@@ -154,6 +154,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         excel_bytes = convert_df_to_excel_multisheet(final_df, method)
         
         import base64
+        import math
         b64_str = base64.b64encode(excel_bytes).decode('utf-8')
         
         total_rows = len(final_df)
@@ -173,15 +174,29 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         preview_df = final_df[preview_cols_exist].head(10).fillna("")
         preview_list = preview_df.to_dict(orient="records")
         
+        # Sanitize any remaining float('nan') or float('inf') which break JSONResponse
+        def sanitize_val(v):
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                return ""
+            return v
+            
+        cleaned_preview = [
+            {k: sanitize_val(v) for k, v in row.items()} 
+            for row in preview_list
+        ]
+        
         return JSONResponse(content={
             "summary": {
                 "total": int(total_rows),
                 "valid": int(valid_rows),
                 "invalid": int(invalid_rows)
             },
-            "preview": preview_list,
+            "preview": cleaned_preview,
             "file_base64": b64_str
         })
 
     except Exception as e:
+        import traceback
+        print("ERROR IN CALC BATCH:")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

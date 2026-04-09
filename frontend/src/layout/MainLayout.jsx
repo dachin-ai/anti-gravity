@@ -80,12 +80,20 @@ const MainLayout = () => {
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           padding: '0 28px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
         }}>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 500, letterSpacing: '0.2px' }}>
             Freemir Operational Dashboard
           </Text>
+          <div className="digital-sphere" style={{ marginRight: 20 }}>
+            <div className="sphere-ring"></div>
+            <div className="sphere-ring"></div>
+            <div className="sphere-ring"></div>
+            <div className="sphere-ring"></div>
+            <div className="sphere-ring"></div>
+          </div>
         </div>
 
         {/* Page Content */}

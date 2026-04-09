@@ -191,14 +191,16 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .ant-input:focus, .ant-input:hover {
-  border-color: var(--indigo) !important;
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.08) !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(5,150,105,0.08) !important;
+  background-color: #f0fdf4 !important;
 }
 
 .ant-input-number-focused,
 .ant-input-number:hover {
-  border-color: var(--indigo) !important;
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.08) !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(5,150,105,0.08) !important;
+  background-color: #f0fdf4 !important;
 }
 
 .ant-input-number {
@@ -323,3 +325,35 @@ h1, h2, h3, h4, h5, h6,
    DIVIDER
    ============================================ */
 .ant-divider { border-color: var(--border) !important; }
+
+/* ============================================
+   DIGITAL SPHERE ANIMATION
+   ============================================ */
+.digital-sphere {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: rotate-sphere 10s linear infinite;
+}
+
+.sphere-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(79, 70, 229, 0.5);
+  border-radius: 50%;
+}
+
+.sphere-ring:nth-child(1) { transform: rotateY(0deg); }
+.sphere-ring:nth-child(2) { transform: rotateY(45deg); }
+.sphere-ring:nth-child(3) { transform: rotateY(90deg); }
+.sphere-ring:nth-child(4) { transform: rotateY(135deg); }
+.sphere-ring:nth-child(5) { transform: rotateX(90deg); border: 1px solid rgba(79, 70, 229, 0.3); }
+
+@keyframes rotate-sphere {
+  0% { transform: rotateX(20deg) rotateY(0deg); }
+  100% { transform: rotateX(20deg) rotateY(360deg); }
+}
+
