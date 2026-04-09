@@ -17,12 +17,22 @@ async def calculate_order_loss(
 ):
     try:
         content = await file.read()
+        filename = file.filename.lower()
         
-        # Detect csv vs excel
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(content))
+        # Robust reading
+        if filename.endswith('.csv'):
+            try:
+                df = pd.read_csv(io.BytesIO(content), encoding='utf-8')
+            except:
+                try:
+                    df = pd.read_csv(io.BytesIO(content), encoding='latin-1')
+                except:
+                    df = pd.read_csv(io.BytesIO(content), encoding='gbk')
         else:
-            df = pd.read_excel(io.BytesIO(content))
+            try:
+                df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
+            except Exception:
+                df = pd.read_excel(io.BytesIO(content))
             
         # load google sheets db
         price_db, _, _ = load_product_database()

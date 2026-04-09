@@ -225,6 +225,10 @@ def generate_excel(dfs: Dict[str, pd.DataFrame]) -> bytes:
 def sanitize_json(val):
     if pd.isna(val) or (isinstance(val, float) and math.isnan(val)):
         return 0
+    if isinstance(val, (np.integer, int)):
+        return int(val)
+    if isinstance(val, (np.floating, float)):
+        return float(val)
     return val
 
 def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Warning") -> Tuple[Dict, bytes]:

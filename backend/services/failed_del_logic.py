@@ -3,6 +3,7 @@ import io
 import xlsxwriter
 from typing import Dict, Any, Tuple
 import math
+import numpy as np
 
 def clean_currency(x):
     if isinstance(x, (int, float)):
@@ -28,6 +29,10 @@ def is_cod(payment_method):
 def sanitize_json(val):
     if pd.isna(val) or (isinstance(val, float) and math.isnan(val)):
         return 0
+    if isinstance(val, (np.integer, int)):
+        return int(val)
+    if isinstance(val, (np.floating, float)):
+        return float(val)
     return val
 
 def process_failed_delivery(df: pd.DataFrame, name_map: Dict[str, str]) -> Tuple[Dict, bytes]:
