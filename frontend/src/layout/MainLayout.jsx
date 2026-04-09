@@ -3,8 +3,8 @@ import { Layout, Menu, Typography } from 'antd';
 import { TagOutlined, SettingOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
-const { Header, Sider, Content } = Layout;
-const { Title } = Typography;
+const { Sider, Content } = Layout;
+const { Title, Text } = Typography;
 
 const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -25,56 +25,81 @@ const MainLayout = () => {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
-      <Sider 
-        collapsible 
-        collapsed={collapsed} 
-        onCollapse={(value) => setCollapsed(value)} 
-        width={260}
-        className="glass-panel"
-        style={{ borderRight: '1px solid var(--glass-border)' }}
+    <Layout style={{ minHeight: '100vh', background: 'var(--off-white)' }}>
+      {/* SIDEBAR */}
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(value) => setCollapsed(value)}
+        width={230}
+        style={{ background: 'var(--white)', borderRight: '1px solid var(--border)', boxShadow: '2px 0 10px rgba(0,0,0,0.04)' }}
       >
-        <div style={{ 
-          height: 64, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          borderBottom: '1px solid var(--glass-border)',
-          marginBottom: 16
+        {/* Logo Area */}
+        <div style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: 8,
+          padding: '0 16px',
         }}>
-          <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", letterSpacing: 1, display: collapsed ? 'none' : 'block' }}>
-            SUPPORT <span style={{color: 'var(--primary)'}}>HUB</span>
-          </Title>
-          <Title level={4} style={{ margin: 0, color: 'var(--primary)', display: collapsed ? 'block' : 'none' }}>
-            SH
-          </Title>
+          {!collapsed ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: 'var(--indigo)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>F</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--slate)', lineHeight: '1', fontFamily: "'Outfit', sans-serif" }}>Freemir</div>
+                <div style={{ fontSize: 10, color: 'var(--slate-light)', lineHeight: '1.4', letterSpacing: '0.5px', textTransform:'uppercase' }}>Support Hub</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              width: 36, height: 36, borderRadius: 8,
+              background: 'var(--indigo)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>F</span>
+            </div>
+          )}
         </div>
-        <Menu 
-          defaultSelectedKeys={[location.pathname]} 
-          mode="inline" 
-          items={menuItems} 
-          onClick={({key}) => navigate(key)}
-          style={{ borderRight: 0, background: 'transparent' }}
+
+        {/* Navigation */}
+        <Menu
+          selectedKeys={[location.pathname]}
+          mode="inline"
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
+          style={{ borderRight: 0, background: 'transparent', padding: '0 0' }}
         />
       </Sider>
-      <Layout style={{ background: 'transparent' }}>
-        <Header className="glass-panel" style={{ 
-          padding: '0 24px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          margin: '16px 24px 0 24px',
-          borderRadius: 16,
-          height: 64
+
+      {/* MAIN CONTENT AREA */}
+      <Layout style={{ background: 'var(--off-white)' }}>
+        {/* Top Bar */}
+        <div style={{
+          height: 60,
+          background: 'var(--white)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 28px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
         }}>
-            <Title level={5} style={{ margin: 0, fontWeight: 500, color: 'var(--text-muted)' }}>Freemir Operational Dashboard</Title>
-        </Header>
-        <Content style={{ margin: '24px' }}>
-          <div style={{ 
-            minHeight: 'calc(100vh - 150px)',
-            borderRadius: 16,
-          }}>
-            <Outlet />
-          </div>
+          <Text style={{ fontSize: 14, color: 'var(--slate-light)', fontWeight: 500 }}>
+            Freemir Operational Dashboard
+          </Text>
+        </div>
+
+        {/* Page Content */}
+        <Content style={{ padding: '28px', overflowY: 'auto' }}>
+          <Outlet />
         </Content>
       </Layout>
     </Layout>
