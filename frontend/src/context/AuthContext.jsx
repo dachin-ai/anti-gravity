@@ -75,14 +75,19 @@ export function AuthProvider({ children }) {
     const logActivity = useCallback(async (toolName) => {
         const token = getToken();
         if (!token || !user) {
-            console.warn('[Activity Log] Skipped - no token or user:', { token: !!token, user: !!user });
+            console.warn('[Activity Log] ⚠️ Skipped - no token or user:', { hasToken: !!token, hasUser: !!user });
             return;
         }
         try {
-            const res = await api.post('/auth/log-activity', { tool_name: toolName, token });
-            console.log('[Activity Log] Recorded:', toolName, res.data);
+            console.log('[Activity Log] 📤 Sending log for:', toolName);
+            const res = await api.post(
+                '/auth/log-activity',
+                { tool_name: toolName, token },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log('[Activity Log] ✅ Recorded:', toolName, res.data);
         } catch (err) {
-            console.error('[Activity Log] Failed:', err.response?.data || err.message);
+            console.error('[Activity Log] ❌ Failed:', err.response?.status, err.response?.data || err.message);
         }
     }, [user, getToken]);
 

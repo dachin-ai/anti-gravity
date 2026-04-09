@@ -57,13 +57,23 @@ def verify(request: Request):
 @router.post("/log-activity")
 def log_tool_activity(body: LogActivityRequest, request: Request):
     """Called by frontend whenever a tool is used."""
-    payload = verify_token(body.token)
+    # Try body token first, then Authorization header
+    token = body.token
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1]
+
+    payload = verify_token(token) if token else None
     if not payload:
+        print(f"[Auth Router] log-activity: token invalid or missing. Token prefix: {str(token)[:20] if token else 'NONE'}")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
     ip = request.client.host if request.client else ""
-    print(f"[Auth Router] log-activity called by {payload['username']} for {body.tool_name}")
-    log_activity(payload["username"], body.tool_name, ip)
-    return {"logged": True, "username": payload["username"], "tool": body.tool_name}
+    username = payload["username"]
+    print(f"[Auth Router] log-activity: {username} used {body.tool_name}")
+    log_activity(username, body.tool_name, ip)
+    return {"logged": True, "username": username, "tool": body.tool_name}
 
 
 @router.get("/test-sheet")
