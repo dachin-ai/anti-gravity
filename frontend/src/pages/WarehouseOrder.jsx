@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 const { Title, Text } = Typography;
 
 /* ─── Editable cell table builder ─── */
-const EditableNumberInput = ({ value, onChange, placeholder, min, style }) => (
+const EditableNumberInput = ({ value, onChange, placeholder, min, style, formatter, parser }) => (
     <InputNumber
         value={value}
         onChange={onChange}
@@ -22,6 +22,8 @@ const EditableNumberInput = ({ value, onChange, placeholder, min, style }) => (
         style={{ width: '100%', background: 'var(--bg-panel)', borderColor: 'var(--border)', color: 'var(--text-main)', ...style }}
         controls={false}
         size="small"
+        formatter={formatter}
+        parser={parser}
     />
 );
 
@@ -66,6 +68,8 @@ const EditableGrid = ({ rows, setRows, columns, addLabel }) => {
                                     onChange={v => updateRow(i, c.key, v)}
                                     placeholder={c.placeholder || ''}
                                     min={c.min}
+                                    formatter={c.formatter}
+                                    parser={c.parser}
                                 />
                             )}
                         </div>
@@ -190,7 +194,15 @@ const WarehouseOrder = () => {
     const platCols = [
         { key: 'name', label: 'Platform', type: 'text', placeholder: 'e.g. Shopee', width: '2fr' },
         { key: 'number', label: '#', type: 'number', placeholder: '1', min: 1, width: '0.7fr' },
-        { key: 'target', label: 'Monthly Target (Rp)', type: 'number', placeholder: 'e.g. 10000000', width: '2fr' },
+        { 
+            key: 'target', 
+            label: 'Monthly Target (Rp)', 
+            type: 'number', 
+            placeholder: 'e.g. 10000000', 
+            width: '2fr',
+            formatter: v => v ? `Rp ${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
+            parser: v => v?.replace(/Rp\s?|(,*)/g, '')
+        },
     ];
     const whCols = [
         { key: 'name', label: 'Warehouse', type: 'text', placeholder: 'e.g. Cikarang', width: '2fr' },

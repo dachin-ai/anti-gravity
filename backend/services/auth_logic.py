@@ -149,7 +149,8 @@ def log_activity(username: str, tool_name: str, ip_address: str = ""):
             ws = sh.add_worksheet(title="Activity Log", rows=1000, cols=4)
             ws.append_row(["Time", "Username", "Tools"])
 
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        jakarta_tz = datetime.timezone(datetime.timedelta(hours=7))
+        now = datetime.datetime.now(jakarta_tz).strftime("%Y-%m-%d %H:%M:%S")
         ws.append_row([now, username, tool_name])
         print(f"[Activity Log] ✓ Logged: {username} used {tool_name} at {now}")
 

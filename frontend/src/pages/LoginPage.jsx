@@ -108,7 +108,7 @@ const LoginPage = () => {
                 {/* Tabs: Login / Sign Up */}
                 <div style={{
                     display: 'flex', background: 'rgba(255,255,255,0.04)',
-                    borderRadius: 10, padding: 4, marginBottom: 28, gap: 4
+                    borderRadius: 10, padding: 4, marginBottom: 36, gap: 4
                 }}>
                     {['login', 'signup'].map(tab => (
                         <button key={tab} onClick={() => { setActiveTab(tab); setSignupDone(false); }}
@@ -126,21 +126,21 @@ const LoginPage = () => {
                 {/* LOGIN FORM */}
                 {activeTab === 'login' && (
                     <Form onFinish={onLogin} layout="vertical" requiredMark={false}>
-                        <Form.Item name="username" rules={[{ required: true, message: 'Enter your username' }]}>
+                        <Form.Item name="username" rules={[{ required: true, message: 'Enter your username' }]} style={{ marginBottom: 24 }}>
                             <Input
                                 prefix={<UserOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Username"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item name="password" rules={[{ required: true, message: 'Enter your password' }]}>
+                        <Form.Item name="password" rules={[{ required: true, message: 'Enter your password' }]} style={{ marginBottom: 24 }}>
                             <Input.Password
                                 prefix={<LockOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Password"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
+                        <Form.Item style={{ marginBottom: 0, marginTop: 12 }}>
                             <Button
                                 htmlType="submit"
                                 loading={loadingLogin}
@@ -161,35 +161,35 @@ const LoginPage = () => {
                 {/* SIGN UP FORM */}
                 {activeTab === 'signup' && !signupDone && (
                     <Form onFinish={onSignup} layout="vertical" requiredMark={false}>
-                        <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Enter a valid email' }]}>
+                        <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Enter a valid email' }]} style={{ marginBottom: 20 }}>
                             <Input
                                 prefix={<MailOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Email Address"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item name="username" rules={[{ required: true, message: 'Choose a username' }]}>
+                        <Form.Item name="username" rules={[{ required: true, message: 'Choose a username' }]} style={{ marginBottom: 20 }}>
                             <Input
                                 prefix={<UserOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Username"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item name="password" rules={[{ required: true, min: 6, message: 'Min. 6 characters' }]}>
+                        <Form.Item name="password" rules={[{ required: true, min: 6, message: 'Min. 6 characters' }]} style={{ marginBottom: 20 }}>
                             <Input.Password
                                 prefix={<LockOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Password"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item name="confirm" rules={[{ required: true, message: 'Confirm your password' }]}>
+                        <Form.Item name="confirm" rules={[{ required: true, message: 'Confirm your password' }]} style={{ marginBottom: 20 }}>
                             <Input.Password
                                 prefix={<LockOutlined style={{ color: '#6366f1' }} />}
                                 placeholder="Confirm Password"
                                 style={inputStyle}
                             />
                         </Form.Item>
-                        <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
+                        <Form.Item style={{ marginBottom: 0, marginTop: 12 }}>
                             <Button
                                 htmlType="submit"
                                 loading={loadingSignup}
