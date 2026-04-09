@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Typography } from 'antd';
-import { TagOutlined, SettingOutlined } from '@ant-design/icons';
+import { Layout, Menu, Typography, Avatar, Button, Tooltip } from 'antd';
+import { TagOutlined, SettingOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -10,6 +11,7 @@ const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { key: '/', icon: <SettingOutlined />, label: 'Dashboard Lobby' },
@@ -95,12 +97,30 @@ const MainLayout = () => {
           <Text style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
             freemir Tools Dashboard
           </Text>
-          <div className="digital-sphere">
-            <div className="sphere-ring"></div>
-            <div className="sphere-ring"></div>
-            <div className="sphere-ring"></div>
-            <div className="sphere-ring"></div>
-            <div className="sphere-ring"></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="digital-sphere">
+              <div className="sphere-ring"></div>
+              <div className="sphere-ring"></div>
+              <div className="sphere-ring"></div>
+              <div className="sphere-ring"></div>
+              <div className="sphere-ring"></div>
+            </div>
+            {user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar size={32} style={{ background: 'linear-gradient(135deg, #6366f1, #3b82f6)', fontSize: 14, fontWeight: 700 }}>
+                  {user.username[0].toUpperCase()}
+                </Avatar>
+                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 500 }}>{user.username}</Text>
+                <Tooltip title="Logout">
+                  <Button
+                    type="text"
+                    icon={<LogoutOutlined />}
+                    onClick={logout}
+                    style={{ color: '#ef4444', fontSize: 14 }}
+                  />
+                </Tooltip>
+              </div>
+            )}
           </div>
         </div>
 
