@@ -2,11 +2,16 @@ import pandas as pd
 import numpy as np
 import io
 import re
+import os
 import gspread
 from typing import Tuple, Dict, Any, List
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GoIpse2K5piWfw5J1urkoZj6KWY3zBo8UX0TAmvUZ1M"
-CREDENTIALS_FILE = "credentials.json"
+
+if os.path.exists("/etc/secrets/credentials.json"):
+    CREDENTIALS_FILE = "/etc/secrets/credentials.json"
+else:
+    CREDENTIALS_FILE = "credentials.json"
 
 PRICE_TYPES = [
     "Warning", "Daily-Discount", "Daily-Livestream", "Daily-Mid-Creator",
