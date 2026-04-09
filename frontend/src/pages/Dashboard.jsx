@@ -13,6 +13,7 @@ const TOOLS_CATALOG = [
     { name: "New ERP OOS Calculate", desc: "Out of Stock (OOS) calculation based on new ERP data.", main_user: "Customer Service", platform: "ERP Qianyi", icon: "⚡", path: "/erp-oos", active: true, category: "operations" },
     { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: true, category: "planning" },
     { name: "Conversion Cleaner", desc: "Data cleaning tool for affiliate conversion reports.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🧹", path: "/conversion-cleaner", active: true, category: "data" },
+    { name: "Order Match Checker", desc: "Cross-reference validation for platform orders vs system ERP codes.", main_user: "Platform Responsible", platform: "Multiplatform", icon: "🔍", path: "/order-match", active: true, category: "operations" },
     { name: "Coming Soon", desc: "New supply chain forecasting module under development.", main_user: "TBD", platform: "TBD", icon: "⭐", path: "", active: false, category: "upcoming" }
 ];
 
