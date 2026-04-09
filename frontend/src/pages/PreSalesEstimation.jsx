@@ -112,6 +112,9 @@ const PreSalesEstimation = () => {
                                 }}>
                                     <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 500 }}>
                                         📄 {file.name}
+                                        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+                                            {file.size ? '(' + (file.size / 1024 / 1024 > 1 ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : (file.size / 1024).toFixed(2) + ' KB') + ')' : ''}
+                                        </span>
                                     </Text>
                                     <Button type="text" size="small" danger onClick={remove} style={{ fontSize: 12, color: '#ef4444' }}>Remove</Button>
                                 </div>

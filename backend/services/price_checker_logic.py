@@ -27,10 +27,20 @@ SHEET_CONFIG = [
     ("Affiliate", ["Warning", "Daily-Mid-Creator", "Daily-Top-Creator", "DD-Mid-Creator", "DD-Top-Creator", "PD-Mid-Creator", "PD-Top-Creator"])
 ]
 
+_cached_price_db = None
+_cached_name_map = None
+_cached_link_map = None
+_cached_client = None
+
 def load_product_database() -> Tuple[Dict, Dict, Dict]:
+    global _cached_price_db, _cached_name_map, _cached_link_map, _cached_client
+    if _cached_price_db is not None:
+        return _cached_price_db, _cached_name_map, _cached_link_map
+        
     try:
-        gc = gspread.service_account(filename=CREDENTIALS_FILE)
-        sh = gc.open_by_url(SPREADSHEET_URL)
+        if _cached_client is None:
+            _cached_client = gspread.service_account(filename=CREDENTIALS_FILE)
+        sh = _cached_client.open_by_url(SPREADSHEET_URL)
         
         # Read Price sheet
         price_worksheet = sh.worksheet("Price")
@@ -57,6 +67,9 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
             name_map = {}
             link_map = {}
 
+        _cached_price_db = price_db
+        _cached_name_map = name_map
+        _cached_link_map = link_map
         return price_db, name_map, link_map
     except Exception as e:
         print(f"Error fetching gspread: {e}")

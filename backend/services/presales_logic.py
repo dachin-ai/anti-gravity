@@ -7,10 +7,18 @@ from typing import Dict, Tuple
 from services.price_checker_logic import SPREADSHEET_URL, CREDENTIALS_FILE
 import gspread
 
+_cached_df_names = None
+_cached_client = None
+
 def load_presales_database() -> pd.DataFrame:
+    global _cached_df_names, _cached_client
+    if _cached_df_names is not None:
+        return _cached_df_names
+        
     try:
-        gc = gspread.service_account(filename=CREDENTIALS_FILE)
-        sh = gc.open_by_url(SPREADSHEET_URL)
+        if _cached_client is None:
+            _cached_client = gspread.service_account(filename=CREDENTIALS_FILE)
+        sh = _cached_client.open_by_url(SPREADSHEET_URL)
         name_worksheet = sh.worksheet("All_Name")
         name_data = name_worksheet.get_all_values()
         
@@ -25,6 +33,7 @@ def load_presales_database() -> pd.DataFrame:
         master_data['Image Link'] = df_names.iloc[:, 2] if df_names.shape[1] > 2 else ""
         master_data['Chinese Name'] = df_names.iloc[:, 3] if df_names.shape[1] > 3 else ""
         
+        _cached_df_names = master_data
         return master_data
     except Exception as e:
         print(f"Error fetching presales master: {e}")

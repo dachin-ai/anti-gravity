@@ -24,9 +24,16 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+_cached_client = None
+_cached_sh = None
+
 def get_sheet_client():
-    gc = gspread.service_account(filename=CREDENTIALS_FILE)
-    return gc.open_by_url(SPREADSHEET_URL)
+    global _cached_client, _cached_sh
+    if _cached_sh is None:
+        if _cached_client is None:
+            _cached_client = gspread.service_account(filename=CREDENTIALS_FILE)
+        _cached_sh = _cached_client.open_by_url(SPREADSHEET_URL)
+    return _cached_sh
 
 
 def get_users() -> list:

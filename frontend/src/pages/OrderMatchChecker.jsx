@@ -176,7 +176,10 @@ const OrderMatchChecker = () => {
                                     background: 'rgba(56,189,248,0.1)', border: '1px solid #38bdf8', borderRadius: 6,
                                     padding: '8px 12px', marginTop: 16,
                                 }}>
-                                    <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 500 }}>📄 {file.name}</Text>
+                                    <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 500 }}>📄 {file.name}
+                                        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+                                            {file.size ? '(' + (file.size / 1024 / 1024 > 1 ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : (file.size / 1024).toFixed(2) + ' KB') + ')' : ''}
+                                        </span></Text>
                                     <Button type="text" size="small" danger onClick={remove} style={{ fontSize: 12, color: '#ef4444' }}>Remove</Button>
                                 </div>
                             )}
