@@ -132,9 +132,29 @@ def log_activity(username: str, tool_name: str, ip_address: str = ""):
     """
     try:
         sh = get_sheet_client()
-        ws = sh.worksheet("Activity Log")
+
+        # Try to find the sheet - try exact name first, then variants
+        ws = None
+        all_sheet_names = [s.title for s in sh.worksheets()]
+        print(f"[Activity Log] Available sheets: {all_sheet_names}")
+
+        for candidate in ["Activity Log", "activity log", "ActivityLog", "Activity_Log"]:
+            if candidate in all_sheet_names:
+                ws = sh.worksheet(candidate)
+                break
+
+        if ws is None:
+            # Create it
+            print(f"[Activity Log] Sheet not found, creating...")
+            ws = sh.add_worksheet(title="Activity Log", rows=1000, cols=4)
+            ws.append_row(["Time", "Username", "Tools"])
+
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws.append_row([now, username, tool_name])
+        print(f"[Activity Log] ✓ Logged: {username} used {tool_name} at {now}")
+
     except Exception as e:
+        import traceback
         print(f"[Activity Log Error] {e}")
-        pass  # Don't fail the main request if logging fails
+        print(traceback.format_exc())
+

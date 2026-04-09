@@ -61,5 +61,18 @@ def log_tool_activity(body: LogActivityRequest, request: Request):
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     ip = request.client.host if request.client else ""
+    print(f"[Auth Router] log-activity called by {payload['username']} for {body.tool_name}")
     log_activity(payload["username"], body.tool_name, ip)
-    return {"logged": True}
+    return {"logged": True, "username": payload["username"], "tool": body.tool_name}
+
+
+@router.get("/test-sheet")
+def test_sheet_access():
+    """Debug endpoint - check which sheets are accessible."""
+    try:
+        from services.auth_logic import get_sheet_client
+        sh = get_sheet_client()
+        sheets = [s.title for s in sh.worksheets()]
+        return {"sheets": sheets, "spreadsheet": sh.title}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

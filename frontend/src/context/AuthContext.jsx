@@ -74,11 +74,15 @@ export function AuthProvider({ children }) {
 
     const logActivity = useCallback(async (toolName) => {
         const token = getToken();
-        if (!token || !user) return;
+        if (!token || !user) {
+            console.warn('[Activity Log] Skipped - no token or user:', { token: !!token, user: !!user });
+            return;
+        }
         try {
-            await api.post('/auth/log-activity', { tool_name: toolName, token });
-        } catch {
-            // Silently fail
+            const res = await api.post('/auth/log-activity', { tool_name: toolName, token });
+            console.log('[Activity Log] Recorded:', toolName, res.data);
+        } catch (err) {
+            console.error('[Activity Log] Failed:', err.response?.data || err.message);
         }
     }, [user, getToken]);
 
