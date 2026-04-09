@@ -15,6 +15,9 @@ const MainLayout = () => {
     { key: '/', icon: <SettingOutlined />, label: 'Dashboard Lobby' },
     { key: '/price-checker', icon: <TagOutlined />, label: 'Price Checker' },
     { key: '/order-loss', icon: <SettingOutlined />, label: 'Order Loss Review' },
+    { key: '/failed-delivery', icon: <TagOutlined />, label: 'Failed Delivery' },
+    { key: '/pre-sales', icon: <TagOutlined />, label: 'Pre-Sales Estimation' },
+    { key: '/erp-oos', icon: <TagOutlined />, label: 'ERP OOS Calculate' },
   ];
 
   return (

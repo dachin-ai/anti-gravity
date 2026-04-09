@@ -4,6 +4,9 @@ import MainLayout from './layout/MainLayout';
 import PriceChecker from './pages/PriceChecker';
 import Dashboard from './pages/Dashboard';
 import OrderLossReview from './pages/OrderLossReview';
+import FailedDelivery from './pages/FailedDelivery';
+import PreSalesEstimation from './pages/PreSalesEstimation';
+import ErpOosCalculate from './pages/ErpOosCalculate';
 
 function App() {
   return (
@@ -27,8 +30,12 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="price-checker" element={<PriceChecker />} />
             <Route path="order-loss" element={<OrderLossReview />} />
+            <Route path="failed-delivery" element={<FailedDelivery />} />
+            <Route path="pre-sales" element={<PreSalesEstimation />} />
+            <Route path="erp-oos" element={<ErpOosCalculate />} />
           </Route>
         </Routes>
+
 
       </Router>
     </ConfigProvider>
