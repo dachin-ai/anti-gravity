@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --bg-app: #0f172a;
-  --bg-panel: rgba(30, 41, 59, 0.7);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --glass-bg: rgba(15, 23, 42, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --bg-app: #f1f5f9;
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
 }
 
 body {
@@ -19,9 +19,10 @@ body {
   background-color: var(--bg-app);
   color: var(--text-main);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(15, 23, 42, 1) 0, transparent 100%), 
-    radial-gradient(at 50% 0%, rgba(49, 46, 129, 0.4) 0, transparent 50%), 
-    radial-gradient(at 100% 100%, rgba(76, 29, 149, 0.3) 0, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(248, 250, 252, 1) 0, transparent 40%),
+    radial-gradient(at 50% 0%, rgba(219, 234, 254, 0.5) 0, transparent 40%),
+    radial-gradient(at 100% 100%, rgba(224, 231, 255, 0.6) 0, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(243, 244, 255, 0.4) 0, transparent 50%);
   background-attachment: fixed;
   background-size: cover;
   min-height: 100vh;
@@ -31,8 +32,38 @@ body {
 
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.ant-card-head-title, .ant-typography {
+  color: var(--text-main) !important;
+}
+
+/* Fix ant tabs for light mode */
+.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: var(--glass-border);
+}
+.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.ant-alert-info {
+  background-color: rgba(79, 70, 229, 0.05) !important;
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+.ant-alert-info .ant-alert-message, .ant-alert-info .ant-alert-description {
+  color: var(--text-main) !important;
 }

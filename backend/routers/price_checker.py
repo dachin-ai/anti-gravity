@@ -153,11 +153,35 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
 
         excel_bytes = convert_df_to_excel_multisheet(final_df, method)
         
-        headers = {
-            'Content-Disposition': f'attachment; filename="Price_Check_{method}_Result.xlsx"',
-            'Access-Control-Expose-Headers': 'Content-Disposition'
-        }
-        return Response(content=excel_bytes, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
+        import base64
+        b64_str = base64.b64encode(excel_bytes).decode('utf-8')
+        
+        total_rows = len(final_df)
+        invalid_rows = 0
+        
+        preview_fields = ["SKU"]
+        if method == "Listing":
+            preview_fields.extend([col_camp_price, "Warning", "Gap Warning"])
+        else:
+            preview_fields.extend([col_target_price, "Warning", "Gap Warning"])
+            
+        if "Gap Warning" in final_df.columns:
+            invalid_rows = len(final_df[final_df["Gap Warning"] == "Invalid"])
+            
+        valid_rows = total_rows - invalid_rows
+        preview_cols_exist = [c for c in preview_fields if c in final_df.columns]
+        preview_df = final_df[preview_cols_exist].head(10).fillna("")
+        preview_list = preview_df.to_dict(orient="records")
+        
+        return JSONResponse(content={
+            "summary": {
+                "total": int(total_rows),
+                "valid": int(valid_rows),
+                "invalid": int(invalid_rows)
+            },
+            "preview": preview_list,
+            "file_base64": b64_str
+        })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

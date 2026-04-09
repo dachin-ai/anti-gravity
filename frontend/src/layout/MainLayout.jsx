@@ -42,7 +42,7 @@ const MainLayout = () => {
           borderBottom: '1px solid var(--glass-border)',
           marginBottom: 16
         }}>
-          <Title level={4} style={{ margin: 0, color: '#fff', fontFamily: "'Outfit', sans-serif", letterSpacing: 1, display: collapsed ? 'none' : 'block' }}>
+          <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", letterSpacing: 1, display: collapsed ? 'none' : 'block' }}>
             SUPPORT <span style={{color: 'var(--primary)'}}>HUB</span>
           </Title>
           <Title level={4} style={{ margin: 0, color: 'var(--primary)', display: collapsed ? 'block' : 'none' }}>
