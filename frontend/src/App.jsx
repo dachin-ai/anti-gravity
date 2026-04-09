@@ -8,6 +8,8 @@ import FailedDelivery from './pages/FailedDelivery';
 import PreSalesEstimation from './pages/PreSalesEstimation';
 import ErpOosCalculate from './pages/ErpOosCalculate';
 
+import SkuMonthlyPlan from './pages/SkuMonthlyPlan';
+
 function App() {
   return (
     <ConfigProvider
@@ -33,6 +35,7 @@ function App() {
             <Route path="failed-delivery" element={<FailedDelivery />} />
             <Route path="pre-sales" element={<PreSalesEstimation />} />
             <Route path="erp-oos" element={<ErpOosCalculate />} />
+            <Route path="sku-plan" element={<SkuMonthlyPlan />} />
           </Route>
         </Routes>
 

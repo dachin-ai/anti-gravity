@@ -18,6 +18,7 @@ const MainLayout = () => {
     { key: '/failed-delivery', icon: <TagOutlined />, label: 'Failed Delivery' },
     { key: '/pre-sales', icon: <TagOutlined />, label: 'Pre-Sales Estimation' },
     { key: '/erp-oos', icon: <TagOutlined />, label: 'ERP OOS Calculate' },
+    { key: '/sku-plan', icon: <TagOutlined />, label: 'SKU Monthly Plan' },
   ];
 
   return (

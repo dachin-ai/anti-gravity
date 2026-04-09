@@ -11,7 +11,7 @@ const TOOLS_CATALOG = [
     { name: "Order Failed Delivery", desc: "Tracking and resolving failed delivery orders.", main_user: "Platform Responsible", platform: "TikTok", icon: "🚚", path: "/failed-delivery", active: true, category: "operations" },
     { name: "Pre-Sales Estimation", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: "🔮", path: "/pre-sales", active: true, category: "planning" },
     { name: "New ERP OOS Calculate", desc: "Out of Stock (OOS) calculation based on new ERP data.", main_user: "Customer Service", platform: "ERP Qianyi", icon: "⚡", path: "/erp-oos", active: true, category: "operations" },
-    { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: false, category: "planning" },
+    { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: true, category: "planning" },
     { name: "Conversion Cleaner", desc: "Data cleaning tool for affiliate conversion reports.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🧹", path: "/conversion-cleaner", active: false, category: "data" },
     { name: "Coming Soon", desc: "New supply chain forecasting module under development.", main_user: "TBD", platform: "TBD", icon: "⭐", path: "", active: false, category: "upcoming" }
 ];
