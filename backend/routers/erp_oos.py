@@ -5,7 +5,7 @@ import base64
 
 from services.erp_oos_logic import process_erp_oos
 
-router = APIRouter(prefix="/erp-oos", tags=["ERP OOS"])
+router = APIRouter(prefix="/api/erp-oos", tags=["ERP OOS"])
 
 @router.post("/calculate")
 async def calculate_erp_oos(

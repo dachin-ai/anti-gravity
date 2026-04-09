@@ -8,7 +8,7 @@ import base64
 from services.price_checker_logic import load_product_database
 from services.failed_del_logic import process_failed_delivery
 
-router = APIRouter(prefix="/failed-delivery", tags=["Failed Delivery"])
+router = APIRouter(prefix="/api/failed-delivery", tags=["Failed Delivery"])
 
 @router.post("/calculate")
 async def calculate_failed_delivery(

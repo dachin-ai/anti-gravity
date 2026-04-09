@@ -5,7 +5,7 @@ import base64
 
 from services.presales_logic import process_presales
 
-router = APIRouter(prefix="/pre-sales", tags=["Pre-Sales"])
+router = APIRouter(prefix="/api/pre-sales", tags=["Pre-Sales"])
 
 @router.post("/calculate")
 async def calculate_presales(

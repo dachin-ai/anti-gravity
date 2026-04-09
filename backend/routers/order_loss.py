@@ -8,7 +8,7 @@ import base64
 from services.price_checker_logic import load_product_database
 from services.order_loss_logic import run_order_loss_audit
 
-router = APIRouter(prefix="/order-loss", tags=["Order Loss"])
+router = APIRouter(prefix="/api/order-loss", tags=["Order Loss"])
 
 @router.post("/calculate")
 async def calculate_order_loss(
