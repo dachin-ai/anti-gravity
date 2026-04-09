@@ -169,70 +169,90 @@ const OrderLossReview = () => {
                             <Divider style={{ borderColor: 'var(--border)' }} />
                             <SectionHeading emoji="📊">Audit Output Summary</SectionHeading>
 
-                            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                            <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
                                 <Col xs={24} md={8}>
-                                    <div style={statCardStyle('var(--indigo)', 'rgba(99,102,241,0.05)')}>
-                                        <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif" }}>
+                                    <div style={{...statCardStyle('#3b82f6', 'rgba(59, 130, 246, 0.15)'), borderLeft: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)', color: 'white' }}>
+                                        <Text style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Total Orders | 总订单数
+                                        </Text>
+                                        <div style={{ fontSize: 42, color: '#fff', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                             {result.summary.total_orders.toLocaleString()}
                                         </div>
-                                        <Text style={{ fontSize: 12, fontWeight: 600, color: 'var(--indigo)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                            Total Orders Audited
-                                        </Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
-                                    <div style={statCardStyle('#10b981', 'rgba(16,185,129,0.05)')}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <CheckCircleFilled style={{ color: '#10b981', fontSize: 24 }} />
-                                            <span style={{ fontSize: 36, fontWeight: 900, color: '#10b981', fontFamily: "'Outfit', sans-serif" }}>
-                                                {result.summary.safe_orders.toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <Text style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                            Safe & Profitable
+                                    <div style={{...statCardStyle('#10b981', 'rgba(16, 185, 129, 0.05)'), borderLeft: '4px solid #10b981' }}>
+                                        <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Safe Orders | 安全订单
                                         </Text>
+                                        <div style={{ fontSize: 42, color: '#10b981', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.safe_orders.toLocaleString()}
+                                        </div>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
-                                    <div style={statCardStyle('#ef4444', 'rgba(239,68,68,0.05)')}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <WarningOutlined style={{ color: '#ef4444', fontSize: 24 }} />
-                                            <span style={{ fontSize: 36, fontWeight: 900, color: '#ef4444', fontFamily: "'Outfit', sans-serif" }}>
-                                                {result.summary.review_orders.toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <Text style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                            Diagnosed Issues
+                                    <div style={{...statCardStyle('#ec4899', 'rgba(236, 72, 153, 0.05)'), borderLeft: '4px solid #ec4899' }}>
+                                        <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Diagnosed Issues | 诊断问题
                                         </Text>
+                                        <div style={{ fontSize: 42, color: '#ec4899', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.review_orders.toLocaleString()}
+                                        </div>
                                     </div>
                                 </Col>
                             </Row>
 
-                            <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
-                                <Col xs={24} md={12}>
-                                    <div style={{ background: 'var(--bg-panel)', padding: 20, borderRadius: 12, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
-                                                Sales Loss Detected
-                                            </div>
-                                            <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b', fontFamily: "'Outfit', sans-serif" }}>
-                                                Rp {result.summary.sales_loss.toLocaleString()}
-                                            </div>
+                            <SectionHeading emoji="💰">Financial Summary | 财务摘要</SectionHeading>
+                            
+                            <Row gutter={[16, 16]} style={{ marginBottom: 32, display: 'flex' }}>
+                                <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
+                                    <div style={{...statCardStyle('#3b82f6', 'rgba(59,130,246,0.1)'), border: 'none', borderLeft: '4px solid #3b82f6', background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Total Transactions
+                                        </Text>
+                                        <div style={{ fontSize: 26, color: '#fff', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.total_transactions.toLocaleString()}
                                         </div>
-                                        <LineChartOutlined style={{ fontSize: 32, color: 'rgba(245, 158, 11, 0.2)' }} />
                                     </div>
                                 </Col>
-                                <Col xs={24} md={12}>
-                                    <div style={{ background: 'var(--bg-panel)', padding: 20, borderRadius: 12, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
-                                                Final Calculated Profit
-                                            </div>
-                                            <div style={{ fontSize: 24, fontWeight: 800, color: result.summary.final_profit > 0 ? '#10b981' : '#ef4444', fontFamily: "'Outfit', sans-serif" }}>
-                                                Rp {result.summary.final_profit.toLocaleString()}
-                                            </div>
+                                <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
+                                    <div style={{...statCardStyle('#f59e0b', 'rgba(245,158,11,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #f59e0b' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Sales Loss
+                                        </Text>
+                                        <div style={{ fontSize: 26, color: '#f59e0b', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.sales_loss.toLocaleString()}
                                         </div>
-                                        <DollarOutlined style={{ fontSize: 32, color: result.summary.final_profit > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }} />
+                                    </div>
+                                </Col>
+                                <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
+                                    <div style={{...statCardStyle('#ec4899', 'rgba(236,72,153,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #ec4899' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            After Sales Loss
+                                        </Text>
+                                        <div style={{ fontSize: 26, color: '#ec4899', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.aftersales_loss.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </Col>
+                                <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
+                                    <div style={{...statCardStyle('#10b981', 'rgba(16,185,129,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #10b981' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Total Profit
+                                        </Text>
+                                        <div style={{ fontSize: 26, color: '#10b981', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.total_profit.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </Col>
+                                <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
+                                    <div style={{...statCardStyle('#f8fafc', 'transparent'), border: '1px solid var(--border)', borderLeft: '4px solid #475569' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                                            Final Profit
+                                        </Text>
+                                        <div style={{ fontSize: 26, color: 'var(--text-main)', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
+                                            {result.summary.final_profit.toLocaleString()}
+                                        </div>
                                     </div>
                                 </Col>
                             </Row>
