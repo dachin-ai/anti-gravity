@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ConfigProvider, theme } from 'antd';
 import MainLayout from './layout/MainLayout';
 import PriceChecker from './pages/PriceChecker';
+import Dashboard from './pages/Dashboard';
+import OrderLossReview from './pages/OrderLossReview';
 
 function App() {
   return (
@@ -22,10 +24,12 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/price-checker" replace />} />
+            <Route index element={<Dashboard />} />
             <Route path="price-checker" element={<PriceChecker />} />
+            <Route path="order-loss" element={<OrderLossReview />} />
           </Route>
         </Routes>
+
       </Router>
     </ConfigProvider>
   );

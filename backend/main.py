@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import price_checker
+from routers import price_checker, order_loss
 
 app = FastAPI()
 
@@ -13,6 +13,7 @@ app.add_middleware(
 )
 
 app.include_router(price_checker.router)
+app.include_router(order_loss.router)
 
 @app.get("/")
 def read_root():

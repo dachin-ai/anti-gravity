@@ -12,8 +12,9 @@ const MainLayout = () => {
   const location = useLocation();
 
   const menuItems = [
+    { key: '/', icon: <SettingOutlined />, label: 'Dashboard Lobby' },
     { key: '/price-checker', icon: <TagOutlined />, label: 'Price Checker' },
-    { key: '/settings',      icon: <SettingOutlined />, label: 'Settings' },
+    { key: '/order-loss', icon: <SettingOutlined />, label: 'Order Loss Review' },
   ];
 
   return (
