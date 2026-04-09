@@ -15,6 +15,7 @@ const TOOLS_CATALOG = [
     { name: "Conversion Cleaner", desc: "Data cleaning tool for affiliate conversion reports.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🧹", path: "/conversion-cleaner", active: true, category: "data" },
     { name: "Order Match Checker", desc: "Cross-reference validation for platform orders vs system ERP codes.", main_user: "Platform Responsible", platform: "Multiplatform", icon: "🔍", path: "/order-match", active: true, category: "operations" },
     { name: "Warehouse Order Estimator", desc: "Estimate daily order volume per warehouse and platform based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: "🏭", path: "/warehouse-order", active: true, category: "planning" },
+    { name: "Socmed Scraper", desc: "Scrape Instagram & TikTok post/comment data via Apify API. Supports bulk & single-post modes.", main_user: "Content / Social", platform: "IG + TikTok", icon: "📥", path: "/socmed-scraping", active: true, category: "data" },
     { name: "Coming Soon", desc: "New supply chain forecasting module under development.", main_user: "TBD", platform: "TBD", icon: "⭐", path: "", active: false, category: "upcoming" }
 ];
 

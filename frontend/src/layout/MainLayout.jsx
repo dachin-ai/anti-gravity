@@ -24,6 +24,7 @@ const MainLayout = () => {
     { key: '/conversion-cleaner', icon: <TagOutlined />, label: 'Conversion Cleaner' },
     { key: '/order-match', icon: <TagOutlined />, label: 'Order Match Checker' },
     { key: '/warehouse-order', icon: <TagOutlined />, label: 'Warehouse Order Estimator' },
+    { key: '/socmed-scraping', icon: <TagOutlined />, label: 'Socmed Scraper' },
   ];
 
   return (
