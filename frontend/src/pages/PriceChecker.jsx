@@ -16,27 +16,27 @@ const { Dragger } = Upload;
 
 /* ─── Reusable UI helpers ─── */
 const Label = ({ children }) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
         {children}
     </div>
 );
 
 const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--slate-900)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
         <span>{emoji}</span> {children}
     </div>
 );
 
 /* ─── Card style helpers ─── */
 const stepCardStyle = {
-    background: 'var(--white)',
+    background: 'var(--bg-card)',
     border: '1px solid var(--border)',
     borderRadius: 12,
     overflow: 'hidden',
 };
 
 const statCardStyle = (accentColor) => ({
-    background: 'var(--white)',
+    background: 'var(--bg-card)',
     border: '1px solid var(--border)',
     borderTop: `4px solid ${accentColor}`,
     borderRadius: 12,
@@ -118,9 +118,9 @@ const PriceChecker = () => {
         {
             title: 'Gap (Margin)', dataIndex: 'Gap', key: 'gap', width: 130,
             render: v => {
-                if (v === 'Invalid') return <Text style={{ color: 'var(--slate-300)' }}>–</Text>;
+                if (v === 'Invalid') return <Text style={{ color: 'var(--text-muted)' }}>–</Text>;
                 const n = Number(v);
-                return <Text style={{ fontWeight: 700, color: n >= 0 ? '#059669' : '#dc2626' }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</Text>;
+                return <Text style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</Text>;
             }
         },
         {
@@ -129,8 +129,8 @@ const PriceChecker = () => {
                 <span style={{
                     display: 'inline-block', padding: '2px 10px', borderRadius: 20,
                     fontSize: 12, fontWeight: 600,
-                    background: v.includes('Safe') ? '#d1fae5' : v.includes('Under') ? '#fee2e2' : '#f1f5f9',
-                    color:      v.includes('Safe') ? '#059669' : v.includes('Under') ? '#dc2626' : '#64748b',
+                    background: v.includes('Safe') ? 'rgba(16,185,129,0.15)' : v.includes('Under') ? 'rgba(239,68,68,0.15)' : 'var(--bg-panel)',
+                    color:      v.includes('Safe') ? '#10b981' : v.includes('Under') ? '#ef4444' : 'var(--text-muted)',
                 }}>
                     {v}
                 </span>
@@ -151,9 +151,9 @@ const PriceChecker = () => {
             title: k, dataIndex: k, key: k, width: 160, ellipsis: true,
             render: (v) => {
                 if (k === 'Gap Warning') {
-                    if (v === 'Invalid') return <Text style={{ color: '#dc2626', fontWeight: 600 }}>Invalid</Text>;
+                    if (v === 'Invalid') return <Text style={{ color: '#ef4444', fontWeight: 600 }}>Invalid</Text>;
                     const n = Number(v);
-                    if (!isNaN(n)) return <Text style={{ color: n >= 0 ? '#059669' : '#dc2626', fontWeight: 600 }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</Text>;
+                    if (!isNaN(n)) return <Text style={{ color: n >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</Text>;
                 }
                 return v ?? '–';
             },
@@ -166,10 +166,10 @@ const PriceChecker = () => {
             {/* PAGE HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                 <div>
-                    <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--slate-900)', fontWeight: 800 }}>
+                    <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
                         Price Checker & Comparator
                     </Title>
-                    <Text style={{ color: 'var(--slate-500)', fontSize: 14 }}>
+                    <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                         Supports Listing Method, SKU Method, and Direct Input
                     </Text>
                 </div>
@@ -180,7 +180,7 @@ const PriceChecker = () => {
                     style={{
                         height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
                         background: 'var(--indigo)', color: '#fff', border: 'none',
-                        boxShadow: '0 2px 8px rgba(79,70,229,0.25)',
+                        boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                     }}
                 >
                     Refresh Data Sheet
@@ -206,11 +206,11 @@ const PriceChecker = () => {
                         {/* Step 1: Download Template */}
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
-                                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--off-white)' }}>
+                                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
                                     <SectionHeading emoji="1️⃣">Download Template</SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
-                                    <Text style={{ fontSize: 13, color: 'var(--slate-500)', display: 'block', marginBottom: 16 }}>
+                                    <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
                                         Download the Excel template, fill in your data, then upload it in the next step.
                                     </Text>
                                     <Button
@@ -219,7 +219,7 @@ const PriceChecker = () => {
                                         onClick={() => downloadTemplate(method)}
                                         style={{
                                             height: 44, borderRadius: 8, fontWeight: 600, fontSize: 13,
-                                            background: 'var(--indigo-light)', color: 'var(--indigo)',
+                                            background: 'var(--bg-panel)', color: 'var(--indigo)',
                                             border: '1.5px dashed var(--indigo)',
                                         }}
                                     >
@@ -232,7 +232,7 @@ const PriceChecker = () => {
                         {/* Step 2: Upload & Process */}
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
-                                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--off-white)' }}>
+                                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
                                     <SectionHeading emoji="2️⃣">Upload & Process</SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
@@ -245,16 +245,16 @@ const PriceChecker = () => {
                                         itemRender={(_, file, __, { remove }) => (
                                             <div style={{
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6,
+                                                background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', borderRadius: 6,
                                                 padding: '8px 12px', marginTop: 8,
                                             }}>
-                                                <Text style={{ color: '#166534', fontSize: 13, fontWeight: 500 }}>
+                                                <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 500 }}>
                                                     📄 {file.name}
                                                 </Text>
                                                 <Button
                                                     type="text" size="small" danger
                                                     onClick={remove}
-                                                    style={{ fontSize: 12, color: '#dc2626', padding: '0 4px' }}
+                                                    style={{ fontSize: 12, color: '#ef4444', padding: '0 4px' }}
                                                 >
                                                     Remove
                                                 </Button>
@@ -271,7 +271,7 @@ const PriceChecker = () => {
                                         style={{
                                             height: 44, borderRadius: 8, fontWeight: 700, fontSize: 14,
                                             background: 'var(--indigo)', color: '#fff', border: 'none',
-                                            boxShadow: '0 2px 8px rgba(79,70,229,0.25)',
+                                            boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                                         }}
                                     >
                                         {calcLoading ? 'Processing...' : 'Start Batch Calculation'}
@@ -294,36 +294,36 @@ const PriceChecker = () => {
                                         <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--indigo)', fontFamily: "'Outfit', sans-serif" }}>
                                             {batchOverview.summary.total}
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--slate-500)' }}>Total Rows Processed</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Total Rows Processed</Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
-                                    <div style={statCardStyle('#059669')}>
+                                    <div style={statCardStyle('#10b981')}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                            <CheckCircleFilled style={{ color: '#059669', fontSize: 20 }} />
-                                            <span style={{ fontSize: 40, fontWeight: 800, color: '#059669', fontFamily: "'Outfit', sans-serif" }}>
+                                            <CheckCircleFilled style={{ color: '#10b981', fontSize: 20 }} />
+                                            <span style={{ fontSize: 40, fontWeight: 800, color: '#10b981', fontFamily: "'Outfit', sans-serif" }}>
                                                 {batchOverview.summary.valid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--slate-500)' }}>Valid Items</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Valid Items</Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
-                                    <div style={statCardStyle('#dc2626')}>
+                                    <div style={statCardStyle('#ef4444')}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                            <CloseCircleFilled style={{ color: '#dc2626', fontSize: 20 }} />
-                                            <span style={{ fontSize: 40, fontWeight: 800, color: '#dc2626', fontFamily: "'Outfit', sans-serif" }}>
+                                            <CloseCircleFilled style={{ color: '#ef4444', fontSize: 20 }} />
+                                            <span style={{ fontSize: 40, fontWeight: 800, color: '#ef4444', fontFamily: "'Outfit', sans-serif" }}>
                                                 {batchOverview.summary.invalid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--slate-500)' }}>Invalid / Flagged Items</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Invalid / Flagged Items</Text>
                                     </div>
                                 </Col>
                             </Row>
 
                             {/* Preview Table (scrollable) */}
                             <div style={{ marginBottom: 6 }}>
-                                <Text style={{ fontSize: 11, fontWeight: 600, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <Text style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                     Data Preview — Top 10 Rows
                                 </Text>
                             </div>
@@ -345,8 +345,8 @@ const PriceChecker = () => {
                                 onClick={handleDownloadResult}
                                 style={{
                                     height: 46, borderRadius: 8, fontWeight: 700, fontSize: 14,
-                                    background: '#059669', color: '#fff', border: 'none',
-                                    boxShadow: '0 2px 10px rgba(5,150,105,0.3)', paddingInline: 28,
+                                    background: '#10b981', color: '#fff', border: 'none',
+                                    boxShadow: '0 2px 10px rgba(16,185,129,0.3)', paddingInline: 28,
                                 }}
                             >
                                 Download Full Result (Excel)
@@ -358,7 +358,7 @@ const PriceChecker = () => {
 
             {/* ─── DIRECT INPUT ─── */}
             {method === 'Direct' && (
-                <div style={{ background: 'var(--white)', borderRadius: 12, border: '1px solid var(--border)', padding: '24px' }}>
+                <div style={{ background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '24px' }}>
                     <Row gutter={[20, 20]}>
                         <Col xs={24} md={16}>
                             <Label>Bundle SKU &mdash; separate with + or comma</Label>
@@ -393,7 +393,7 @@ const PriceChecker = () => {
                         style={{
                             marginTop: 16, height: 46, borderRadius: 8, fontWeight: 700, fontSize: 14,
                             background: 'var(--indigo)', color: '#fff', border: 'none',
-                            boxShadow: '0 2px 8px rgba(79,70,229,0.25)', paddingInline: 32,
+                            boxShadow: '0 2px 8px rgba(99,102,241,0.25)', paddingInline: 32,
                         }}
                     >
                         Calculate Real-time
@@ -402,7 +402,7 @@ const PriceChecker = () => {
                     {calcLoading && (
                         <div style={{ textAlign: 'center', padding: '40px 0' }}>
                             <Spin size="large" />
-                            <div style={{ marginTop: 12, color: 'var(--slate-500)', fontSize: 13 }}>Calculating prices...</div>
+                            <div style={{ marginTop: 12, color: 'var(--text-muted)', fontSize: 13 }}>Calculating prices...</div>
                         </div>
                     )}
 
@@ -415,13 +415,13 @@ const PriceChecker = () => {
                             <Row gutter={16} style={{ marginBottom: 24 }}>
                                 {[
                                     { label: 'Bundle Discount', value: `${Number(directResult.summary.bundle_discount) * 100}%`, color: 'var(--indigo)' },
-                                    { label: 'Clearance Status', value: directResult.summary.clearance, color: '#b45309' },
-                                    { label: 'Gift Status',      value: directResult.summary.gift,      color: '#059669' },
+                                    { label: 'Clearance Status', value: directResult.summary.clearance, color: '#f59e0b' },
+                                    { label: 'Gift Status',      value: directResult.summary.gift,      color: '#10b981' },
                                 ].map(({ label, value, color }) => (
                                     <Col key={label} xs={24} md={8}>
-                                        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
+                                        <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
                                             <div style={{ fontSize: 30, fontWeight: 800, color, fontFamily: "'Outfit', sans-serif" }}>{value}</div>
-                                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--slate-500)', marginTop: 4 }}>{label}</div>
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>
                                         </div>
                                     </Col>
                                 ))}
