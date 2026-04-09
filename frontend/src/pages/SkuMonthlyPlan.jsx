@@ -3,6 +3,7 @@ import { Typography, Button, Row, Col, Upload, message, Divider, DatePicker, Inp
 import { InboxOutlined, CloudUploadOutlined, FileExcelOutlined, CalendarOutlined, TagOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -32,6 +33,7 @@ const SkuMonthlyPlan = () => {
     const [brand, setBrand] = useState('freemir');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileList.length) {
@@ -55,6 +57,7 @@ const SkuMonthlyPlan = () => {
             const res = await api.post('/sku-plan/calculate', formData);
             setResult(res.data);
             message.success('Data successfully processed & formatted!');
+            logActivity('SKU Monthly Plan');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Formatting failed. Please check the file structure.');
         } finally {

@@ -7,6 +7,7 @@ import {
     ThunderboltOutlined, InboxOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -22,6 +23,7 @@ const ErpOosCalculate = () => {
     const [fileB, setFileB] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileA.length || !fileB.length) {
@@ -40,6 +42,7 @@ const ErpOosCalculate = () => {
             const res = await api.post('/erp-oos/calculate', formData);
             setResult(res.data);
             message.success('Matching Complete!');
+            logActivity('ERP OOS Calculate');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Calculation failed. Please check the file structure.');
         } finally {

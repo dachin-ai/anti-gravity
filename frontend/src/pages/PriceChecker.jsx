@@ -10,6 +10,7 @@ import {
     DatabaseOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -49,6 +50,7 @@ const PriceChecker = () => {
     const [method, setMethod] = useState('Listing');
     const [loadingDb, setLoadingDb] = useState(false);
     const [calcLoading, setCalcLoading] = useState(false);
+    const { logActivity } = useAuth();
 
     // Direct Input
     const [skuInput, setSkuInput] = useState('');
@@ -84,6 +86,7 @@ const PriceChecker = () => {
         try {
             const res = await api.post('/price-checker/calculate-direct', { sku_string: skuInput, target_price: targetPrice });
             setDirectResult(res.data);
+            logActivity('Price Checker (Direct)');
         } catch { message.error('Calculation failed');
         } finally { setCalcLoading(false); }
     };
@@ -98,6 +101,7 @@ const PriceChecker = () => {
             const res = await api.post('/price-checker/calculate-batch', formData);
             setBatchOverview(res.data);
             message.success('Batch calculation complete! See overview below.');
+            logActivity('Price Checker (Batch)');
         } catch { message.error('Batch calculation failed');
         } finally { setCalcLoading(false); }
     };

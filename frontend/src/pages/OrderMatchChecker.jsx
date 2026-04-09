@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import { Typography, Button, Row, Col, Upload, message, Divider, Table, Tabs, Tag } from 'antd';
 import { InboxOutlined, ScanOutlined, FileExcelOutlined, CheckCircleFilled, WarningFilled, AimOutlined } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -42,6 +42,7 @@ const OrderMatchChecker = () => {
     const [fileList, setFileList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileList.length) {
@@ -59,6 +60,7 @@ const OrderMatchChecker = () => {
             const res = await api.post('/order-match/calculate', formData);
             setResult(res.data);
             message.success('Order matching complete!');
+            logActivity('Order Match Checker');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Processing failed. Check your file structure.');
         } finally {

@@ -7,6 +7,7 @@ import {
     ShoppingCartOutlined, CheckCircleOutlined, CodeSandboxOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -21,6 +22,7 @@ const PreSalesEstimation = () => {
     const [fileList, setFileList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileList.length) {
@@ -38,6 +40,7 @@ const PreSalesEstimation = () => {
             const res = await api.post('/pre-sales/calculate', formData);
             setResult(res.data);
             message.success('Analysis complete!');
+            logActivity('Pre-Sales Estimation');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Calculation failed. Please check the file structure.');
         } finally {

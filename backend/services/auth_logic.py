@@ -127,18 +127,14 @@ def verify_token(token: str) -> Optional[Dict]:
 
 
 def log_activity(username: str, tool_name: str, ip_address: str = ""):
-    """Append an activity row to 'Activity Log' sheet."""
+    """Append an activity row to 'Activity Log' sheet.
+    Column order: Time | Username | Tools
+    """
     try:
         sh = get_sheet_client()
-
-        # Get or create Activity Log sheet
-        try:
-            ws = sh.worksheet("Activity Log")
-        except gspread.WorksheetNotFound:
-            ws = sh.add_worksheet(title="Activity Log", rows=1000, cols=5)
-            ws.append_row(["Username", "Tool", "Timestamp", "IP Address"])
-
+        ws = sh.worksheet("Activity Log")
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ws.append_row([username, tool_name, now, ip_address])
-    except Exception:
+        ws.append_row([now, username, tool_name])
+    except Exception as e:
+        print(f"[Activity Log Error] {e}")
         pass  # Don't fail the main request if logging fails

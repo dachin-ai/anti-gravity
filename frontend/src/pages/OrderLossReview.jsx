@@ -7,6 +7,7 @@ import {
     WarningOutlined, CheckCircleFilled, DollarOutlined, LineChartOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -36,6 +37,7 @@ const OrderLossReview = () => {
     const [priceType, setPriceType] = useState('Warning');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileList.length) {
@@ -54,6 +56,7 @@ const OrderLossReview = () => {
             const res = await api.post('/order-loss/calculate', formData);
             setResult(res.data);
             message.success('Audit complete! See summary below.');
+            logActivity('Order Loss Review');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Calculation failed. Please check the file structure.');
         } finally {

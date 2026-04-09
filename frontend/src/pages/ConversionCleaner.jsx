@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Typography, Button, Row, Col, Upload, message, Divider, Table, Tabs } from 'antd';
-import {
-    InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
+import { InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
     DollarOutlined, ArrowLeftOutlined, UserOutlined, AppstoreOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -51,6 +51,7 @@ const ConversionCleaner = () => {
     const [fileList, setFileList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const { logActivity } = useAuth();
 
     const handleUpload = async () => {
         if (!fileList.length) {
@@ -68,6 +69,7 @@ const ConversionCleaner = () => {
             const res = await api.post('/conversion-cleaner/calculate', formData);
             setResult(res.data);
             message.success('Data processed successfully!');
+            logActivity('Conversion Cleaner');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Processing failed. Check your CSV file structure.');
         } finally {
