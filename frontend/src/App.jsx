@@ -7,6 +7,7 @@ import OrderLossReview from './pages/OrderLossReview';
 import FailedDelivery from './pages/FailedDelivery';
 import PreSalesEstimation from './pages/PreSalesEstimation';
 import ErpOosCalculate from './pages/ErpOosCalculate';
+import ConversionCleaner from './pages/ConversionCleaner';
 
 import SkuMonthlyPlan from './pages/SkuMonthlyPlan';
 
@@ -36,6 +37,7 @@ function App() {
             <Route path="pre-sales" element={<PreSalesEstimation />} />
             <Route path="erp-oos" element={<ErpOosCalculate />} />
             <Route path="sku-plan" element={<SkuMonthlyPlan />} />
+            <Route path="conversion-cleaner" element={<ConversionCleaner />} />
           </Route>
         </Routes>
 

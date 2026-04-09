@@ -19,6 +19,7 @@ const MainLayout = () => {
     { key: '/pre-sales', icon: <TagOutlined />, label: 'Pre-Sales Estimation' },
     { key: '/erp-oos', icon: <TagOutlined />, label: 'ERP OOS Calculate' },
     { key: '/sku-plan', icon: <TagOutlined />, label: 'SKU Monthly Plan' },
+    { key: '/conversion-cleaner', icon: <TagOutlined />, label: 'Conversion Cleaner' },
   ];
 
   return (
