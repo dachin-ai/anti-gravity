@@ -45,7 +45,10 @@ def process_presales(file_bytes: bytes, filename: str) -> Tuple[Dict, bytes]:
     if filename.endswith('.csv'):
         df_raw = pd.read_csv(io.BytesIO(file_bytes), header=None, low_memory=False)
     else:
-        df_raw = pd.read_excel(io.BytesIO(file_bytes), header=None)
+        try:
+            df_raw = pd.read_excel(io.BytesIO(file_bytes), header=None, engine='calamine')
+        except:
+            df_raw = pd.read_excel(io.BytesIO(file_bytes), header=None)
         
     if df_raw.shape[1] == 1:
         logs.append("Detection: Single-column embed found. Splitting by comma...")
@@ -68,7 +71,7 @@ def process_presales(file_bytes: bytes, filename: str) -> Tuple[Dict, bytes]:
     clean_orders[QTY_IDX] = pd.to_numeric(clean_orders[QTY_IDX], errors='coerce').fillna(0)
     
     sku_data = {}
-    for _, row in clean_orders.iterrows():
+    for row in clean_orders.itertuples(index=False, name=None):
         qty = row[QTY_IDX]
         raw_sku_str = str(row[SKU_IDX])
         wh_name = str(row[WH_IDX]).strip() if not pd.isna(row[WH_IDX]) else "Unknown WH"

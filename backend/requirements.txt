@@ -9,3 +9,4 @@ google-auth
 PyJWT
 apify-client
 requests
+calamine

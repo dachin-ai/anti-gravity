@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip } from 'antd';
-import { TagOutlined, SettingOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { TagOutlined, SettingOutlined, LogoutOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,9 +14,9 @@ const MainLayout = () => {
   const { user, logout } = useAuth();
 
   const menuItems = [
-    { key: '/', icon: <SettingOutlined />, label: 'Dashboard Lobby' },
+    { key: '/', icon: <HomeOutlined />, label: 'Dashboard Lobby' },
     { key: '/price-checker', icon: <TagOutlined />, label: 'Price Checker' },
-    { key: '/order-loss', icon: <SettingOutlined />, label: 'Order Loss Review' },
+    { key: '/order-loss', icon: <TagOutlined />, label: 'Order Loss Review' },
     { key: '/failed-delivery', icon: <TagOutlined />, label: 'Failed Delivery' },
     { key: '/pre-sales', icon: <TagOutlined />, label: 'Pre-Sales Estimation' },
     { key: '/erp-oos', icon: <TagOutlined />, label: 'ERP OOS Calculate' },
