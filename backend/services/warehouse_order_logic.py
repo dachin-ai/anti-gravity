@@ -194,10 +194,14 @@ def _build_excel(matrix_rows, col_structure, wh_names, plat_names, days_list, ao
             for c in range(1, 2 + len(col_structure)):
                 ws_matrix.cell(r, c).border = border
 
-        # Auto-width
+        # Auto-width - skip merged cells (they don't have column_letter)
+        from openpyxl.cell.cell import MergedCell
         for col_cells in ws_matrix.columns:
-            max_len = max((len(str(cell.value or '')) for cell in col_cells), default=8)
-            ws_matrix.column_dimensions[col_cells[0].column_letter].width = min(max_len + 4, 20)
+            non_merged = [cell for cell in col_cells if not isinstance(cell, MergedCell)]
+            if not non_merged:
+                continue
+            max_len = max((len(str(cell.value or '')) for cell in non_merged), default=8)
+            ws_matrix.column_dimensions[non_merged[0].column_letter].width = min(max_len + 4, 20)
 
         # Sheet 2: Summary
         sum_df = pd.DataFrame(summary_details)
