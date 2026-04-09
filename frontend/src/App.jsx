@@ -12,6 +12,7 @@ import ErpOosCalculate from './pages/ErpOosCalculate';
 import SkuMonthlyPlan from './pages/SkuMonthlyPlan';
 import ConversionCleaner from './pages/ConversionCleaner';
 import OrderMatchChecker from './pages/OrderMatchChecker';
+import WarehouseOrder from './pages/WarehouseOrder';
 
 // Protected route wrapper
 function ProtectedApp() {
@@ -48,6 +49,7 @@ function ProtectedApp() {
         <Route path="sku-plan" element={<SkuMonthlyPlan />} />
         <Route path="conversion-cleaner" element={<ConversionCleaner />} />
         <Route path="order-match" element={<OrderMatchChecker />} />
+        <Route path="warehouse-order" element={<WarehouseOrder />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

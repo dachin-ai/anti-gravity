@@ -14,6 +14,7 @@ const TOOLS_CATALOG = [
     { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: true, category: "planning" },
     { name: "Conversion Cleaner", desc: "Data cleaning tool for affiliate conversion reports.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🧹", path: "/conversion-cleaner", active: true, category: "data" },
     { name: "Order Match Checker", desc: "Cross-reference validation for platform orders vs system ERP codes.", main_user: "Platform Responsible", platform: "Multiplatform", icon: "🔍", path: "/order-match", active: true, category: "operations" },
+    { name: "Warehouse Order Estimator", desc: "Estimate daily order volume per warehouse and platform based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: "🏭", path: "/warehouse-order", active: true, category: "planning" },
     { name: "Coming Soon", desc: "New supply chain forecasting module under development.", main_user: "TBD", platform: "TBD", icon: "⭐", path: "", active: false, category: "upcoming" }
 ];
 
