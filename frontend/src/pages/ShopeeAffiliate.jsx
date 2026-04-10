@@ -20,9 +20,9 @@ const { Title, Text } = Typography;
 const { Dragger } = Upload;
 const { RangePicker } = DatePicker;
 
-const API = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api/shopee-affiliate`
-  : 'http://localhost:8000/api/shopee-affiliate';
+import api from '../api';
+
+const API = '/shopee-affiliate';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -67,7 +67,7 @@ const ShopeeAffiliate = () => {
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        const res = await axios.get(`${API}/stores`);
+        const res = await api.get(`${API}/stores`);
         setStores(res.data.stores || []);
       } catch { message.error('Failed to load stores from AT1.'); }
       finally { setStoresLoading(false); }
@@ -235,7 +235,7 @@ const CheckerTab = ({ stores }) => {
   const fetchMatrix = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/checker-matrix`, {
+      const res = await api.get(`${API}/checker-matrix`, {
         params: { year: selectedMonth.format('YYYY'), month: selectedMonth.format('MM') }
       });
       setMatrixData(res.data.matrix || []);
@@ -258,7 +258,7 @@ const CheckerTab = ({ stores }) => {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          const res = await axios.delete(`${API}/data`, { params: { date } });
+          const res = await api.delete(`${API}/data`, { params: { date } });
           message.success(res.data.message);
           fetchMatrix();
         } catch (e) {
@@ -337,7 +337,7 @@ const AnalyticsTab = ({ stores }) => {
     if (!dateRange || dateRange.length !== 2) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/analytics`, {
+      const res = await api.get(`${API}/analytics`, {
         params: { start_date: dateRange[0].format('YYYY-MM-DD'), end_date: dateRange[1].format('YYYY-MM-DD'), store_id: selectedStore }
       });
       setData(res.data);
@@ -420,7 +420,7 @@ const ReportTab = ({ stores }) => {
     if (!dateRange || dateRange.length !== 2) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/report`, {
+      const res = await api.get(`${API}/report`, {
         params: {
           start_date:  dateRange[0].format('YYYY-MM-DD'),
           end_date:    dateRange[1].format('YYYY-MM-DD'),
@@ -439,7 +439,7 @@ const ReportTab = ({ stores }) => {
     if (!dateRange || dateRange.length !== 2) return;
     setDownloading(true);
     try {
-      const res = await axios.get(`${API}/report/download`, {
+      const res = await api.get(`${API}/report/download`, {
         params: {
           start_date:  dateRange[0].format('YYYY-MM-DD'),
           end_date:    dateRange[1].format('YYYY-MM-DD'),
@@ -620,7 +620,7 @@ const ComparisonTab = ({ stores }) => {
     if (!periodA || !periodB) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/comparison`, {
+      const res = await api.get(`${API}/comparison`, {
         params: {
           period_a_start: periodA[0].format('YYYY-MM-DD'),
           period_a_end:   periodA[1].format('YYYY-MM-DD'),
@@ -697,14 +697,17 @@ const ComparisonTab = ({ stores }) => {
   ];
 
   const labelCol = dimension === 'by_store'
-    ? { title: 'Store ID',  render: r => <Tag color="blue">{r.label}</Tag>, width: 140 }
+    ? [{ title: 'Store ID',  dataIndex: 'label', render: v => <Tag color="blue">{v}</Tag>, width: 140, onHeaderCell: getHeaderCell }]
     : dimension === 'by_creator'
-    ? { title: 'Creator',   render: r => <span style={{ color: '#e2e8f0' }}>{r.label}</span>, width: 240 }
-    : { title: 'Product',   render: r => <Tooltip title={r.label}><span style={{ color: '#e2e8f0' }}>{r.label}</span></Tooltip>, width: 280, ellipsis: true };
+    ? [{ title: 'Creator',   dataIndex: 'label', render: v => <span style={{ color: '#e2e8f0' }}>{v}</span>, width: 240, onHeaderCell: getHeaderCell }]
+    : [
+        { title: 'PID', dataIndex: 'key', width: 120, onHeaderCell: getHeaderCell, render: v => <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+        { title: 'Product Name', dataIndex: 'label', render: v => <Tooltip title={v}><span style={{ color: '#e2e8f0' }}>{v.split(' (PID:')[0]}</span></Tooltip>, width: 280, ellipsis: true, onHeaderCell: getHeaderCell }
+      ];
 
   const columns = [
     { title: 'No', render: (_, __, i) => i+1, width: 45, align: 'center', onHeaderCell: getHeaderCell },
-    { ...labelCol, onHeaderCell: getHeaderCell },
+    ...labelCol,
     ...metricCols('gmv',        'GMV'),
     ...metricCols('commission', 'Commission'),
     ...roiCompCols(),
