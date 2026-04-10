@@ -61,13 +61,14 @@ const ShopeeAffiliate = () => {
   const [storesLoading, setStoresLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    const fetchStores = async () => {
       try {
         const res = await axios.get(`${API}/stores`);
         setStores(res.data.stores || []);
-      } catch { message.error('Gagal memuat daftar toko dari AT1.'); }
+      } catch { message.error('Failed to load stores from AT1.'); }
       finally { setStoresLoading(false); }
-    })();
+    };
+    fetchStores();
   }, []);
 
   return (
@@ -84,7 +85,7 @@ const ShopeeAffiliate = () => {
             Shopee Affiliate Hub
           </Title>
           <Text style={{ color: '#64748b', fontSize: 13 }}>
-            Sentral integrasi & analisis data Product · Creator · Conversion
+            Centralized data integration & analytics for Product · Creator · Conversion
           </Text>
         </div>
       </div>
@@ -94,8 +95,8 @@ const ShopeeAffiliate = () => {
           { key: 'upload',      label: '① Upload Data',         children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
           { key: 'checker',     label: '② Checker Matrix',      children: <CheckerTab   stores={stores} /> },
           { key: 'analytics',   label: '③ Analytics',           children: <AnalyticsTab stores={stores} /> },
-          { key: 'report',      label: <span><FileTextOutlined /> ④ Laporan Lengkap</span>,    children: <ReportTab    stores={stores} /> },
-          { key: 'comparison',  label: <span><BarChartOutlined /> ⑤ Komparasi Periode</span>, children: <ComparisonTab stores={stores} /> },
+          { key: 'report',      label: <span><FileTextOutlined /> ④ Full Report</span>,    children: <ReportTab    stores={stores} /> },
+          { key: 'comparison',  label: <span><BarChartOutlined /> ⑤ Period Comparison</span>, children: <ComparisonTab stores={stores} /> },
         ]} />
       </Card>
     </div>
@@ -117,9 +118,9 @@ const UploadTab = ({ stores, storesLoading }) => {
   const needsManual  = !isConversion;  // product or creator
 
   const handleUpload = async () => {
-    if (!selectedStore)                          return message.warning('Pilih toko terlebih dahulu.');
-    if (!fileList.length)                        return message.warning('Pilih atau tarik file untuk diunggah.');
-    if (isConversion && fileList.length > 1)     return message.warning('Conversion: upload 1 file per bulan saja.');
+    if (!selectedStore)                          return message.warning('Please select a store first.');
+    if (!fileList.length)                        return message.warning('Select or drag CSV files to upload.');
+    if (isConversion && fileList.length > 1)     return message.warning('Conversion: only 1 file per month is allowed.');
 
     setUploading(true);
     let ok = 0, fail = 0;
@@ -130,7 +131,6 @@ const UploadTab = ({ stores, storesLoading }) => {
       fd.append('store_id',   selectedStore);
       if (isConversion)                      fd.append('manual_date', selectedMonth.format('YYYY-MM'));
       if (needsManual && manualDate)         fd.append('manual_date', manualDate.format('YYYY-MM-DD'));
-      // If neither → backend will auto-detect from filename
       try {
         const res = await axios.post(`${API}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         res.data.succeed ? ok++ : (fail++, message.error(`${fo.name}: ${res.data.message}`));
@@ -139,7 +139,7 @@ const UploadTab = ({ stores, storesLoading }) => {
         message.error(`${fo.name}: ${e.response?.data?.detail || e.message}`);
       }
     }
-    if (ok) message.success(`✅ Berhasil memproses ${ok} file!`);
+    if (ok) message.success(`✅ Successfully processed ${ok} file(s)!`);
     if (!fail) setFileList([]);
     setUploading(false);
   };
@@ -149,18 +149,18 @@ const UploadTab = ({ stores, storesLoading }) => {
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Row gutter={16}>
           <Col span={12}>
-            <div style={S.label}>Tipe Data</div>
+            <div style={S.label}>Data Type</div>
             <Select style={{ width: '100%', marginTop: 6 }} value={uploadType}
               onChange={v => { setUploadType(v); setFileList([]); }}
               options={[
-                { value: 'conversion', label: '📋 Conversion (1 file/bulan)' },
+                { value: 'conversion', label: '📋 Conversion (1 file/month)' },
                 { value: 'product',    label: '📦 Product (batch)' },
                 { value: 'creator',    label: '🎬 Creator (batch)' },
               ]} />
           </Col>
           <Col span={12}>
-            <div style={S.label}>Pilih Toko</div>
-            <Select showSearch loading={storesLoading} placeholder="Pilih toko Shopee..."
+            <div style={S.label}>Select Store</div>
+            <Select showSearch loading={storesLoading} placeholder="Select a Shopee store..."
               style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
               options={stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))} />
           </Col>
@@ -168,34 +168,34 @@ const UploadTab = ({ stores, storesLoading }) => {
 
         {isConversion && (
           <div>
-            <div style={S.label}>Bulan Laporan (Conversion)</div>
+            <div style={S.label}>Report Month (Conversion)</div>
             <DatePicker picker="month" style={{ width: '100%', marginTop: 6 }}
               value={selectedMonth} onChange={d => d && setSelectedMonth(d)} allowClear={false} />
             <div style={{ ...S.warnBox, marginTop: 10, fontSize: 12, color: '#faad14' }}>
-              ⚠️ Data Conversion toko ini untuk bulan dipilih akan <strong>ditimpa</strong> jika upload ulang.
+              ⚠️ Conversion data for this store and month will be <strong>overwritten</strong> if re-uploaded.
             </div>
           </div>
         )}
         {needsManual && (
           <div>
             <div style={S.label}>
-              Tanggal Manual <span style={{ color: '#475569', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opsional — isi jika nama file sudah diubah)</span>
+              Manual Date Override <span style={{ color: '#475569', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional — fill only if filename has no date)</span>
             </div>
             <DatePicker
               style={{ width: '100%', marginTop: 6 }}
               value={manualDate}
               onChange={setManualDate}
-              placeholder="Biarkan kosong untuk deteksi otomatis dari nama file"
+              placeholder="Leave blank to auto-detect from filename"
               allowClear
             />
             {manualDate
               ? (
                 <div style={{ ...S.warnBox, marginTop: 8, fontSize: 12, color: '#faad14' }}>
-                  📅 Semua file yang diupload sekarang akan ditandai tanggal <strong>{manualDate.format('DD MMMM YYYY')}</strong>.
+                  📅 All uploaded files in this batch will be tagged as <strong>{manualDate.format('DD MMMM YYYY')}</strong>.
                 </div>
               ) : (
                 <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12, marginTop: 8 }}>
-                  💡 Tanggal terdeteksi <strong>otomatis</strong> dari nama file (cth: <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> atau <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch upload diperbolehkan.
+                  💡 Dates are <strong>auto-detected</strong> from filenames (e.g. <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> or <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch uploading is allowed.
                 </div>
               )
             }
@@ -206,14 +206,14 @@ const UploadTab = ({ stores, storesLoading }) => {
           onChange={info => setFileList(info.fileList)} beforeUpload={() => false}
           style={{ background: 'rgba(15,23,42,0.6)', borderColor: 'rgba(255,255,255,0.12)' }}>
           <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#ff4d4f', fontSize: 36 }} /></p>
-          <p style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 500 }}>Klik atau Tarik file CSV ke sini</p>
-          <p style={{ color: '#64748b', fontSize: 13 }}>Upload file mentah langsung dari Shopee tanpa diubah strukturnya</p>
+          <p style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 500 }}>Click or Drag CSV files here</p>
+          <p style={{ color: '#64748b', fontSize: 13 }}>Upload raw files directly from Shopee Affiliate portal</p>
         </Dragger>
 
         <Button type="primary" block size="large" icon={<UploadOutlined />}
           loading={uploading} onClick={handleUpload}
           style={{ background: 'linear-gradient(135deg,#ff4d4f,#ff7a45)', border: 'none', fontWeight: 600, height: 48 }}>
-          Mulai Ekstraksi Data (ETL)
+          Start ETL Process
         </Button>
       </Space>
     </div>
@@ -235,7 +235,7 @@ const CheckerTab = ({ stores }) => {
         params: { year: selectedMonth.format('YYYY'), month: selectedMonth.format('MM') }
       });
       setMatrixData(res.data.matrix || []);
-    } catch { message.error('Gagal menarik Data Checker Matrix.'); }
+    } catch { message.error('Failed to load Checker Matrix.'); }
     setLoading(false);
   }, [selectedMonth]);
 
@@ -250,7 +250,7 @@ const CheckerTab = ({ stores }) => {
 
   const columns = [
     {
-      title: 'Tanggal', dataIndex: 'date', fixed: 'left', width: 110,
+      title: 'Date', dataIndex: 'date', fixed: 'left', width: 110,
       onHeaderCell: getHeaderCell,
       render: t => <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{dayjs(t).format('DD MMM YYYY')}</span>,
     },
@@ -269,14 +269,14 @@ const CheckerTab = ({ stores }) => {
     <div style={{ padding: '20px 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <Text style={{ color: '#94a3b8' }}>Filter Bulan:</Text>
+          <Text style={{ color: '#94a3b8' }}>Filter Month:</Text>
           <DatePicker picker="month" value={selectedMonth} onChange={d => d && setSelectedMonth(d)} allowClear={false} />
         </Space>
         <Button icon={<ReloadOutlined />} onClick={fetchMatrix} loading={loading}>Refresh</Button>
       </div>
       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
-        <CheckCircleFilled style={{ color: '#22c55e' }} /> = Ada data &nbsp;&nbsp;
-        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Kosong
+        <CheckCircleFilled style={{ color: '#22c55e' }} /> = Data available &nbsp;&nbsp;
+        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data
       </div>
       <Table columns={columns} dataSource={matrixData} rowKey="date" loading={loading}
         bordered size="small" pagination={false} scroll={tblScroll} style={{ background: 'transparent' }}
@@ -302,7 +302,7 @@ const AnalyticsTab = ({ stores }) => {
         params: { start_date: dateRange[0].format('YYYY-MM-DD'), end_date: dateRange[1].format('YYYY-MM-DD'), store_id: selectedStore }
       });
       setData(res.data);
-    } catch { message.error('Gagal mengambil Analytics.'); }
+    } catch { message.error('Failed to load Analytics.'); }
     setLoading(false);
   }, [dateRange, selectedStore]);
 
@@ -311,11 +311,11 @@ const AnalyticsTab = ({ stores }) => {
   const maxProd = Math.max(...data.topProducts.map(p => p.gmv || 0), 1);
   const maxCrtr = Math.max(...data.topCreators.map(c => c.gmv || 0), 1);
 
-  const BarRow = ({ rank, label, sub, gmv, max }) => (
+  const BarRow = ({ label, sub, gmv, max }) => (
     <div style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
         <span style={{ color: '#e2e8f0', fontSize: 13, maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <span style={{ color: '#64748b', marginRight: 6, fontSize: 11 }}>#{rank}</span>{label}
+          {label}
         </span>
         <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 13 }}>Rp {fmtRp(gmv)}</span>
       </div>
@@ -330,28 +330,28 @@ const AnalyticsTab = ({ stores }) => {
     <div style={{ padding: '20px 24px' }}>
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={14}>
-          <div style={S.label}>Rentang Tanggal</div>
+          <div style={S.label}>Date Range</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={dateRange} onChange={setDateRange} />
         </Col>
         <Col span={10}>
-          <div style={S.label}>Toko</div>
+          <div style={S.label}>Store</div>
           <Select showSearch style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
-            options={[{ value: 'ALL', label: '🌐 Semua Toko' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
+            options={[{ value: 'ALL', label: '🌐 All Stores' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
         </Col>
       </Row>
       <Row gutter={20}>
         <Col span={12}>
-          <Card title={<span style={{ color: '#e2e8f0' }}>🏆 Top 15 Produk (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
+          <Card title={<span style={{ color: '#e2e8f0' }}>🏆 Top 15 Products (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
             {loading ? <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
-              : data.topProducts.length ? data.topProducts.map((p, i) => <BarRow key={i} rank={i+1} label={p.name} gmv={p.gmv} max={maxProd} />)
-              : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>Belum ada data produk</div>}
+              : data.topProducts.length ? data.topProducts.map((p, i) => <BarRow key={i} label={p.name} gmv={p.gmv} max={maxProd} />)
+              : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>No product data</div>}
           </Card>
         </Col>
         <Col span={12}>
-          <Card title={<span style={{ color: '#e2e8f0' }}>🎬 Top 15 Creator (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
+          <Card title={<span style={{ color: '#e2e8f0' }}>🎬 Top 15 Creators (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
             {loading ? <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
-              : data.topCreators.length ? data.topCreators.map((c, i) => <BarRow key={i} rank={i+1} label={c.name || c.username} sub={`@${c.username}`} gmv={c.gmv} max={maxCrtr} />)
-              : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>Belum ada data creator</div>}
+              : data.topCreators.length ? data.topCreators.map((c, i) => <BarRow key={i} label={c.name || c.username} sub={`@${c.username}`} gmv={c.gmv} max={maxCrtr} />)
+              : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>No creator data</div>}
           </Card>
         </Col>
       </Row>
@@ -363,9 +363,9 @@ const AnalyticsTab = ({ stores }) => {
 // ④ Laporan Lengkap
 // ─────────────────────────────────────────────────────────────────────────────
 const REPORT_DIMS = [
-  { value: 'by_store',   label: '🏪 Per Toko' },
-  { value: 'by_creator', label: '🎬 Per Creator' },
-  { value: 'by_product', label: '📦 Per Produk' },
+  { value: 'by_store',   label: '🏪 By Store' },
+  { value: 'by_creator', label: '🎬 By Creator' },
+  { value: 'by_product', label: '📦 By Product' },
 ];
 
 const ReportTab = ({ stores }) => {
@@ -390,7 +390,7 @@ const ReportTab = ({ stores }) => {
         }
       });
       setData(res.data.data || []);
-    } catch { message.error('Gagal memuat laporan.'); }
+    } catch { message.error('Failed to load report.'); }
     setLoading(false);
   }, [dateRange, selectedStore, dimension]);
 
@@ -417,7 +417,7 @@ const ReportTab = ({ stores }) => {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch { message.error('Gagal mengunduh laporan.'); }
+    } catch { message.error('Failed to download report.'); }
     setDownloading(false);
   };
 
@@ -442,37 +442,37 @@ const ReportTab = ({ stores }) => {
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
       { title: 'Store ID', dataIndex: 'store_id', width: 150, onHeaderCell: getHeaderCell, render: v => <Tag color="blue">{v}</Tag> },
       numCol('GMV (Rp)', 'gmv', 'Rp '),
-      numCol('Komisi (Rp)', 'commission', 'Rp '),
+      numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
-      numCol('Unit Terjual', 'units'),
-      numCol('Klik', 'clicks'),
-      { title: 'Creator', dataIndex: 'creator_count', align: 'right', width: 90, onHeaderCell: getHeaderCell, render: v => <span style={{ color: '#a5b4fc' }}>{v}</span> }
+      numCol('Units Sold', 'units'),
+      numCol('Clicks', 'clicks'),
+      { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 90, onHeaderCell: getHeaderCell, render: v => <span style={{ color: '#a5b4fc' }}>{v}</span> }
     ];
   } else if (dimension === 'by_creator') {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
       { title: 'Username', dataIndex: 'username', width: 180, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>@{v}</span> },
-      { title: 'Nama Creator', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell,
+      { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#e2e8f0' }}>{v}</span> },
       numCol('GMV (Rp)', 'gmv', 'Rp '),
-      numCol('Komisi (Rp)', 'commission', 'Rp '),
+      numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
-      numCol('Unit Terjual', 'units'),
-      numCol('Klik', 'clicks'),
-      { title: 'Toko', dataIndex: 'store_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
+      numCol('Units Sold', 'units'),
+      numCol('Clicks', 'clicks'),
+      { title: 'Stores', dataIndex: 'store_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#fbbf24' }}>{v}</span> },
     ];
   } else if (dimension === 'by_product') {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
-      { title: 'Nama Produk', dataIndex: 'product_name', width: 300, ellipsis: true, onHeaderCell: getHeaderCell,
+      { title: 'Product Name', dataIndex: 'product_name', width: 300, ellipsis: true, onHeaderCell: getHeaderCell,
         render: v => <Tooltip title={v}><span style={{ color: '#e2e8f0' }}>{v}</span></Tooltip> },
       numCol('Total GMV (Rp)', 'gmv', 'Rp '),
-      numCol('Komisi (Rp)', 'commission', 'Rp '),
+      numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
-      numCol('Total Order', 'orders'),
-      { title: 'Creator', dataIndex: 'creator_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
+      numCol('Total Orders', 'orders'),
+      { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#fbbf24' }}>{v}</span> },
     ];
   }
@@ -482,16 +482,16 @@ const ReportTab = ({ stores }) => {
     const subCols = [
       { title: 'Username', dataIndex: 'username', width: 180, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#a5b4fc' }}>@{v}</span> },
-      { title: 'Nama Creator', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell },
+      { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell },
       { title: 'GMV (Rp)', dataIndex: 'gmv', align: 'right', width: 150, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#22c55e', fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
-      { title: 'Komisi (Rp)', dataIndex: 'commission', align: 'right', width: 150, onHeaderCell: getHeaderCell,
+      { title: 'Commission (Rp)', dataIndex: 'commission', align: 'right', width: 150, onHeaderCell: getHeaderCell,
         render: v => <span style={{ fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
-      { title: 'Order', dataIndex: 'orders', align: 'right', width: 90, onHeaderCell: getHeaderCell },
+      { title: 'Orders', dataIndex: 'orders', align: 'right', width: 90, onHeaderCell: getHeaderCell },
     ];
     return (
       <div style={{ padding: '8px 32px', background: 'rgba(10,20,35,0.8)' }}>
-        <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8, display: 'block' }}>Creator yang mendrive produk ini:</Text>
+        <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8, display: 'block' }}>Creators who drove this product:</Text>
         <Table columns={subCols} dataSource={record.creators} rowKey="username"
           bordered size="small" pagination={false} scroll={{ x: 'max-content' }}
           style={{ background: 'transparent' }} onRow={getBodyRowStyle} />
@@ -504,13 +504,13 @@ const ReportTab = ({ stores }) => {
       {/* Controls */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={11}>
-          <div style={S.label}>Rentang Tanggal</div>
+          <div style={S.label}>Date Range</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={dateRange} onChange={setDateRange} />
         </Col>
         <Col span={8}>
-          <div style={S.label}>Toko</div>
+          <div style={S.label}>Store</div>
           <Select showSearch style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
-            options={[{ value: 'ALL', label: '🌐 Semua Toko' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
+            options={[{ value: 'ALL', label: '🌐 All Stores' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
         </Col>
         <Col span={5}>
           <div style={S.label}>Download</div>
@@ -530,7 +530,7 @@ const ReportTab = ({ stores }) => {
           style={{ background: 'rgba(15,23,42,0.8)' }}
         />
         <Text style={{ color: '#475569', fontSize: 12, marginLeft: 12 }}>
-          {data.length} baris · {dateRange?.[0]?.format('DD MMM')} – {dateRange?.[1]?.format('DD MMM YYYY')}
+          {data.length} rows · {dateRange?.[0]?.format('DD MMM')} – {dateRange?.[1]?.format('DD MMM YYYY')}
         </Text>
       </div>
 
@@ -582,7 +582,7 @@ const ComparisonTab = ({ stores }) => {
         }
       });
       setData(res.data);
-    } catch { message.error('Gagal memuat data komparasi.'); }
+    } catch { message.error('Failed to load comparison data.'); }
     setLoading(false);
   }, [periodA, periodB, selectedStore, dimension]);
 
@@ -624,15 +624,15 @@ const ComparisonTab = ({ stores }) => {
     ? { title: 'Store ID',  render: r => <Tag color="blue">{r.label}</Tag>, width: 140 }
     : dimension === 'by_creator'
     ? { title: 'Creator',   render: r => <span style={{ color: '#e2e8f0' }}>{r.label}</span>, width: 240 }
-    : { title: 'Produk',    render: r => <Tooltip title={r.label}><span style={{ color: '#e2e8f0' }}>{r.label}</span></Tooltip>, width: 280, ellipsis: true };
+    : { title: 'Product',   render: r => <Tooltip title={r.label}><span style={{ color: '#e2e8f0' }}>{r.label}</span></Tooltip>, width: 280, ellipsis: true };
 
   const columns = [
     { title: 'No', render: (_, __, i) => i+1, width: 45, align: 'center', onHeaderCell: getHeaderCell },
     { ...labelCol, onHeaderCell: getHeaderCell },
     ...metricCols('gmv',        'GMV'),
-    ...metricCols('commission', 'Komisi'),
-    ...metricCols('units',      'Unit'),
-    ...metricCols('clicks',     'Klik'),
+    ...metricCols('commission', 'Commission'),
+    ...metricCols('units',      'Units'),
+    ...metricCols('clicks',     'Clicks'),
   ];
 
   const rows = data?.rows || [];
@@ -642,19 +642,19 @@ const ComparisonTab = ({ stores }) => {
       {/* Period pickers */}
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col span={7}>
-          <div style={S.label}>📅 Periode A (Pembanding)</div>
+          <div style={S.label}>📅 Period A (Baseline)</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={periodA} onChange={setPeriodA}
             placeholder={['A Start', 'A End']} />
         </Col>
         <Col span={7}>
-          <div style={S.label}>📅 Periode B (Acuan)</div>
+          <div style={S.label}>📅 Period B (Comparison)</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={periodB} onChange={setPeriodB}
             placeholder={['B Start', 'B End']} />
         </Col>
         <Col span={6}>
-          <div style={S.label}>Toko</div>
+          <div style={S.label}>Store</div>
           <Select showSearch style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
-            options={[{ value: 'ALL', label: '🌐 Semua Toko' }, ...stores.map(s => ({ value: s.code, label: s.code }))]} />
+            options={[{ value: 'ALL', label: '🌐 All Stores' }, ...stores.map(s => ({ value: s.code, label: s.code }))]} />
         </Col>
         <Col span={4}>
           <div style={S.label}>&nbsp;</div>
@@ -674,15 +674,15 @@ const ComparisonTab = ({ stores }) => {
       {data && (
         <div style={{ marginBottom: 12, display: 'flex', gap: 24 }}>
           <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: '8px 16px' }}>
-            <Text style={{ color: '#93c5fd', fontWeight: 600, fontSize: 12 }}>Periode A</Text>
+            <Text style={{ color: '#93c5fd', fontWeight: 600, fontSize: 12 }}>Period A</Text>
             <div style={{ color: '#e2e8f0', fontSize: 12 }}>{data.period_a}</div>
           </div>
           <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 8, padding: '8px 16px' }}>
-            <Text style={{ color: '#fbbf24', fontWeight: 600, fontSize: 12 }}>Periode B</Text>
+            <Text style={{ color: '#fbbf24', fontWeight: 600, fontSize: 12 }}>Period B</Text>
             <div style={{ color: '#e2e8f0', fontSize: 12 }}>{data.period_b}</div>
           </div>
           <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: '8px 16px' }}>
-            <Text style={{ color: '#22c55e', fontSize: 12 }}><RiseOutlined /> Δ positif = Periode A lebih baik dari B</Text>
+            <Text style={{ color: '#22c55e', fontSize: 12 }}><RiseOutlined /> Positive Δ = Period B is better than A</Text>
           </div>
         </div>
       )}

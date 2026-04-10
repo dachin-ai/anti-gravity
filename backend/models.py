@@ -38,7 +38,8 @@ from sqlalchemy import Float, Date
 class ShopeeAffConversion(Base):
     __tablename__ = "shopee_aff_conversions"
     
-    order_id = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    order_id = Column(String, index=True)
     store_id = Column(String, index=True)
     order_time = Column(DateTime)
     order_status = Column(String)
