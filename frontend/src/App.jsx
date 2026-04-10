@@ -14,6 +14,7 @@ import ConversionCleaner from './pages/ConversionCleaner';
 import OrderMatchChecker from './pages/OrderMatchChecker';
 import WarehouseOrder from './pages/WarehouseOrder';
 import SocmedScraping from './pages/SocmedScraping';
+import AffiliateAnalyzer from './pages/AffiliateAnalyzer';
 
 // Protected route wrapper
 function ProtectedApp() {
@@ -52,6 +53,7 @@ function ProtectedApp() {
         <Route path="order-match" element={<OrderMatchChecker />} />
         <Route path="warehouse-order" element={<WarehouseOrder />} />
         <Route path="socmed-scraping" element={<SocmedScraping />} />
+        <Route path="affiliate-analyzer" element={<AffiliateAnalyzer />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
