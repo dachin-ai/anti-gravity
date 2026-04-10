@@ -143,7 +143,8 @@ def log_activity(username: str, tool_name: str, ip_address: str = ""):
         db = SessionLocal()
         
         jakarta_tz = datetime.timezone(datetime.timedelta(hours=7))
-        now_dt = datetime.datetime.now(jakarta_tz)
+        # Get raw Jakarta time, then strip timezone details and microseconds so PostgreSQL stores the literal numbers safely.
+        now_dt = datetime.datetime.now(jakarta_tz).replace(tzinfo=None, microsecond=0)
         
         new_log = ActivityLog(
             time=now_dt,
