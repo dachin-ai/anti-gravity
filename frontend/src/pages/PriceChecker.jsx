@@ -82,13 +82,6 @@ const PriceChecker = () => {
             message.error(error.response?.data?.detail || 'Failed to sync Google Sheets to Database');
         } finally { setLoadingDb(false); }
     };
-        try {
-            const res = await api.get('/price-checker/refresh');
-            message.success(`Connected! ${res.data.records} SKU pricing records loaded.`);
-        } catch {
-            message.error('Failed to connect to Google Sheets');
-        } finally { setLoadingDb(false); }
-    };
 
     const downloadTemplate = async (tplMethod) => {
         try {
