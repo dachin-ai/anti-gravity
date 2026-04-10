@@ -7,8 +7,12 @@ import {
   InboxOutlined, CheckCircleFilled, MinusCircleFilled,
   ShopOutlined, UploadOutlined, ReloadOutlined,
   DownloadOutlined, BarChartOutlined, FileTextOutlined,
-  RiseOutlined, FallOutlined, MinusOutlined
+  RiseOutlined, FallOutlined, MinusOutlined,
+  DeleteOutlined, ExclamationCircleFilled,
+  CloudUploadOutlined, AppstoreOutlined, LineChartOutlined,
+  SwapOutlined
 } from '@ant-design/icons';
+import { Modal } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
@@ -92,11 +96,11 @@ const ShopeeAffiliate = () => {
 
       <Card style={S.card} bodyStyle={{ padding: 0 }}>
         <Tabs size="large" style={{ padding: '0 8px' }} items={[
-          { key: 'upload',      label: '① Upload Data',         children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
-          { key: 'checker',     label: '② Checker Matrix',      children: <CheckerTab   stores={stores} /> },
-          { key: 'analytics',   label: '③ Analytics',           children: <AnalyticsTab stores={stores} /> },
-          { key: 'report',      label: <span><FileTextOutlined /> ④ Full Report</span>,    children: <ReportTab    stores={stores} /> },
-          { key: 'comparison',  label: <span><BarChartOutlined /> ⑤ Period Comparison</span>, children: <ComparisonTab stores={stores} /> },
+          { key: 'upload',      label: <span><CloudUploadOutlined /> Upload Data</span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
+          { key: 'checker',     label: <span><AppstoreOutlined /> Checker Matrix</span>,       children: <CheckerTab   stores={stores} /> },
+          { key: 'analytics',   label: <span><LineChartOutlined /> Analytics</span>,            children: <AnalyticsTab stores={stores} /> },
+          { key: 'report',      label: <span><FileTextOutlined /> Full Report</span>,           children: <ReportTab    stores={stores} /> },
+          { key: 'comparison',  label: <span><SwapOutlined /> Period Comparison</span>,         children: <ComparisonTab stores={stores} /> },
         ]} />
       </Card>
     </div>
@@ -244,9 +248,33 @@ const CheckerTab = ({ stores }) => {
   const activeStoreCodes = [...new Set(matrixData.flatMap(r => Object.keys(r.stores || {})))].sort();
   const getStoreName = code => { const s = stores.find(x => x.code === code); return s ? s.name.split(' - ').slice(-1)[0] : code; };
 
+  const handleDelete = (date) => {
+    Modal.confirm({
+      title: 'Delete Data',
+      icon: <ExclamationCircleFilled />,
+      content: `All Product, Creator, and Conversion data for ${dayjs(date).format('DD MMM YYYY')} will be permanently deleted. Continue?`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          const res = await axios.delete(`${API}/data`, { params: { date } });
+          message.success(res.data.message);
+          fetchMatrix();
+        } catch (e) {
+          message.error(e.response?.data?.detail || 'Failed to delete data.');
+        }
+      }
+    });
+  };
+
   const Tick = ({ val }) => val
     ? <CheckCircleFilled  style={{ color: '#22c55e', fontSize: 15 }} />
     : <MinusCircleFilled  style={{ color: '#1e3a5f', fontSize: 13 }} />;
+
+  const hasAnyData = (row) => {
+    return Object.values(row.stores || {}).some(s => s.product || s.creator || s.conversion);
+  };
 
   const columns = [
     {
@@ -262,7 +290,17 @@ const CheckerTab = ({ stores }) => {
         { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Crtr</span>, align: 'center', width: 52, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} /> },
         { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conv</span>, align: 'center', width: 52, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} /> },
       ]
-    }))
+    })),
+    {
+      title: '', fixed: 'right', width: 50, align: 'center',
+      onHeaderCell: getHeaderCell,
+      render: (_, row) => hasAnyData(row) ? (
+        <Button type="text" danger size="small" icon={<DeleteOutlined />}
+          onClick={() => handleDelete(row.date)}
+          style={{ opacity: 0.6 }}
+        />
+      ) : null
+    }
   ];
 
   return (
@@ -276,7 +314,8 @@ const CheckerTab = ({ stores }) => {
       </div>
       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
         <CheckCircleFilled style={{ color: '#22c55e' }} /> = Data available &nbsp;&nbsp;
-        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data
+        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data &nbsp;&nbsp;
+        <DeleteOutlined style={{ color: '#ef4444' }} /> = Click to delete all data for that date
       </div>
       <Table columns={columns} dataSource={matrixData} rowKey="date" loading={loading}
         bordered size="small" pagination={false} scroll={tblScroll} style={{ background: 'transparent' }}
@@ -343,7 +382,7 @@ const AnalyticsTab = ({ stores }) => {
         <Col span={12}>
           <Card title={<span style={{ color: '#e2e8f0' }}>🏆 Top 15 Products (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
             {loading ? <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
-              : data.topProducts.length ? data.topProducts.map((p, i) => <BarRow key={i} label={p.name} gmv={p.gmv} max={maxProd} />)
+              : data.topProducts.length ? data.topProducts.map((p, i) => <BarRow key={i} label={p.name} sub={`PID: ${p.product_id}`} gmv={p.gmv} max={maxProd} />)
               : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>No product data</div>}
           </Card>
         </Col>
@@ -441,7 +480,10 @@ const ReportTab = ({ stores }) => {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
       { title: 'Store ID', dataIndex: 'store_id', width: 150, onHeaderCell: getHeaderCell, render: v => <Tag color="blue">{v}</Tag> },
-      numCol('GMV (Rp)', 'gmv', 'Rp '),
+      numCol('GMV Completed', 'gmv_completed', 'Rp '),
+      numCol('GMV Pending', 'gmv_pending', 'Rp '),
+      numCol('GMV Potential', 'gmv_potential', 'Rp '),
+      numCol('GMV Canceled', 'gmv_canceled', 'Rp '),
       numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
       numCol('Units Sold', 'units'),
@@ -455,7 +497,10 @@ const ReportTab = ({ stores }) => {
         render: v => <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>@{v}</span> },
       { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#e2e8f0' }}>{v}</span> },
-      numCol('GMV (Rp)', 'gmv', 'Rp '),
+      numCol('GMV Completed', 'gmv_completed', 'Rp '),
+      numCol('GMV Pending', 'gmv_pending', 'Rp '),
+      numCol('GMV Potential', 'gmv_potential', 'Rp '),
+      numCol('GMV Canceled', 'gmv_canceled', 'Rp '),
       numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
       numCol('Units Sold', 'units'),
@@ -466,12 +511,17 @@ const ReportTab = ({ stores }) => {
   } else if (dimension === 'by_product') {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
-      { title: 'Product Name', dataIndex: 'product_name', width: 300, ellipsis: true, onHeaderCell: getHeaderCell,
+      { title: 'PID', dataIndex: 'product_id', width: 120, onHeaderCell: getHeaderCell,
+        render: v => <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+      { title: 'Product Name', dataIndex: 'product_name', width: 280, ellipsis: true, onHeaderCell: getHeaderCell,
         render: v => <Tooltip title={v}><span style={{ color: '#e2e8f0' }}>{v}</span></Tooltip> },
-      numCol('Total GMV (Rp)', 'gmv', 'Rp '),
+      numCol('GMV Completed', 'gmv_completed', 'Rp '),
+      numCol('GMV Pending', 'gmv_pending', 'Rp '),
+      numCol('GMV Potential', 'gmv_potential', 'Rp '),
+      numCol('GMV Canceled', 'gmv_canceled', 'Rp '),
       numCol('Commission (Rp)', 'commission', 'Rp '),
       roiCol(),
-      numCol('Total Orders', 'orders'),
+      numCol('Units Sold', 'units'),
       { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#fbbf24' }}>{v}</span> },
     ];
@@ -483,11 +533,10 @@ const ReportTab = ({ stores }) => {
       { title: 'Username', dataIndex: 'username', width: 180, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#a5b4fc' }}>@{v}</span> },
       { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell },
-      { title: 'GMV (Rp)', dataIndex: 'gmv', align: 'right', width: 150, onHeaderCell: getHeaderCell,
+      { title: 'GMV Potential (Rp)', dataIndex: 'gmv_potential', align: 'right', width: 150, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#22c55e', fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
       { title: 'Commission (Rp)', dataIndex: 'commission', align: 'right', width: 150, onHeaderCell: getHeaderCell,
         render: v => <span style={{ fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
-      { title: 'Orders', dataIndex: 'orders', align: 'right', width: 90, onHeaderCell: getHeaderCell },
     ];
     return (
       <div style={{ padding: '8px 32px', background: 'rgba(10,20,35,0.8)' }}>
@@ -601,22 +650,49 @@ const ComparisonTab = ({ stores }) => {
     );
   };
 
-  const metricCols = (metricKey, label) => [
+  const metricCols = (metricKey, label, prefix = 'Rp ') => [
     {
       title: <span style={{ color: '#93c5fd' }}>{label} A</span>,
       align: 'right', width: 140, onHeaderCell: getHeaderCell,
-      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>Rp {fmtRp(r[`a_${metricKey}`])}</span>
+      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`a_${metricKey}`])}</span>
     },
     {
       title: <span style={{ color: '#fbbf24' }}>{label} B</span>,
       align: 'right', width: 140, onHeaderCell: getHeaderCell,
-      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>Rp {fmtRp(r[`b_${metricKey}`])}</span>
+      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`b_${metricKey}`])}</span>
     },
     {
       title: <span style={{ color: '#a5b4fc' }}>Δ {label}</span>,
       align: 'center', width: 110, onHeaderCell: getHeaderCell,
       sorter: (a, b) => (a[`delta_${metricKey}`] || -999) - (b[`delta_${metricKey}`] || -999),
       render: r => <DeltaBadge val={r[`delta_${metricKey}`]} />
+    }
+  ];
+
+  const roiCompCols = () => [
+    {
+      title: <span style={{ color: '#93c5fd' }}>ROI A</span>,
+      align: 'right', width: 100, onHeaderCell: getHeaderCell,
+      render: r => {
+        const v = r.a_roi || 0;
+        const col = v >= 5 ? '#22c55e' : v >= 2 ? '#faad14' : '#ef4444';
+        return <span style={{ color: col, fontWeight: 700 }}>{v.toFixed(2)}x</span>;
+      }
+    },
+    {
+      title: <span style={{ color: '#fbbf24' }}>ROI B</span>,
+      align: 'right', width: 100, onHeaderCell: getHeaderCell,
+      render: r => {
+        const v = r.b_roi || 0;
+        const col = v >= 5 ? '#22c55e' : v >= 2 ? '#faad14' : '#ef4444';
+        return <span style={{ color: col, fontWeight: 700 }}>{v.toFixed(2)}x</span>;
+      }
+    },
+    {
+      title: <span style={{ color: '#a5b4fc' }}>Δ ROI</span>,
+      align: 'center', width: 110, onHeaderCell: getHeaderCell,
+      sorter: (a, b) => (a.delta_roi || -999) - (b.delta_roi || -999),
+      render: r => <DeltaBadge val={r.delta_roi} />
     }
   ];
 
@@ -631,8 +707,9 @@ const ComparisonTab = ({ stores }) => {
     { ...labelCol, onHeaderCell: getHeaderCell },
     ...metricCols('gmv',        'GMV'),
     ...metricCols('commission', 'Commission'),
-    ...metricCols('units',      'Units'),
-    ...metricCols('clicks',     'Clicks'),
+    ...roiCompCols(),
+    ...metricCols('units',      'Units', ''),
+    ...metricCols('clicks',     'Clicks', ''),
   ];
 
   const rows = data?.rows || [];

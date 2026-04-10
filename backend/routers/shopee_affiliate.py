@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, String
+from sqlalchemy import func, cast, String, case
 from database import get_db
 from typing import Optional
 import io
@@ -92,12 +92,32 @@ def get_checker_matrix(month: str, year: str, db: Session = Depends(get_db)):
     output = [{"date": d, "stores": matrix[d]} for d in sorted(matrix.keys())]
     return {"matrix": output}
 
+@router.delete("/data")
+def delete_shopee_data(date: str, store_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """Delete all Shopee Affiliate data for a specific date and store."""
+    q_conv = db.query(ShopeeAffConversion).filter(func.date(ShopeeAffConversion.order_time) == date)
+    q_prod = db.query(ShopeeAffProduct).filter(ShopeeAffProduct.date == date)
+    q_crtr = db.query(ShopeeAffCreator).filter(ShopeeAffCreator.date == date)
+
+    if store_id and store_id != 'ALL':
+        q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+        q_prod = q_prod.filter(ShopeeAffProduct.store_id == store_id)
+        q_crtr = q_crtr.filter(ShopeeAffCreator.store_id == store_id)
+
+    del_conv = q_conv.delete(synchronize_session=False)
+    del_prod = q_prod.delete(synchronize_session=False)
+    del_crtr = q_crtr.delete(synchronize_session=False)
+    db.commit()
+
+    return {"succeed": True, "message": f"Deleted {del_conv} conversions, {del_prod} products, {del_crtr} creators."}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ANALYTICS (quick top-list)
 # ─────────────────────────────────────────────────────────────────────────────
 @router.get("/analytics")
 def get_analytics(start_date: str, end_date: str, store_id: Optional[str] = None, db: Session = Depends(get_db)):
     base_prod = db.query(
+        ShopeeAffProduct.product_id,
         ShopeeAffProduct.product_name,
         func.sum(ShopeeAffProduct.gmv).label('total_gmv')
     ).filter(ShopeeAffProduct.date >= start_date, ShopeeAffProduct.date <= end_date)
@@ -112,139 +132,133 @@ def get_analytics(start_date: str, end_date: str, store_id: Optional[str] = None
         base_prod    = base_prod.filter(ShopeeAffProduct.store_id == store_id)
         base_creator = base_creator.filter(ShopeeAffCreator.store_id == store_id)
 
-    top_products = base_prod.group_by(ShopeeAffProduct.product_name)\
+    top_products = base_prod.group_by(ShopeeAffProduct.product_id, ShopeeAffProduct.product_name)\
         .order_by(func.sum(ShopeeAffProduct.gmv).desc()).limit(15).all()
     top_creators = base_creator.group_by(ShopeeAffCreator.affiliate_username)\
         .order_by(func.sum(ShopeeAffCreator.gmv).desc()).limit(15).all()
 
     return {
-        "topProducts": [{"name": p[0], "gmv": p[1]} for p in top_products],
-        "topCreators": [{"username": c[0], "name": c[1], "gmv": c[2]} for c in top_creators]
+        "topProducts": [{"product_id": p.product_id, "name": p.product_name, "gmv": p.total_gmv} for p in top_products],
+        "topCreators": [{"username": c.affiliate_username, "name": c.aff_name, "gmv": c.total_gmv} for c in top_creators]
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FULL REPORT — 3 dimensional JSON
 # ─────────────────────────────────────────────────────────────────────────────
+def _gmv_aggs():
+    return [
+        func.sum(case((func.lower(ShopeeAffConversion.order_status) == 'completed', ShopeeAffConversion.purchase_value), else_=0)).label('gmv_completed'),
+        func.sum(case((func.lower(ShopeeAffConversion.order_status) == 'pending', ShopeeAffConversion.purchase_value), else_=0)).label('gmv_pending'),
+        func.sum(case((func.lower(ShopeeAffConversion.order_status) == 'cancelled', ShopeeAffConversion.purchase_value), else_=0)).label('gmv_canceled'),
+    ]
+
 def _build_by_store(db, start_date, end_date, store_id=None):
-    """Aggregate by store: GMV, commission, unit, clicks from creator table."""
-    q = db.query(
-        ShopeeAffCreator.store_id,
-        func.sum(ShopeeAffCreator.gmv).label('gmv'),
-        func.sum(ShopeeAffCreator.commission).label('commission'),
-        func.sum(ShopeeAffCreator.unit_sold).label('units'),
-        func.sum(ShopeeAffCreator.clicks).label('clicks'),
-        func.count(func.distinct(ShopeeAffCreator.affiliate_username)).label('creator_count'),
-    ).filter(ShopeeAffCreator.date >= start_date, ShopeeAffCreator.date <= end_date)
-    if store_id and store_id != 'ALL':
-        q = q.filter(ShopeeAffCreator.store_id == store_id)
-    rows = q.group_by(ShopeeAffCreator.store_id).order_by(func.sum(ShopeeAffCreator.gmv).desc()).all()
+    """Aggregate by store: GMV (from Conversion) and Units/Clicks (from Creator)."""
+    q_conv = db.query(ShopeeAffConversion.store_id, func.sum(ShopeeAffConversion.commission).label('commission'), *_gmv_aggs())\
+        .filter(ShopeeAffConversion.order_time >= start_date, ShopeeAffConversion.order_time <= end_date + " 23:59:59")
+    if store_id and store_id != 'ALL': q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+    conv_rows = q_conv.group_by(ShopeeAffConversion.store_id).all()
+
+    q_crtr = db.query(ShopeeAffCreator.store_id, func.sum(ShopeeAffCreator.unit_sold).label('units'), func.sum(ShopeeAffCreator.clicks).label('clicks'), func.count(func.distinct(ShopeeAffCreator.affiliate_username)).label('creator_count'))\
+        .filter(ShopeeAffCreator.date >= start_date, ShopeeAffCreator.date <= end_date)
+    if store_id and store_id != 'ALL': q_crtr = q_crtr.filter(ShopeeAffCreator.store_id == store_id)
+    crtr_rows = {r.store_id: r for r in q_crtr.group_by(ShopeeAffCreator.store_id).all()}
 
     result = []
-    for r in rows:
-        gmv   = float(r.gmv or 0)
-        comm  = float(r.commission or 0)
+    for r in conv_rows:
+        gmv_c = float(r.gmv_completed or 0)
+        gmv_p = float(r.gmv_pending or 0)
+        comm = float(r.commission or 0)
+        cr = crtr_rows.get(r.store_id)
         result.append({
             "store_id":      r.store_id,
-            "gmv":           gmv,
+            "gmv_completed": gmv_c, "gmv_pending": gmv_p,
+            "gmv_potential": gmv_c + gmv_p,
+            "gmv_canceled":  float(r.gmv_canceled or 0),
             "commission":    comm,
-            "roi":           round(gmv / comm, 2) if comm > 0 else 0,
-            "units":         int(r.units or 0),
-            "clicks":        int(r.clicks or 0),
-            "creator_count": int(r.creator_count or 0),
+            "roi":           round((gmv_c + gmv_p) / comm, 2) if comm > 0 else 0,
+            "units":         int(cr.units or 0) if cr else 0,
+            "clicks":        int(cr.clicks or 0) if cr else 0,
+            "creator_count": int(cr.creator_count or 0) if cr else 0,
         })
-    return result
+    return sorted(result, key=lambda x: x["gmv_potential"], reverse=True)
 
 def _build_by_creator(db, start_date, end_date, store_id=None):
-    """Aggregate creator across stores."""
-    q = db.query(
-        ShopeeAffCreator.affiliate_username,
-        func.max(ShopeeAffCreator.affiliate_name).label('name'),
-        func.sum(ShopeeAffCreator.gmv).label('gmv'),
-        func.sum(ShopeeAffCreator.commission).label('commission'),
-        func.sum(ShopeeAffCreator.unit_sold).label('units'),
-        func.sum(ShopeeAffCreator.clicks).label('clicks'),
-        func.count(func.distinct(ShopeeAffCreator.store_id)).label('store_count'),
-    ).filter(ShopeeAffCreator.date >= start_date, ShopeeAffCreator.date <= end_date)
-    if store_id and store_id != 'ALL':
-        q = q.filter(ShopeeAffCreator.store_id == store_id)
-    rows = q.group_by(ShopeeAffCreator.affiliate_username).order_by(func.sum(ShopeeAffCreator.gmv).desc()).all()
+    """Aggregate by creator: GMV (from Conversion) and Units/Clicks (from Creator)."""
+    q_conv = db.query(ShopeeAffConversion.affiliate_username, func.max(ShopeeAffConversion.affiliate_name).label('name'), func.sum(ShopeeAffConversion.commission).label('commission'), *_gmv_aggs())\
+        .filter(ShopeeAffConversion.order_time >= start_date, ShopeeAffConversion.order_time <= end_date + " 23:59:59")
+    if store_id and store_id != 'ALL': q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+    conv_rows = q_conv.group_by(ShopeeAffConversion.affiliate_username).all()
+
+    q_crtr = db.query(ShopeeAffCreator.affiliate_username, func.sum(ShopeeAffCreator.unit_sold).label('units'), func.sum(ShopeeAffCreator.clicks).label('clicks'), func.count(func.distinct(ShopeeAffCreator.store_id)).label('store_count'))\
+        .filter(ShopeeAffCreator.date >= start_date, ShopeeAffCreator.date <= end_date)
+    if store_id and store_id != 'ALL': q_crtr = q_crtr.filter(ShopeeAffCreator.store_id == store_id)
+    crtr_rows = {r.affiliate_username: r for r in q_crtr.group_by(ShopeeAffCreator.affiliate_username).all()}
 
     result = []
-    for r in rows:
-        gmv  = float(r.gmv or 0)
+    for r in conv_rows:
+        gmv_c = float(r.gmv_completed or 0)
+        gmv_p = float(r.gmv_pending or 0)
         comm = float(r.commission or 0)
+        cr = crtr_rows.get(r.affiliate_username)
         result.append({
-            "username":    r.affiliate_username,
-            "name":        r.name or r.affiliate_username,
-            "gmv":         gmv,
-            "commission":  comm,
-            "roi":         round(gmv / comm, 2) if comm > 0 else 0,
-            "units":       int(r.units or 0),
-            "clicks":      int(r.clicks or 0),
-            "store_count": int(r.store_count or 0),
+            "username":      r.affiliate_username,
+            "name":          r.name or r.affiliate_username,
+            "gmv_completed": gmv_c, "gmv_pending": gmv_p,
+            "gmv_potential": gmv_c + gmv_p,
+            "gmv_canceled":  float(r.gmv_canceled or 0),
+            "commission":    comm,
+            "roi":           round((gmv_c + gmv_p) / comm, 2) if comm > 0 else 0,
+            "units":         int(cr.units or 0) if cr else 0,
+            "clicks":        int(cr.clicks or 0) if cr else 0,
+            "store_count":   int(cr.store_count or 0) if cr else 0,
         })
-    return result
+    return sorted(result, key=lambda x: x["gmv_potential"], reverse=True)
 
 def _build_by_product(db, start_date, end_date, store_id=None):
-    """Aggregate product, then show which creators drove it (from Conversion)."""
-    # Base product aggregation from conversion (has both product + affiliate)
+    """Aggregate product from Conversion, merge units from Product table, show which creators drove it."""
     q_conv = db.query(
-        ShopeeAffConversion.product_id,
-        ShopeeAffConversion.product_name,
-        ShopeeAffConversion.affiliate_username,
-        ShopeeAffConversion.affiliate_name,
-        func.sum(ShopeeAffConversion.purchase_value).label('gmv'),
-        func.sum(ShopeeAffConversion.commission).label('commission'),
-        func.count(ShopeeAffConversion.order_id).label('orders'),
-    ).filter(
-        ShopeeAffConversion.order_time >= start_date,
-        ShopeeAffConversion.order_time <= end_date + " 23:59:59"
-    )
-    if store_id and store_id != 'ALL':
-        q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+        ShopeeAffConversion.product_id, ShopeeAffConversion.product_name, ShopeeAffConversion.affiliate_username, ShopeeAffConversion.affiliate_name,
+        func.sum(ShopeeAffConversion.commission).label('commission'), *_gmv_aggs()
+    ).filter(ShopeeAffConversion.order_time >= start_date, ShopeeAffConversion.order_time <= end_date + " 23:59:59")
+    if store_id and store_id != 'ALL': q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+    conv_rows = q_conv.group_by(ShopeeAffConversion.product_id, ShopeeAffConversion.product_name, ShopeeAffConversion.affiliate_username, ShopeeAffConversion.affiliate_name).all()
 
-    rows = q_conv.group_by(
-        ShopeeAffConversion.product_id,
-        ShopeeAffConversion.product_name,
-        ShopeeAffConversion.affiliate_username,
-        ShopeeAffConversion.affiliate_name
-    ).order_by(func.sum(ShopeeAffConversion.purchase_value).desc()).all()
+    q_prod = db.query(ShopeeAffProduct.product_id, func.sum(ShopeeAffProduct.unit_sold).label('units'))\
+        .filter(ShopeeAffProduct.date >= start_date, ShopeeAffProduct.date <= end_date)
+    if store_id and store_id != 'ALL': q_prod = q_prod.filter(ShopeeAffProduct.store_id == store_id)
+    prod_units = {r.product_id: int(r.units or 0) for r in q_prod.group_by(ShopeeAffProduct.product_id).all()}
 
-    # Merge into product → creators map
     prod_map = {}
-    for r in rows:
+    for r in conv_rows:
         pid = r.product_id
         if pid not in prod_map:
             prod_map[pid] = {
-                "product_id":   pid,
-                "product_name": r.product_name or "(Unknown)",
-                "gmv":          0.0,
-                "commission":   0.0,
-                "orders":       0,
-                "creators":     []
+                "product_id": pid, "product_name": r.product_name or "(Unknown)",
+                "gmv_completed": 0.0, "gmv_pending": 0.0, "gmv_potential": 0.0, "gmv_canceled": 0.0,
+                "commission": 0.0, "units": prod_units.get(pid, 0), "creators": []
             }
-        gmv  = float(r.gmv or 0)
-        comm = float(r.commission or 0)
-        prod_map[pid]["gmv"]        += gmv
-        prod_map[pid]["commission"] += comm
-        prod_map[pid]["orders"]     += int(r.orders or 0)
+        g_c, g_p, g_x = float(r.gmv_completed or 0), float(r.gmv_pending or 0), float(r.gmv_canceled or 0)
+        c = float(r.commission or 0)
+        prod_map[pid]["gmv_completed"] += g_c
+        prod_map[pid]["gmv_pending"]   += g_p
+        prod_map[pid]["gmv_potential"] += (g_c + g_p)
+        prod_map[pid]["gmv_canceled"]  += g_x
+        prod_map[pid]["commission"]    += c
         prod_map[pid]["creators"].append({
-            "username":   r.affiliate_username,
-            "name":       r.affiliate_name or r.affiliate_username,
-            "gmv":        gmv,
-            "commission": comm,
-            "orders":     int(r.orders or 0),
+            "username": r.affiliate_username,
+            "name": r.affiliate_name or r.affiliate_username,
+            "gmv_potential": (g_c + g_p), "commission": c,
         })
 
-    # Sort creators within each product by gmv desc, compute ROI
     result = []
     for pid, p in prod_map.items():
-        p["roi"] = round(p["gmv"] / p["commission"], 2) if p["commission"] > 0 else 0
-        p["creators"] = sorted(p["creators"], key=lambda x: x["gmv"], reverse=True)[:20]
+        p["roi"] = round(p["gmv_potential"] / p["commission"], 2) if p["commission"] > 0 else 0
+        p["creators"] = sorted(p["creators"], key=lambda x: x["gmv_potential"], reverse=True)[:20]
         p["creator_count"] = len(p["creators"])
         result.append(p)
 
-    result.sort(key=lambda x: x["gmv"], reverse=True)
+    result.sort(key=lambda x: x["gmv_potential"], reverse=True)
     return result
 
 @router.get("/report")
@@ -317,53 +331,62 @@ def _build_excel(data, report_type, period_label):
 
     # ── By Store ──────────────────────────────────────────────────────────────
     if report_type == "by_store":
-        headers = ["No", "Store ID", "GMV (Rp)", "Komisi (Rp)", "ROI", "Unit Terjual", "Klik", "Jumlah Creator"]
+        headers = ["No", "Store ID", "GMV Completed", "GMV Pending", "GMV Potential", "GMV Canceled", "Commission (Rp)", "ROI", "Units Sold", "Clicks", "Total Creators"]
         write_header(ws, headers, row=3)
         for i, r in enumerate(data, 1):
             alt = (i % 2 == 0)
             apply_cell(ws, i+3, 1, i,                alt)
             apply_cell(ws, i+3, 2, r["store_id"],    alt)
-            apply_cell(ws, i+3, 3, r["gmv"],         alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 4, r["commission"],  alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 5, r["roi"],         alt).number_format = '0.00'
-            apply_cell(ws, i+3, 6, r["units"],       alt)
-            apply_cell(ws, i+3, 7, r["clicks"],      alt)
-            apply_cell(ws, i+3, 8, r["creator_count"], alt)
-        col_widths = [5, 18, 18, 18, 10, 15, 12, 16]
+            apply_cell(ws, i+3, 3, r["gmv_completed"],alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 4, r["gmv_pending"],  alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 5, r["gmv_potential"],alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 6, r["gmv_canceled"], alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 7, r["commission"],   alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 8, r["roi"],          alt).number_format = '0.00'
+            apply_cell(ws, i+3, 9, r["units"],        alt)
+            apply_cell(ws, i+3, 10, r["clicks"],      alt)
+            apply_cell(ws, i+3, 11, r["creator_count"], alt)
+        col_widths = [5, 18, 18, 18, 18, 18, 18, 10, 15, 12, 16]
 
     # ── By Creator ────────────────────────────────────────────────────────────
     elif report_type == "by_creator":
-        headers = ["No", "Username", "Nama Creator", "GMV (Rp)", "Komisi (Rp)", "ROI", "Unit Terjual", "Klik", "Jumlah Toko"]
+        headers = ["No", "Username", "Creator Name", "GMV Completed", "GMV Pending", "GMV Potential", "GMV Canceled", "Commission (Rp)", "ROI", "Units Sold", "Clicks", "Total Stores"]
         write_header(ws, headers, row=3)
         for i, r in enumerate(data, 1):
             alt = (i % 2 == 0)
             apply_cell(ws, i+3, 1, i,               alt)
             apply_cell(ws, i+3, 2, r["username"],   alt)
             apply_cell(ws, i+3, 3, r["name"],       alt)
-            apply_cell(ws, i+3, 4, r["gmv"],        alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 5, r["commission"], alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 6, r["roi"],        alt).number_format = '0.00'
-            apply_cell(ws, i+3, 7, r["units"],      alt)
-            apply_cell(ws, i+3, 8, r["clicks"],     alt)
-            apply_cell(ws, i+3, 9, r["store_count"],alt)
-        col_widths = [5, 24, 28, 18, 18, 10, 14, 12, 13]
+            apply_cell(ws, i+3, 4, r["gmv_completed"],alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 5, r["gmv_pending"],  alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 6, r["gmv_potential"],alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 7, r["gmv_canceled"], alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 8, r["commission"], alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 9, r["roi"],        alt).number_format = '0.00'
+            apply_cell(ws, i+3, 10, r["units"],      alt)
+            apply_cell(ws, i+3, 11, r["clicks"],     alt)
+            apply_cell(ws, i+3, 12, r["store_count"],alt)
+        col_widths = [5, 24, 28, 18, 18, 18, 18, 18, 10, 14, 12, 13]
 
     # ── By Product ────────────────────────────────────────────────────────────
     elif report_type == "by_product":
         # Sheet 1: product summary
-        headers = ["No", "Product ID", "Nama Produk", "Total GMV (Rp)", "Komisi (Rp)", "ROI", "Total Order", "Jumlah Creator"]
+        headers = ["No", "Product ID", "Product Name", "GMV Completed", "GMV Pending", "GMV Potential", "GMV Canceled", "Commission (Rp)", "ROI", "Units Sold", "Total Creators"]
         write_header(ws, headers, row=3)
         for i, r in enumerate(data, 1):
             alt = (i % 2 == 0)
             apply_cell(ws, i+3, 1, i,                  alt)
             apply_cell(ws, i+3, 2, r["product_id"],    alt)
             apply_cell(ws, i+3, 3, r["product_name"],  alt)
-            apply_cell(ws, i+3, 4, r["gmv"],           alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 5, r["commission"],    alt).number_format = '#,##0'
-            apply_cell(ws, i+3, 6, r["roi"],           alt).number_format = '0.00'
-            apply_cell(ws, i+3, 7, r["orders"],        alt)
-            apply_cell(ws, i+3, 8, r["creator_count"], alt)
-        col_widths = [5, 18, 50, 18, 18, 10, 14, 16]
+            apply_cell(ws, i+3, 4, r["gmv_completed"], alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 5, r["gmv_pending"],   alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 6, r["gmv_potential"], alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 7, r["gmv_canceled"],  alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 8, r["commission"],    alt).number_format = '#,##0'
+            apply_cell(ws, i+3, 9, r["roi"],           alt).number_format = '0.00'
+            apply_cell(ws, i+3, 10, r["units"],        alt)
+            apply_cell(ws, i+3, 11, r["creator_count"], alt)
+        col_widths = [5, 18, 50, 18, 18, 18, 18, 18, 10, 14, 16]
 
         # Sheet 2: product × creator breakdown
         ws2 = wb.create_sheet("Creator per Produk")
@@ -372,24 +395,23 @@ def _build_excel(data, report_type, period_label):
         ws2["A1"].font  = Font(bold=True, size=13, color="1A3A5C")
         ws2["A1"].alignment = Alignment(horizontal="center")
         ws2.row_dimensions[1].height = 28
-        det_headers = ["Nama Produk", "Username Creator", "Nama Creator", "GMV (Rp)", "Komisi (Rp)", "ROI", "Order"]
+        det_headers = ["Product Name", "Username Creator", "Creator Name", "GMV Potential (Rp)", "Commission (Rp)", "ROI"]
         write_header(ws2, det_headers, row=3)
         row_idx = 4
         alt = False
         for p in data:
             for c in p["creators"]:
                 comm = c["commission"]
-                roi  = round(c["gmv"] / comm, 2) if comm > 0 else 0
+                roi  = round(c["gmv_potential"] / comm, 2) if comm > 0 else 0
                 apply_cell(ws2, row_idx, 1, p["product_name"], alt)
                 apply_cell(ws2, row_idx, 2, c["username"],     alt)
                 apply_cell(ws2, row_idx, 3, c["name"],         alt)
-                apply_cell(ws2, row_idx, 4, c["gmv"],          alt).number_format = '#,##0'
+                apply_cell(ws2, row_idx, 4, c["gmv_potential"],alt).number_format = '#,##0'
                 apply_cell(ws2, row_idx, 5, c["commission"],   alt).number_format = '#,##0'
                 apply_cell(ws2, row_idx, 6, roi,               alt).number_format = '0.00'
-                apply_cell(ws2, row_idx, 7, c["orders"],       alt)
                 row_idx += 1
                 alt = not alt
-        for ci, w in enumerate([50, 24, 28, 16, 16, 10, 10], 1):
+        for ci, w in enumerate([50, 24, 28, 16, 16, 10], 1):
             ws2.column_dimensions[get_column_letter(ci)].width = w
 
     # Apply column widths to main sheet
@@ -474,22 +496,33 @@ def get_comparison(
         r = a_data.get(key) or b_data.get(key)
         if dimension == "by_store":   return r["store_id"]
         if dimension == "by_creator": return f"{r.get('name', '')} (@{r['username']})"
-        if dimension == "by_product": return r.get("product_name", key)
+        if dimension == "by_product": return f"{r.get('product_name', key)} (PID: {key})"
         return key
 
     rows = []
     for key in all_keys:
         a = a_data.get(key, {})
         b = b_data.get(key, {})
+
+        a_gmv = a.get("gmv_potential", 0)
+        b_gmv = b.get("gmv_potential", 0)
+        a_comm = a.get("commission", 0)
+        b_comm = b.get("commission", 0)
+        a_roi = round(a_gmv / a_comm, 2) if a_comm > 0 else 0
+        b_roi = round(b_gmv / b_comm, 2) if b_comm > 0 else 0
+
         row = {
             "key":          key,
             "label":        label_for(key, a_data, b_data, dimension),
-            "a_gmv":        a.get("gmv", 0),
-            "b_gmv":        b.get("gmv", 0),
-            "delta_gmv":    delta(a.get("gmv", 0), b.get("gmv", 0)),
-            "a_commission": a.get("commission", 0),
-            "b_commission": b.get("commission", 0),
-            "delta_commission": delta(a.get("commission", 0), b.get("commission", 0)),
+            "a_gmv":        a_gmv,
+            "b_gmv":        b_gmv,
+            "delta_gmv":    delta(a_gmv, b_gmv),
+            "a_commission": a_comm,
+            "b_commission": b_comm,
+            "delta_commission": delta(a_comm, b_comm),
+            "a_roi":        a_roi,
+            "b_roi":        b_roi,
+            "delta_roi":    delta(a_roi, b_roi),
             "a_units":      a.get("units", 0),
             "b_units":      b.get("units", 0),
             "delta_units":  delta(a.get("units", 0), b.get("units", 0)),
