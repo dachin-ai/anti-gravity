@@ -15,6 +15,7 @@ import OrderMatchChecker from './pages/OrderMatchChecker';
 import WarehouseOrder from './pages/WarehouseOrder';
 import SocmedScraping from './pages/SocmedScraping';
 import AffiliateAnalyzer from './pages/AffiliateAnalyzer';
+import ShopeeAffiliate from './pages/ShopeeAffiliate';
 
 // Protected route wrapper
 function ProtectedApp() {
@@ -54,6 +55,7 @@ function ProtectedApp() {
         <Route path="warehouse-order" element={<WarehouseOrder />} />
         <Route path="socmed-scraping" element={<SocmedScraping />} />
         <Route path="affiliate-analyzer" element={<AffiliateAnalyzer />} />
+        <Route path="shopee-affiliate" element={<ShopeeAffiliate />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

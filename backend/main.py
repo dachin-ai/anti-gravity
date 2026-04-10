@@ -24,6 +24,10 @@ app.include_router(auth.router)
 app.include_router(warehouse_order.router)
 app.include_router(socmed.router)
 app.include_router(affiliate.router)
+
+from routers import shopee_affiliate
+app.include_router(shopee_affiliate.router, prefix="/api/shopee-affiliate", tags=["shopee-affiliate"])
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to FastAPI Backend!"}

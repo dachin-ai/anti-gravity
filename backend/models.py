@@ -30,3 +30,51 @@ class FreemirName(Base):
     sku = Column(String, primary_key=True, index=True)
     product_name = Column(String)
     link = Column(String)
+
+# --- Shopee Affiliate Analytics Models ---
+
+from sqlalchemy import Float, Date
+
+class ShopeeAffConversion(Base):
+    __tablename__ = "shopee_aff_conversions"
+    
+    order_id = Column(String, primary_key=True, index=True)
+    store_id = Column(String, index=True)
+    order_time = Column(DateTime)
+    order_status = Column(String)
+    product_id = Column(String, index=True)
+    variation_id = Column(String)
+    product_name = Column(String)
+    affiliate_username = Column(String, index=True)
+    affiliate_name = Column(String)
+    purchase_value = Column(Float)
+    commission = Column(Float)
+    channel = Column(String)
+
+class ShopeeAffProduct(Base):
+    __tablename__ = "shopee_aff_products"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(Date, index=True)
+    store_id = Column(String, index=True)
+    product_id = Column(String, index=True)
+    product_name = Column(String)
+    gmv = Column(Float)
+    unit_sold = Column(Integer)
+    commission = Column(Float)
+    roi = Column(Float)
+
+class ShopeeAffCreator(Base):
+    __tablename__ = "shopee_aff_creators"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(Date, index=True)
+    store_id = Column(String, index=True)
+    affiliate_username = Column(String, index=True)
+    affiliate_name = Column(String)
+    gmv = Column(Float)
+    unit_sold = Column(Integer)
+    clicks = Column(Integer)
+    commission = Column(Float)
+    roi = Column(Float)
+

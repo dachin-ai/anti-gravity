@@ -26,6 +26,7 @@ const MainLayout = () => {
     { key: '/warehouse-order', icon: <TagOutlined />, label: 'Warehouse Order Estimator' },
     { key: '/socmed-scraping', icon: <TagOutlined />, label: 'Socmed Scraper' },
     { key: '/affiliate-analyzer', icon: <TagOutlined />, label: 'Affiliate Analyzer' },
+    { key: '/shopee-affiliate', icon: <TagOutlined />, label: 'Shopee Affiliate Hub' },
   ];
 
   return (
