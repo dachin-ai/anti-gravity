@@ -106,13 +106,24 @@ def clean_money_field(val: Any) -> float:
     
 def extract_date_from_filename(filename: str) -> Optional[str]:
     """
-    Extracts date string 'YYYY-MM-DD' from filename pattern '_YYYYMMDD'.
-    e.g. '_20260410' -> '2026-04-10'
+    Extracts date string 'YYYY-MM-DD' from filename.
+    Supports multiple patterns:
+    - _YYYYMMDD  (e.g. _20260401)
+    - _YYYYMMDDHHMMSS (e.g. _202604011459)
+    - YYYYMMDD anywhere (e.g. 202604101458-OS1April2026)
     """
-    match = re.search(r'_(\d{4})(\d{2})(\d{2})', filename)
+    # Try '_YYYYMMDD' prefix first (most specific)
+    match = re.search(r'_(\d{4})(\d{2})(\d{2})(?:\d{4})?', filename)
     if match:
         year, month, day = match.groups()
         return f"{year}-{month}-{day}"
+    # Try loose YYYYMMDD anywhere in filename
+    match = re.search(r'(\d{4})(\d{2})(\d{2})', filename)
+    if match:
+        year, month, day = match.groups()
+        # Basic sanity check
+        if 2020 <= int(year) <= 2035 and 1 <= int(month) <= 12 and 1 <= int(day) <= 31:
+            return f"{year}-{month}-{day}"
     return None
 
 def process_and_save_upload(db: Session, file_content: bytes, filename: str, file_type: str, store_id: str, manual_date: str = None) -> Dict[str, Any]:
@@ -131,42 +142,74 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
         records_processed = 0
         
         if file_type == 'conversion':
-            # Conversion file rule: Month/Year from manual_date (e.g. '2026-04')
-            # But the order actual date comes from `Order Time`.
+            # --- Flexible column mapping for Conversion ---
+            # Shopee sometimes changes column names slightly across regions/periods.
+            # We find columns by key identifiers rather than exact match.
+            actual_cols = list(df.columns)
             
-            # Step 1: Ensure columns exist
-            required_cols = ['Order id', 'Order Status', 'Order Time', 'Item id', 'Item Name', 'Affiliate Username', 'Purchase Value(Rp)', 'Refund Amount(Rp)', 'Order Brand Commission to Affiliate(Rp)']
-            
-            if not all(col in df.columns for col in required_cols):
-                return {"succeed": False, "message": f"CSV Conversion tidak cocok. Pastikan ada {required_cols}"}
-            
-            # Optional columns
-            has_aff_name = 'Affiliate Name' in df.columns
-            has_model_id = 'Model id' in df.columns
-            has_channel = 'Channel' in df.columns
-            
+            def find_col(candidates):
+                """Find first matching column from candidates list (case-insensitive partial match)."""
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.lower() == col.lower():
+                            return col
+                # Partial match fallback
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.lower() in col.lower():
+                            return col
+                return None
+
+            col_order_id   = find_col(['Order id', 'Order ID', 'OrderId'])
+            col_status     = find_col(['Order Status', 'OrderStatus'])
+            col_time       = find_col(['Order Time', 'OrderTime'])
+            col_item_id    = find_col(['Item id', 'Item ID', 'ItemId'])
+            col_item_name  = find_col(['Item Name', 'ItemName'])
+            col_model_id   = find_col(['Model id', 'Model ID', 'ModelId', 'Variation'])
+            col_aff_name   = find_col(['Affiliate Name'])
+            col_aff_user   = find_col(['Affiliate Username', 'Affiliate User'])
+            col_pv         = find_col(['Purchase Value(Rp)', 'Purchase Value', 'GMV'])
+            col_refund     = find_col(['Refund Amount(Rp)', 'Refund Amount'])
+            col_commission = find_col(['Order Brand Commission to Affiliate(Rp)', 'Brand Commission to Affiliate', 'Commission to Affiliate'])
+            col_channel    = find_col(['Channel'])
+
+            # Validate critical columns
+            missing = []
+            if not col_order_id:   missing.append('Order id')
+            if not col_status:     missing.append('Order Status')
+            if not col_time:       missing.append('Order Time')
+            if not col_item_id:    missing.append('Item id')
+            if not col_aff_user:   missing.append('Affiliate Username')
+            if not col_pv:         missing.append('Purchase Value(Rp)')
+
+            if missing:
+                found_preview = actual_cols[:10]
+                return {"succeed": False, "message": f"CSV Conversion tidak cocok. Kolom yang tidak ditemukan: {missing}. Kolom yang ada di file: {found_preview}..."}
+
             new_records = []
-            
+
             for index, row in df.iterrows():
-                order_id = str(row['Order id']).strip()
+                order_id = str(row[col_order_id]).strip()
                 if not order_id or order_id == 'nan':
                     continue
-                
-                status = str(row['Order Status']).strip()
-                gmv = clean_money_field(row['Purchase Value(Rp)'])
-                
+
+                status = str(row[col_status]).strip()
+                gmv = clean_money_field(row[col_pv])
+
                 # If Cancelled, use Refund Amount as GMV
-                if status.lower() == 'cancelled':
-                    gmv = clean_money_field(row['Refund Amount(Rp)'])
-                    
-                channel_raw = str(row.get('Channel', '')).strip()
+                if status.lower() in ['cancelled', 'canceled'] and col_refund:
+                    refund_val = clean_money_field(row[col_refund])
+                    if refund_val > 0:
+                        gmv = refund_val
+
+                channel_raw = str(row[col_channel]).strip() if col_channel else ''
                 channel_label = 'Social Media'
                 if 'shopeelive' in channel_raw.lower():
                     channel_label = 'Live'
                 elif 'shopeevideo' in channel_raw.lower():
                     channel_label = 'Video'
-                    
-                order_time = row['Order Time']
+
+                order_time = row[col_time]
                 if pd.isna(order_time) or str(order_time) == 'nan':
                     order_time = None
                 else:
@@ -174,38 +217,31 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                         order_time = pd.to_datetime(order_time)
                     except:
                         order_time = None
-                
-                # Create object
+
                 record = ShopeeAffConversion(
                     order_id=order_id,
                     store_id=store_id,
                     order_time=order_time,
                     order_status=status,
-                    product_id=str(row['Item id']).strip(),
-                    variation_id=str(row['Model id']).strip() if has_model_id else "",
-                    product_name=str(row['Item Name']).strip(),
-                    affiliate_username=str(row['Affiliate Username']).strip(),
-                    affiliate_name=str(row['Affiliate Name']).strip() if has_aff_name else "",
+                    product_id=str(row[col_item_id]).strip() if col_item_id else "",
+                    variation_id=str(row[col_model_id]).strip() if col_model_id else "",
+                    product_name=str(row[col_item_name]).strip() if col_item_name else "",
+                    affiliate_username=str(row[col_aff_user]).strip(),
+                    affiliate_name=str(row[col_aff_name]).strip() if col_aff_name else "",
                     purchase_value=gmv,
-                    commission=clean_money_field(row['Order Brand Commission to Affiliate(Rp)']),
+                    commission=clean_money_field(row[col_commission]) if col_commission else 0.0,
                     channel=channel_label
                 )
                 new_records.append(record)
-            
-            # Since conversion is ONE file per month, maybe we delete existing records for that month/store first to prevent duplicates?
-            # Or we just upsert. But simpler is just bulk insert for now and handle collisions or clear based on user flow.
-            # We'll clear the current store's conversion data for the uploaded month to allow re-uploading without duplication.
-            # But the user selects a "month" like '2026-04'. We can extract year/month from `manual_date` and drop those matches.
-            
+
             if manual_date and len(manual_date.split('-')) >= 2:
                 year, month = manual_date.split('-')[:2]
                 from sqlalchemy import cast, String
-                # Delete existing records for the same store and month
                 db.query(ShopeeAffConversion).filter(
                     ShopeeAffConversion.store_id == store_id,
                     cast(ShopeeAffConversion.order_time, String).like(f"{year}-{month}%")
                 ).delete(synchronize_session=False)
-            
+
             db.bulk_save_objects(new_records)
             db.commit()
             records_processed = len(new_records)
