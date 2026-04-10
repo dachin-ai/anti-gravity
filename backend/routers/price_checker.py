@@ -9,7 +9,8 @@ from services.price_checker_logic import (
     generate_breakdown_table,
     PRICE_TYPES,
     generate_template_file,
-    convert_df_to_excel_multisheet
+    convert_df_to_excel_multisheet,
+    sync_google_sheets_to_neon
 )
 from pydantic import BaseModel
 
@@ -26,8 +27,25 @@ def get_db():
         refresh_db()
     return db_cache["price_db"], db_cache["name_map"], db_cache["link_map"]
 
+@router.post("/sync-neon")
+def sync_neon():
+    try:
+        count = sync_google_sheets_to_neon()
+        global db_cache
+        db_cache["price_db"] = None
+        db_cache["name_map"] = None
+        db_cache["link_map"] = None
+        return {"message": f"Successfully synced {count} rows from Google Sheets to Neon Database."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
+
 @router.get("/refresh")
 def refresh_db():
+    global db_cache
+    db_cache["price_db"] = None
+    db_cache["name_map"] = None
+    db_cache["link_map"] = None
+    
     p, n, l = load_product_database()
     if not p:
          raise HTTPException(status_code=500, detail="Failed to connect to spreadsheet")

@@ -61,9 +61,27 @@ const PriceChecker = () => {
     const [fileList, setFileList] = useState([]);
     const [batchOverview, setBatchOverview] = useState(null);
 
-    /* ─── API ─── */
     const fetchReferenceData = async () => {
         setLoadingDb(true);
+        try {
+            const res = await api.get('/price-checker/refresh');
+            message.success(`Database loaded! ${res.data.records} SKU pricing records available.`);
+        } catch {
+            message.error('Failed to connect to database');
+        } finally { setLoadingDb(false); }
+    };
+
+    const syncNeonData = async () => {
+        setLoadingDb(true);
+        try {
+            const res = await api.post('/price-checker/sync-neon');
+            message.success(res.data.message);
+            fetchReferenceData(); // refresh the loaded cache
+            logActivity('Price Checker (Sync DB)');
+        } catch (error) {
+            message.error(error.response?.data?.detail || 'Failed to sync Google Sheets to Database');
+        } finally { setLoadingDb(false); }
+    };
         try {
             const res = await api.get('/price-checker/refresh');
             message.success(`Connected! ${res.data.records} SKU pricing records loaded.`);
@@ -177,18 +195,30 @@ const PriceChecker = () => {
                         Supports Listing Method, SKU Method, and Direct Input
                     </Text>
                 </div>
-                <Button
-                    icon={<DatabaseOutlined />}
-                    onClick={fetchReferenceData}
-                    loading={loadingDb}
-                    style={{
-                        height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
-                        background: 'var(--indigo)', color: '#fff', border: 'none',
-                        boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
-                    }}
-                >
-                    Refresh Data Sheet
-                </Button>
+                <div style={{ display: 'flex', gap: 12 }}>
+                    <Button
+                        icon={<DatabaseOutlined />}
+                        onClick={fetchReferenceData}
+                        loading={loadingDb}
+                        style={{
+                            height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
+                        }}
+                    >
+                        Load Database
+                    </Button>
+                    <Button
+                        icon={<DatabaseOutlined />}
+                        onClick={syncNeonData}
+                        loading={loadingDb}
+                        style={{
+                            height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
+                            background: 'var(--indigo)', color: '#fff', border: 'none',
+                            boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
+                        }}
+                    >
+                        🔄 Sync Prices 🔄
+                    </Button>
+                </div>
             </div>
 
             {/* TABS */}

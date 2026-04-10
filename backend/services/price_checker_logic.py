@@ -5,6 +5,8 @@ import re
 import os
 import gspread
 from typing import Tuple, Dict, Any, List
+from database import SessionLocal
+from models import FreemirPrice, FreemirName
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GoIpse2K5piWfw5J1urkoZj6KWY3zBo8UX0TAmvUZ1M"
 
@@ -33,47 +35,110 @@ _cached_link_map = None
 _cached_client = None
 
 def load_product_database() -> Tuple[Dict, Dict, Dict]:
-    global _cached_price_db, _cached_name_map, _cached_link_map, _cached_client
+    global _cached_price_db, _cached_name_map, _cached_link_map
     if _cached_price_db is not None:
         return _cached_price_db, _cached_name_map, _cached_link_map
         
+    db = SessionLocal()
     try:
-        if _cached_client is None:
-            _cached_client = gspread.service_account(filename=CREDENTIALS_FILE)
-        sh = _cached_client.open_by_url(SPREADSHEET_URL)
+        prices = db.query(FreemirPrice).all()
+        names = db.query(FreemirName).all()
         
-        # Read Price sheet
-        price_worksheet = sh.worksheet("Price")
-        price_data = price_worksheet.get_all_values()
-        if not price_data:
-            return {}, {}, {}
+        price_db = {}
+        for p in prices:
+            item = {"Category": p.category, "Clearance": p.clearance}
+            if p.prices:
+                item.update(p.prices)
+            price_db[p.sku] = item
             
-        df_price = pd.DataFrame(price_data[1:], columns=price_data[0])
-        df_price.iloc[:, 0] = df_price.iloc[:, 0].astype(str).str.strip()
-        price_db = df_price.set_index(df_price.columns[0]).to_dict('index')
-
-        # Read All_Name sheet
-        try:
-            name_worksheet = sh.worksheet("All_Name")
-            name_data = name_worksheet.get_all_values()
-            df_names = pd.DataFrame(name_data[1:], columns=name_data[0])
-            df_names.iloc[:, 0] = df_names.iloc[:, 0].astype(str).str.strip()
-            name_map = df_names.set_index(df_names.columns[0])[df_names.columns[1]].to_dict()
-            if df_names.shape[1] > 2:
-                link_map = df_names.set_index(df_names.columns[0])[df_names.columns[2]].to_dict()
-            else:
-                link_map = {}
-        except Exception:
-            name_map = {}
-            link_map = {}
-
+        name_map = {}
+        link_map = {}
+        for n in names:
+            name_map[n.sku] = n.product_name
+            link_map[n.sku] = n.link
+            
         _cached_price_db = price_db
         _cached_name_map = name_map
         _cached_link_map = link_map
         return price_db, name_map, link_map
     except Exception as e:
-        print(f"Error fetching gspread: {e}")
+        print(f"Error fetching from DB: {e}")
         return {}, {}, {}
+    finally:
+        db.close()
+
+def sync_google_sheets_to_neon() -> int:
+    try:
+        client = gspread.service_account(filename=CREDENTIALS_FILE)
+        sh = client.open_by_url(SPREADSHEET_URL)
+        
+        # Read Price sheet
+        price_worksheet = sh.worksheet("Price")
+        price_data = price_worksheet.get_all_values()
+        
+        db = SessionLocal()
+        
+        count = 0
+        if price_data:
+            cols = price_data[0]
+            df_price = pd.DataFrame(price_data[1:], columns=cols)
+            df_price = df_price[df_price.iloc[:, 0].astype(str).str.strip() != ""]
+            
+            sku_col = cols[0]
+            cat_col = "Category" if "Category" in cols else None
+            clear_col = "Clearance" if "Clearance" in cols else None
+            
+            db.query(FreemirPrice).delete()
+            db.commit()
+            
+            for _, row in df_price.iterrows():
+                sku_val = str(row[sku_col]).strip()
+                cat_val = str(row[cat_col]) if cat_col and cat_col in row else ""
+                clear_val = str(row[clear_col]) if clear_col and clear_col in row else ""
+                
+                prices_dict = {}
+                for pt in PRICE_TYPES:
+                    if pt in row:
+                        prices_dict[pt] = str(row[pt])
+                
+                db.add(FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict))
+                count += 1
+            db.commit()
+
+        # Read All_Name sheet
+        try:
+            name_worksheet = sh.worksheet("All_Name")
+            name_data = name_worksheet.get_all_values()
+            if name_data:
+                df_names = pd.DataFrame(name_data[1:], columns=name_data[0])
+                df_names = df_names[df_names.iloc[:, 0].astype(str).str.strip() != ""]
+                sku_c = df_names.columns[0]
+                name_c = df_names.columns[1] if len(df_names.columns) > 1 else None
+                link_c = df_names.columns[2] if len(df_names.columns) > 2 else None
+                
+                db.query(FreemirName).delete()
+                db.commit()
+                
+                for _, row in df_names.iterrows():
+                    sku_val = str(row[sku_c]).strip()
+                    n_val = str(row[name_c]) if name_c else ""
+                    l_val = str(row[link_c]) if link_c else ""
+                    db.add(FreemirName(sku=sku_val, product_name=n_val, link=l_val))
+                db.commit()
+        except Exception:
+            pass
+            
+        db.close()
+        
+        # Invalidate cache
+        global _cached_price_db
+        _cached_price_db = None
+        
+        return count
+    except Exception as e:
+        print(f"Error syncing gspread to neon: {e}")
+        import traceback; traceback.print_exc()
+        raise e
 
 def clean_sku_list(sku_string: str) -> List[str]:
     if pd.isna(sku_string) or not sku_string: return []
