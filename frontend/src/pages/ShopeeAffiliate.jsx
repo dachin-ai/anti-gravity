@@ -108,11 +108,13 @@ const ShopeeAffiliate = () => {
 const UploadTab = ({ stores, storesLoading }) => {
   const [uploadType,    setUploadType]    = useState('conversion');
   const [selectedStore, setSelectedStore] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(dayjs());
+  const [selectedMonth, setSelectedMonth] = useState(dayjs());     // for conversion
+  const [manualDate,    setManualDate]    = useState(null);         // for product/creator (optional)
   const [uploading,     setUploading]     = useState(false);
   const [fileList,      setFileList]      = useState([]);
 
   const isConversion = uploadType === 'conversion';
+  const needsManual  = !isConversion;  // product or creator
 
   const handleUpload = async () => {
     if (!selectedStore)                          return message.warning('Pilih toko terlebih dahulu.');
@@ -126,7 +128,9 @@ const UploadTab = ({ stores, storesLoading }) => {
       fd.append('file',       fo.originFileObj);
       fd.append('file_type',  uploadType);
       fd.append('store_id',   selectedStore);
-      if (isConversion) fd.append('manual_date', selectedMonth.format('YYYY-MM'));
+      if (isConversion)                      fd.append('manual_date', selectedMonth.format('YYYY-MM'));
+      if (needsManual && manualDate)         fd.append('manual_date', manualDate.format('YYYY-MM-DD'));
+      // If neither → backend will auto-detect from filename
       try {
         const res = await axios.post(`${API}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         res.data.succeed ? ok++ : (fail++, message.error(`${fo.name}: ${res.data.message}`));
@@ -172,9 +176,29 @@ const UploadTab = ({ stores, storesLoading }) => {
             </div>
           </div>
         )}
-        {!isConversion && (
-          <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12 }}>
-            💡 Tanggal terdeteksi <strong>otomatis</strong> dari nama file (cth: <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code>). Batch upload diperbolehkan.
+        {needsManual && (
+          <div>
+            <div style={S.label}>
+              Tanggal Manual <span style={{ color: '#475569', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opsional — isi jika nama file sudah diubah)</span>
+            </div>
+            <DatePicker
+              style={{ width: '100%', marginTop: 6 }}
+              value={manualDate}
+              onChange={setManualDate}
+              placeholder="Biarkan kosong untuk deteksi otomatis dari nama file"
+              allowClear
+            />
+            {manualDate
+              ? (
+                <div style={{ ...S.warnBox, marginTop: 8, fontSize: 12, color: '#faad14' }}>
+                  📅 Semua file yang diupload sekarang akan ditandai tanggal <strong>{manualDate.format('DD MMMM YYYY')}</strong>.
+                </div>
+              ) : (
+                <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12, marginTop: 8 }}>
+                  💡 Tanggal terdeteksi <strong>otomatis</strong> dari nama file (cth: <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> atau <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch upload diperbolehkan.
+                </div>
+              )
+            }
           </div>
         )}
 
