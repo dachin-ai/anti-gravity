@@ -3,7 +3,11 @@ import os
 import hashlib
 import jwt
 import datetime
+import traceback
 from typing import Optional, Dict, Tuple
+from sqlalchemy.orm import Session
+from database import SessionLocal
+from models import ActivityLog
 
 # Same spreadsheet as price checker
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GoIpse2K5piWfw5J1urkoZj6KWY3zBo8UX0TAmvUZ1M"
@@ -134,35 +138,24 @@ def verify_token(token: str) -> Optional[Dict]:
 
 
 def log_activity(username: str, tool_name: str, ip_address: str = ""):
-    """Append an activity row to 'Activity Log' sheet.
-    Column order: Time | Username | Tools
-    """
+    """Menyimpan riwayat pengguna (Activity Log) ke PostgreSQL (Neon)."""
     try:
-        sh = get_sheet_client()
-
-        # Try to find the sheet - try exact name first, then variants
-        ws = None
-        all_sheet_names = [s.title for s in sh.worksheets()]
-        print(f"[Activity Log] Available sheets: {all_sheet_names}")
-
-        for candidate in ["Activity Log", "activity log", "ActivityLog", "Activity_Log"]:
-            if candidate in all_sheet_names:
-                ws = sh.worksheet(candidate)
-                break
-
-        if ws is None:
-            # Create it
-            print(f"[Activity Log] Sheet not found, creating...")
-            ws = sh.add_worksheet(title="Activity Log", rows=1000, cols=4)
-            ws.append_row(["Time", "Username", "Tools"])
-
+        db = SessionLocal()
+        
         jakarta_tz = datetime.timezone(datetime.timedelta(hours=7))
-        now = datetime.datetime.now(jakarta_tz).strftime("%Y-%m-%d %H:%M:%S")
-        ws.append_row([now, username, tool_name])
-        print(f"[Activity Log] ✓ Logged: {username} used {tool_name} at {now}")
+        now_dt = datetime.datetime.now(jakarta_tz)
+        
+        new_log = ActivityLog(
+            time=now_dt,
+            username=username,
+            tools=tool_name
+        )
+        db.add(new_log)
+        db.commit()
+        db.close()
+        print(f"[Activity Log] ✓ Logged to DB: {username} used {tool_name} at {now_dt.strftime('%Y-%m-%d %H:%M:%S')}")
 
     except Exception as e:
-        import traceback
-        print(f"[Activity Log Error] {e}")
-        print(traceback.format_exc())
+        print(f"[Activity Log DB Error] {e}")
+        traceback.print_exc()
 

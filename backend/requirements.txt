@@ -10,3 +10,8 @@ PyJWT
 apify-client
 requests
 python-calamine
+
+# Database Dependencies
+sqlalchemy
+psycopg2-binary
+python-dotenv
