@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip } from 'antd';
 import { TagOutlined, SettingOutlined, LogoutOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Bi from '../components/Bi';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -14,20 +15,44 @@ const MainLayout = () => {
   const { user, logout } = useAuth();
 
   const menuItems = [
-    { key: '/', icon: <HomeOutlined />, label: 'Dashboard Lobby' },
-    { key: '/price-checker', icon: <TagOutlined />, label: 'Price Checker' },
-    { key: '/order-loss', icon: <TagOutlined />, label: 'Order Loss Review' },
-    { key: '/failed-delivery', icon: <TagOutlined />, label: 'Failed Delivery' },
-    { key: '/pre-sales', icon: <TagOutlined />, label: 'Pre-Sales Estimation' },
-    { key: '/erp-oos', icon: <TagOutlined />, label: 'ERP OOS Calculate' },
-    { key: '/sku-plan', icon: <TagOutlined />, label: 'SKU Monthly Plan' },
-    { key: '/conversion-cleaner', icon: <TagOutlined />, label: 'Conversion Cleaner' },
-    { key: '/order-match', icon: <TagOutlined />, label: 'Order Match Checker' },
-    { key: '/warehouse-order', icon: <TagOutlined />, label: 'Warehouse Order Estimator' },
-    { key: '/socmed-scraping', icon: <TagOutlined />, label: 'Socmed Scraper' },
-    { key: '/affiliate-analyzer', icon: <TagOutlined />, label: 'Affiliate Analyzer' },
-    { key: '/shopee-affiliate', icon: <TagOutlined />, label: 'Shopee Affiliate Hub' },
+    { key: '/', icon: <HomeOutlined />, label: <Bi e="Dashboard Lobby" c="总大厅" /> },
+    {
+      key: 'group-freemir',
+      label: <Bi e="Freemir Suite" c="Freemir 套件" />,
+      icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M16 4h-3c-2.76 0-5 2.24-5 5v3H5v4h3v8h4v-8h4v-4h-4V9c0-.55.45-1 1-1h3V4z"/></svg></span>,
+      children: [
+        { key: '/price-checker', label: <Bi e="Price Checker" c="查价仪" /> },
+        { key: '/warehouse-order', label: <Bi e="Order Planner" c="海外仓备货预估" /> },
+        // Hidden items:
+        // { key: '/sku-plan', label: <Bi e="SKU Monthly Plan" c="SKU 月度计划" /> },
+        // { key: '/socmed-scraping', label: <Bi e="Socmed Scraper" c="社媒抓取" /> },
+        // { key: '/erp-oos', label: <Bi e="ERP OOS Calculator" c="ERP 缺货计算" /> },
+      ]
+    },
+    {
+      key: 'group-shopee',
+      label: <Bi e="Shopee Suite" c="Shopee 套件" />,
+      icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></span>,
+      children: [
+        { key: '/order-loss', label: <Bi e="Order Review" c="订单亏损审查" /> },
+        { key: '/shopee-affiliate', label: <Bi e="Affiliate Performance" c="Shopee 联盟中心" /> },
+      ]
+    },
+    {
+      key: 'group-tiktok',
+      label: <Bi e="TikTok Suite" c="TikTok 套件" />,
+      icon: <span className="anticon"><svg viewBox="0 0 448 512" width="1em" height="1em" fill="currentColor"><path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25v178.72A162.55 162.55 0 1 1 185.85 188.31v89.89a74.62 74.62 0 1 0 52.23 71.18V0h88a121.18 121.18 0 0 0 1.86 22.17A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/></svg></span>,
+      children: [
+        { key: '/pre-sales', label: <Bi e="Pre-Sales Checker" c="预售预估" /> },
+        { key: '/affiliate-analyzer', label: <Bi e="Affiliate Analyzer" c="联盟数据分析" /> },
+        // Hidden items:
+        // { key: '/failed-delivery', label: <Bi e="Failed Delivery Tracker" c="退件追踪" /> },
+      ]
+    }
   ];
+
+  /* Automatically auto-expand all menus based on current location */
+  const openKeys = menuItems.filter(i => i.children?.some(c => c.key === location.pathname)).map(i => i.key);
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
@@ -37,14 +62,13 @@ const MainLayout = () => {
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        width={240}
+        width={260}
         style={{
           background: 'var(--bg-card)',
           borderRight: '1px solid var(--border)',
           boxShadow: '2px 0 16px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Logo */}
         <div style={{
           height: 64,
           display: 'flex',
@@ -55,20 +79,18 @@ const MainLayout = () => {
           marginBottom: 10,
           gap: 12,
         }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-            background: 'var(--indigo)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(99,102,241,0.5)',
-          }}>
-            <span style={{ color: '#fff', fontSize: 18, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>F</span>
-          </div>
-          {!collapsed && (
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#ffffff', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>Freemir</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.4 }}>
-                Tools
-              </div>
+          {!collapsed ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <img src="/logo.png" alt="Freemir Logo" style={{ height: 32, objectFit: 'contain' }} />
+            </div>
+          ) : (
+            <div style={{
+              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+              background: 'var(--indigo)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 10px rgba(99,102,241,0.5)',
+            }}>
+              <span style={{ color: '#fff', fontSize: 18, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>F</span>
             </div>
           )}
         </div>
@@ -76,6 +98,7 @@ const MainLayout = () => {
         {/* Navigation */}
         <Menu
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={openKeys}
           mode="inline"
           items={menuItems}
           onClick={({ key }) => navigate(key)}
@@ -99,15 +122,33 @@ const MainLayout = () => {
           boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         }}>
           <Text style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            freemir Tools Dashboard
+            <Bi e="freemir Tools Dashboard" c="freemir 工具仪表板" />
           </Text>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="digital-sphere">
-              <div className="sphere-ring"></div>
-              <div className="sphere-ring"></div>
-              <div className="sphere-ring"></div>
-              <div className="sphere-ring"></div>
-              <div className="sphere-ring"></div>
+            <div className="tech-spatula-container" title="Freemir Kitchen Tech" style={{ width: 36, height: 36 }}>
+              <svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ overflow: 'visible' }}>
+                {/* Tech Glow effect under spatula */}
+                <circle cx="32" cy="32" r="14" fill="rgba(16,185,129,0.3)" filter="blur(8px)" stroke="none" />
+                
+                {/* Spatula Head: Narrower and rounded trapezoid */}
+                <path d="M22 14 Q32 10 42 14 L38 33 Q32 35 26 33 Z" fill="rgba(255,255,255,0.1)" strokeWidth="2.5" />
+                
+                {/* 5 Vertical Slots inside narrower head */}
+                <line x1="25.5" y1="16" x2="27" y2="30" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
+                <line x1="28.5" y1="14.5" x2="29.5" y2="31" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
+                <line x1="32" y1="14" x2="32" y2="32" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
+                <line x1="35.5" y1="14.5" x2="34.5" y2="31" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
+                <line x1="38.5" y1="16" x2="37" y2="30" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
+                
+                {/* Handle matching the reference (tapered and rounded at bottom) */}
+                <path d="M30 34 C 31 38, 31 56, 31 58 A 1 1 0 0 0 33 58 C 33 56, 33 38, 34 34" strokeWidth="3" />
+                
+                {/* Hanging hole at bottom of handle */}
+                <ellipse cx="32" cy="56" rx="1" ry="2" strokeWidth="1" />
+                
+                {/* Tech Ring (Perfectly dotted) */}
+                <circle className="tech-spatula-ring" cx="32" cy="35" r="28" strokeDasharray="1 6" strokeLinecap="round" strokeWidth="2.5" />
+              </svg>
             </div>
             {user && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

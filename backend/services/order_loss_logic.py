@@ -137,12 +137,16 @@ def process_data_grouped(df, group_col, order_metrics=None):
     temp['Loss_Val'] = temp['Product Detail Gross Profit'].apply(lambda x: x if x < 0 else 0)
     temp['Profit_Val'] = temp['Product Detail Gross Profit'].apply(lambda x: x if x >= 0 else 0)
     
-    grouped = temp.groupby(group_col).agg({
+    agg_dict = {
         'Loss_Val': 'sum',
         'Profit_Val': 'sum',
         'Product Detail Gross Profit': 'sum',
         'Type': 'first'
-    }).reset_index()
+    }
+    if 'Qty' in temp.columns:
+        agg_dict['Qty'] = 'sum'
+        
+    grouped = temp.groupby(group_col).agg(agg_dict).reset_index()
     
     sales_loss_list, aftersales_loss_list = [], []
     for idx, row in grouped.iterrows():
@@ -155,7 +159,11 @@ def process_data_grouped(df, group_col, order_metrics=None):
     grouped['Sales Loss | 销售损失'] = sales_loss_list
     grouped['After Sales Loss | 售后损失'] = aftersales_loss_list
     
-    grouped.columns = [group_col, 'Loss_Val', 'Profit | 利润', 'Total Net', 'Type', 'Sales Loss | 销售损失', 'After Sales Loss | 售后损失']
+    if 'Qty' in temp.columns:
+        grouped.columns = [group_col, 'Loss_Val', 'Profit | 利润', 'Total Net', 'Type', 'Qty', 'Sales Loss | 销售损失', 'After Sales Loss | 售后损失']
+    else:
+        grouped.columns = [group_col, 'Loss_Val', 'Profit | 利润', 'Total Net', 'Type', 'Sales Loss | 销售损失', 'After Sales Loss | 售后损失']
+        
     grouped['Total Loss | 总损失'] = grouped['Sales Loss | 销售损失'] + grouped['After Sales Loss | 售后损失']
     grouped['Total Profit | 总利润'] = grouped['Profit | 利润']
     grouped['Final Profit | 最终利润'] = grouped['Total Net']
@@ -165,8 +173,9 @@ def process_data_grouped(df, group_col, order_metrics=None):
     
     grouped = grouped.sort_values(by='Total Loss | 总损失', ascending=True)
     
-    final_cols = [group_col, 'Sales Loss | 销售损失', 'After Sales Loss | 售后损失', 
-                  'Total Loss | 总损失', 'Total Profit | 总利润', 'Final Profit | 最终利润', 'First Judge | 第一判断']
+    final_cols = [group_col]
+    if 'Qty' in temp.columns: final_cols.append('Qty')
+    final_cols.extend(['Sales Loss | 销售损失', 'After Sales Loss | 售后损失', 'Total Loss | 总损失', 'Total Profit | 总利润', 'Final Profit | 最终利润', 'First Judge | 第一判断'])
     grouped = grouped[final_cols]
     
     if group_col == 'Original Order Number' and order_metrics is not None:
@@ -231,7 +240,7 @@ def sanitize_json(val):
         return float(val)
     return val
 
-def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Warning") -> Tuple[Dict, bytes]:
+def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Warning", method: str = "Profit Review") -> Tuple[Dict, bytes]:
     df.columns = df.columns.str.strip()
     actual_cols = list(df.columns)
     
@@ -256,9 +265,15 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     col_map['Product Detail Amount After Discount'] = find_col(['Product Detail Amount After Discount', 'Product Actual Amount Paid', 'Product Actual Amount', 'Product Amount After Discount', '商品明细优惠后金额', '商品实付金额', '商品折后明细金额'])
     col_map['Seller Coupon'] = find_col(['Seller Coupon', '卖家优惠券'])
     col_map['Order allocated amount'] = find_col(['Order allocated amount', 'Order allocated'])
+    col_map['Qty'] = find_col(['商品数量', 'Qty', 'Quantity', 'Item Quantity'])
+    col_map['Order Label'] = find_col(['Order Label', 'Pesanan Berlabel', '订单标签', 'Label'])
     
     req_cols_keys = ['Store', 'Original Order Number', 'ERP Order Number', 'Online Product Code', 'System Product Code', 
-                'Product Detail Gross Profit', 'Product Detail Amount After Discount', 'Seller Coupon']
+                'Product Detail Gross Profit', 'Product Detail Amount After Discount']
+    if method == "Profit Review":
+        req_cols_keys.append('Seller Coupon')
+    else:
+        req_cols_keys.append('Qty')
     
     missing = [k for k in req_cols_keys if not col_map[k]]
     if missing:
@@ -268,10 +283,64 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     df = df.rename(columns=rename_dict)
     
     df['Type'] = df['Original Order Number'].apply(detect_type)
-    df['Product Detail Gross Profit'] = df['Product Detail Gross Profit'].apply(clean_currency_strict)
-    df['Product Detail Amount After Discount'] = df['Product Detail Amount After Discount'].apply(clean_currency_strict)
-    df['Seller Coupon'] = df['Seller Coupon'].apply(clean_currency_strict)
-    
+    if 'Product Detail Gross Profit' in df.columns:
+        df['Product Detail Gross Profit'] = df['Product Detail Gross Profit'].apply(clean_currency_strict)
+    if 'Product Detail Amount After Discount' in df.columns:
+        df['Product Detail Amount After Discount'] = df['Product Detail Amount After Discount'].apply(clean_currency_strict)
+    if 'Seller Coupon' in df.columns:
+        df['Seller Coupon'] = df['Seller Coupon'].apply(clean_currency_strict)
+    if 'Qty' in df.columns:
+        df['Qty'] = df['Qty'].apply(clean_currency_strict)
+    else:
+        df['Qty'] = 1  # Fallback
+        
+    # =============== PRE-SALES REVIEW Logic ===============
+    if method == "Pre-Sales Review":
+        if 'Order Label' not in df.columns:
+            # Try to gracefully fail or return empty if no order label
+            sheet1 = pd.DataFrame(columns=['System Product Code | 系统商品编码', 'QTY'])
+            sheet2 = pd.DataFrame(columns=['Store | 店铺', 'System Product Code | 系统商品编码', 'QTY'])
+            return {"total_orders": len(df), "total_transactions": len(df), "review_orders": 0, "safe_orders": 0, "total_profit": 0}, generate_excel({"Unique SKU Presales": sheet1, "Per Store Presales": sheet2})
+            
+        presale_mask = df['Order Label'].astype(str).str.contains('presale|pre-sale|pre sale|预售|预', case=False, na=False)
+        ps_df = df[presale_mask].copy()
+        
+        expanded_rows = []
+        for _, row in ps_df.iterrows():
+            store = row.get('Store')
+            system_code = row.get('System Product Code')
+            qty = row.get('Qty', 1)
+            skus = clean_sku_list(system_code)
+            for sku in skus:
+                if sku:
+                    expanded_rows.append({'Store | 店铺': store, 'System Product Code': sku, 'QTY': qty})
+                    
+        expanded_df = pd.DataFrame(expanded_rows)
+        if expanded_df.empty:
+            expanded_df = pd.DataFrame(columns=['Store | 店铺', 'System Product Code', 'QTY'])
+            
+        sheet1 = expanded_df.groupby('System Product Code', as_index=False).agg({'QTY': 'sum'})
+        sheet1 = sheet1.rename(columns={'System Product Code': 'System Product Code | 系统商品编码'})
+        sheet1 = sheet1.sort_values(by='QTY', ascending=False)
+        
+        sheet2 = expanded_df.groupby(['Store | 店铺', 'System Product Code'], as_index=False).agg({'QTY': 'sum'})
+        sheet2 = sheet2.rename(columns={'System Product Code': 'System Product Code | 系统商品编码'})
+        sheet2 = sheet2.sort_values(by=['Store | 店铺', 'QTY'], ascending=[True, False])
+        
+        summary = {
+            "total_orders": len(df),
+            "total_transactions": len(df),
+            "safe_orders": 0,
+            "review_orders": len(ps_df),  # Used for Pre-Sales Order Count
+            "sales_loss": 0,
+            "aftersales_loss": 0,
+            "total_profit": int(expanded_df['QTY'].sum()),  # Hijacking to return total presale units
+            "final_profit": 0
+        }
+        excel_bytes = generate_excel({"Unique SKU Presales": sheet1, "Per Store Presales": sheet2})
+        return summary, excel_bytes
+        
+    # =============== PROFIT REVIEW Logic ===============
     has_allocated_amount = 'Order allocated amount' in df.columns
     if has_allocated_amount:
         df['Order allocated amount'] = df['Order allocated amount'].apply(clean_currency_strict)
@@ -328,7 +397,7 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
         axis=1
     )
     
-    sheet1 = df[req_cols + (['Order allocated amount'] if has_allocated_amount else []) + ['Type']].copy()
+    sheet1 = df[req_cols_keys + (['Order allocated amount'] if has_allocated_amount else []) + ['Type']].copy()
     sheet2 = process_data_grouped(df, 'Original Order Number', order_metrics)
     
     sheet2['Reason | 原因'] = sheet2.apply(get_diagnostic_reason, axis=1)
@@ -338,10 +407,15 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
         cols.insert(1, cols.pop(cols.index('Store | 店铺')))
     if 'Reason | 原因' in cols:
         cols.append(cols.pop(cols.index('Reason | 原因')))
+    # Remove Qty from By Order summary if it leaked
+    if 'Qty' in cols: cols.remove('Qty')
     sheet2 = sheet2[cols]
     
     sheet3 = process_data_grouped(df, 'System Product Code') 
+    # Rename Qty col
+    if 'Qty' in sheet3.columns: sheet3 = sheet3.rename(columns={'Qty': 'QTY'})
     sheet4 = process_data_grouped(df, 'Store | 店铺' if 'Store | 店铺' in df.columns else 'Store') 
+    if 'Qty' in sheet4.columns: sheet4 = sheet4.rename(columns={'Qty': 'QTY'})
     
     # Calculate Summaries
     total_sales_loss = sheet2['Sales Loss | 销售损失'].sum()

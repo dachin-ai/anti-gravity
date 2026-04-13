@@ -13,7 +13,8 @@ router = APIRouter(prefix="/api/order-loss", tags=["Order Loss"])
 @router.post("/calculate")
 async def calculate_order_loss(
     file: UploadFile = File(...),
-    price_type: str = Form("Warning")
+    price_type: str = Form("Warning"),
+    method: str = Form("Profit Review")
 ):
     try:
         content = await file.read()
@@ -40,7 +41,7 @@ async def calculate_order_loss(
         if not price_db:
             raise HTTPException(status_code=500, detail="Failed to connect to Google Sheets Database.")
             
-        summary, excel_bytes = run_order_loss_audit(df, price_db, price_type)
+        summary, excel_bytes = run_order_loss_audit(df, price_db, price_type, method)
         
         return JSONResponse({
             "summary": summary,

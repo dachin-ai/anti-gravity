@@ -12,6 +12,7 @@ import {
   CloudUploadOutlined, AppstoreOutlined, LineChartOutlined,
   SwapOutlined
 } from '@ant-design/icons';
+import Bi from '../components/Bi';
 import { Modal } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -86,21 +87,21 @@ const ShopeeAffiliate = () => {
         </div>
         <div>
           <Title level={3} style={{ margin: 0, color: '#f1f5f9', fontFamily: "'Outfit',sans-serif" }}>
-            Shopee Affiliate Hub
+            <Bi e="Shopee Affiliate Hub" c="Shopee 联盟中心" />
           </Title>
-          <Text style={{ color: '#64748b', fontSize: 13 }}>
-            Centralized data integration & analytics for Product · Creator · Conversion
+          <Text style={{ color: '#64748b', fontSize: 13, display: 'block', marginTop: 4 }}>
+            <Bi e="Centralized data integration & analytics for Product · Creator · Conversion" c="产品、创作者、转化的集中数据集成与分析" />
           </Text>
         </div>
       </div>
 
       <Card style={S.card} bodyStyle={{ padding: 0 }}>
         <Tabs size="large" style={{ padding: '0 8px' }} items={[
-          { key: 'upload',      label: <span><CloudUploadOutlined /> Upload Data</span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
-          { key: 'checker',     label: <span><AppstoreOutlined /> Checker Matrix</span>,       children: <CheckerTab   stores={stores} /> },
-          { key: 'analytics',   label: <span><LineChartOutlined /> Analytics</span>,            children: <AnalyticsTab stores={stores} /> },
-          { key: 'report',      label: <span><FileTextOutlined /> Full Report</span>,           children: <ReportTab    stores={stores} /> },
-          { key: 'comparison',  label: <span><SwapOutlined /> Period Comparison</span>,         children: <ComparisonTab stores={stores} /> },
+          { key: 'upload',      label: <span><CloudUploadOutlined /> <Bi e="Upload Data" c="上传数据" /></span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
+          { key: 'checker',     label: <span><AppstoreOutlined /> <Bi e="Checker Matrix" c="检查矩阵" /></span>,       children: <CheckerTab   stores={stores} /> },
+          { key: 'analytics',   label: <span><LineChartOutlined /> <Bi e="Analytics" c="分析" /></span>,            children: <AnalyticsTab stores={stores} /> },
+          { key: 'report',      label: <span><FileTextOutlined /> <Bi e="Full Report" c="完整报告" /></span>,           children: <ReportTab    stores={stores} /> },
+          { key: 'comparison',  label: <span><SwapOutlined /> <Bi e="Period Comparison" c="期间对比" /></span>,         children: <ComparisonTab stores={stores} /> },
         ]} />
       </Card>
     </div>
@@ -150,7 +151,7 @@ const UploadTab = ({ stores, storesLoading }) => {
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Row gutter={16}>
           <Col span={12}>
-            <div style={S.label}>Data Type</div>
+            <div style={S.label}><Bi e="Data Type" c="数据类型" /></div>
             <Select style={{ width: '100%', marginTop: 6 }} value={uploadType}
               onChange={v => { setUploadType(v); setFileList([]); }}
               options={[
@@ -160,7 +161,7 @@ const UploadTab = ({ stores, storesLoading }) => {
               ]} />
           </Col>
           <Col span={12}>
-            <div style={S.label}>Select Store</div>
+            <div style={S.label}><Bi e="Select Store" c="选择店铺" /></div>
             <Select showSearch loading={storesLoading} placeholder="Select a Shopee store..."
               style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
               options={stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))} />
@@ -204,7 +205,7 @@ const UploadTab = ({ stores, storesLoading }) => {
         <Button type="primary" block size="large" icon={<UploadOutlined />}
           loading={uploading} onClick={handleUpload}
           style={{ background: 'linear-gradient(135deg,#ff4d4f,#ff7a45)', border: 'none', fontWeight: 600, height: 48 }}>
-          Start ETL Process
+          <Bi e="Start ETL Process" c="开始 ETL 处理" />
         </Button>
       </Space>
     </div>
@@ -237,7 +238,7 @@ const CheckerTab = ({ stores }) => {
 
   const handleDelete = (date) => {
     Modal.confirm({
-      title: 'Delete Data',
+      title: 'Delete All Data for Date',
       icon: <ExclamationCircleFilled />,
       content: `All Product, Creator, and Conversion data for ${dayjs(date).format('DD MMM YYYY')} will be permanently deleted. Continue?`,
       okText: 'Delete',
@@ -245,7 +246,7 @@ const CheckerTab = ({ stores }) => {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          const res = await api.delete(`${API}/data`, { params: { date } });
+          const res = await api.delete(`${API}/data`, { params: { date, data_type: 'all' } });
           message.success(res.data.message);
           fetchMatrix();
         } catch (e) {
@@ -255,9 +256,41 @@ const CheckerTab = ({ stores }) => {
     });
   };
 
-  const Tick = ({ val }) => val
-    ? <CheckCircleFilled  style={{ color: '#22c55e', fontSize: 15 }} />
-    : <MinusCircleFilled  style={{ color: '#1e3a5f', fontSize: 13 }} />;
+  const handleDeleteSpecific = (date, store_id, dataType) => {
+    Modal.confirm({
+      title: 'Delete Specific Data',
+      icon: <ExclamationCircleFilled />,
+      content: `Delete ${dataType.toUpperCase()} data for store ${getStoreName(store_id)} on ${dayjs(date).format('DD MMM YYYY')}?`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          const res = await api.delete(`${API}/data`, { params: { date, store_id, data_type: dataType } });
+          message.success(res.data.message);
+          fetchMatrix();
+        } catch (e) {
+          message.error(e.response?.data?.detail || 'Failed to delete data.');
+        }
+      }
+    });
+  };
+
+  const Tick = ({ val, rowDate, storeId, dataType }) => {
+    if (val) {
+      return (
+        <Tooltip title={`Click to delete ${dataType} data for ${getStoreName(storeId)}`}>
+          <CheckCircleFilled 
+            onClick={() => handleDeleteSpecific(rowDate, storeId, dataType)}
+            style={{ color: '#22c55e', fontSize: 16, cursor: 'pointer', transition: 'color 0.2s' }} 
+            onMouseEnter={(e) => e.target.style.color = '#ef4444'}
+            onMouseLeave={(e) => e.target.style.color = '#22c55e'}
+          />
+        </Tooltip>
+      );
+    }
+    return <MinusCircleFilled style={{ color: '#1e3a5f', fontSize: 13 }} />;
+  };
 
   const hasAnyData = (row) => {
     return Object.values(row.stores || {}).some(s => s.product || s.creator || s.conversion);
@@ -273,9 +306,9 @@ const CheckerTab = ({ stores }) => {
       title: <span style={{ color: '#93c5fd' }}>{getStoreName(code)}</span>,
       onHeaderCell: getHeaderCell,
       children: [
-        { title: <span style={{ color: '#86efac', fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} /> },
-        { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Creator</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} /> },
-        { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conversion</span>, align: 'center', width: 75, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} /> },
+        { title: <span style={{ color: '#86efac', fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} rowDate={r.date} storeId={code} dataType="product" /> },
+        { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Creator</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} rowDate={r.date} storeId={code} dataType="creator" /> },
+        { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conversion</span>, align: 'center', width: 75, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} rowDate={r.date} storeId={code} dataType="conversion" /> },
       ]
     })),
     {
@@ -300,9 +333,9 @@ const CheckerTab = ({ stores }) => {
         <Button icon={<ReloadOutlined />} onClick={fetchMatrix} loading={loading}>Refresh</Button>
       </div>
       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
-        <CheckCircleFilled style={{ color: '#22c55e' }} /> = Data available &nbsp;&nbsp;
-        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data &nbsp;&nbsp;
-        <DeleteOutlined style={{ color: '#ef4444' }} /> = Click to delete all data for that date
+        <CheckCircleFilled style={{ color: '#22c55e' }} /> = Data available (Click on the tick to delete specific data)<br/>
+        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data &nbsp;&nbsp;&nbsp;&nbsp;
+        <DeleteOutlined style={{ color: '#ef4444' }} /> = Bulk click to delete all data (for all stores) on that date
       </div>
       <Table columns={columns} dataSource={matrixData} rowKey="date" loading={loading}
         bordered size="small" pagination={false} scroll={tblScroll} style={{ background: 'transparent' }}
@@ -356,11 +389,11 @@ const AnalyticsTab = ({ stores }) => {
     <div style={{ padding: '20px 24px' }}>
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={14}>
-          <div style={S.label}>Date Range</div>
+          <div style={S.label}><Bi e="Date Range" c="日期范围" /></div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={dateRange} onChange={setDateRange} />
         </Col>
         <Col span={10}>
-          <div style={S.label}>Store</div>
+          <div style={S.label}><Bi e="Store" c="店铺" /></div>
           <Select showSearch style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
             options={[{ value: 'ALL', label: '🌐 All Stores' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
         </Col>

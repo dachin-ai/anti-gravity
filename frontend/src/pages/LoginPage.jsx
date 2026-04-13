@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, message, Tabs, Typography } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
+import Bi from '../components/Bi';
 
 const { Title, Text, Link } = Typography;
 
@@ -16,7 +17,7 @@ const LoginPage = () => {
         setLoadingLogin(true);
         try {
             await login(values.username, values.password);
-            message.success('Welcome back!');
+            message.success('Welcome back! 欢迎回来！');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Login failed.');
         } finally {
@@ -101,7 +102,7 @@ const LoginPage = () => {
                         Freemir Tools
                     </Title>
                     <Text style={{ color: '#64748b', fontSize: 13 }}>
-                        Internal Operations Platform
+                        <Bi e="Internal Operations Platform" c="内部运营平台" />
                     </Text>
                 </div>
 
@@ -118,7 +119,7 @@ const LoginPage = () => {
                                 background: activeTab === tab ? 'rgba(99,102,241,0.9)' : 'transparent',
                                 color: activeTab === tab ? '#fff' : '#94a3b8',
                             }}>
-                            {tab === 'login' ? '🔑 Login' : '✍️ Sign Up'}
+                            {tab === 'login' ? <Bi e="🔑 Login" c="登录" /> : <Bi e="✍️ Sign Up" c="注册" />}
                         </button>
                     ))}
                 </div>

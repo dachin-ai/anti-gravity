@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import Bi from '../components/Bi';
 
 const { Title, Text } = Typography;
 
@@ -152,10 +153,9 @@ const WarehouseOrder = () => {
         if (!result) return null;
         const { matrix_rows, days, platform_names, warehouse_names } = result;
 
-        // Build ant-design columns: fixed Warehouse + one per (day × platform)
         const cols = [
             {
-                title: 'Warehouse',
+                title: <Bi e="Warehouse" c="发货仓" />,
                 dataIndex: 'Warehouse',
                 key: 'Warehouse',
                 fixed: 'left',
@@ -163,7 +163,7 @@ const WarehouseOrder = () => {
                 render: v => <Text strong style={{ color: 'var(--text-main)', fontSize: 12 }}>{v}</Text>
             },
             ...days.map(d => ({
-                title: <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, color: '#94a3b8' }}>Day {d}</div>,
+                title: <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, color: '#94a3b8' }}><Bi e={`Day ${d}`} c={`第 ${d} 天`} /></div>,
                 key: `day_${d}`,
                 children: platform_names.map(p => ({
                     title: <div style={{ fontSize: 10, color: '#64748b', textAlign: 'center' }}>{p}</div>,
@@ -192,11 +192,11 @@ const WarehouseOrder = () => {
     };
 
     const platCols = [
-        { key: 'name', label: 'Platform', type: 'text', placeholder: 'e.g. Shopee', width: '2fr' },
+        { key: 'name', label: <Bi e="Platform" c="平台" />, type: 'text', placeholder: 'e.g. Shopee', width: '2fr' },
         { key: 'number', label: '#', type: 'number', placeholder: '1', min: 1, width: '0.7fr' },
         { 
             key: 'target', 
-            label: 'Monthly Target (Rp)', 
+            label: <Bi e="Monthly Target (Rp)" c="月度目标 (Rp)" />, 
             type: 'number', 
             placeholder: 'e.g. 10000000', 
             width: '2fr',
@@ -205,14 +205,14 @@ const WarehouseOrder = () => {
         },
     ];
     const whCols = [
-        { key: 'name', label: 'Warehouse', type: 'text', placeholder: 'e.g. Cikarang', width: '2fr' },
+        { key: 'name', label: <Bi e="Warehouse" c="发货仓" />, type: 'text', placeholder: 'e.g. Cikarang', width: '2fr' },
         { key: 'number', label: '#', type: 'number', placeholder: '1', min: 1, width: '0.7fr' },
-        { key: 'proportion', label: 'Proportion (%)', type: 'number', placeholder: '85', min: 0, width: '1.5fr' },
+        { key: 'proportion', label: <Bi e="Proportion (%)" c="占比 (%)" />, type: 'number', placeholder: '85', min: 0, width: '1.5fr' },
     ];
     const evCols = [
-        { key: 'name', label: 'Event Name', type: 'text', placeholder: 'Pay Day', width: '1.5fr' },
-        { key: 'dates_str', label: 'Dates (e.g. 25 or 5+6+7)', type: 'text', placeholder: '25', width: '2fr' },
-        { key: 'proportion', label: 'Total Proportion (%)', type: 'number', placeholder: '20', min: 0, width: '1.5fr' },
+        { key: 'name', label: <Bi e="Event Name" c="活动节点" />, type: 'text', placeholder: 'Pay Day', width: '1.5fr' },
+        { key: 'dates_str', label: <Bi e="Dates (e.g. 25 or 5+6+7)" c="日期 (例: 25 或 5+6+7)" />, type: 'text', placeholder: '25', width: '2fr' },
+        { key: 'proportion', label: <Bi e="Total Proportion (%)" c="总销售占比 (%)" />, type: 'number', placeholder: '20', min: 0, width: '1.5fr' },
     ];
 
     return (
@@ -220,10 +220,10 @@ const WarehouseOrder = () => {
             {/* Header */}
             <div style={{ marginBottom: 24 }}>
                 <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                    🏭 Warehouse Order Estimator
+                    🏭 <Bi e="Order Planner" c="订单规划器" />
                 </Title>
                 <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                    Calculate daily order estimations per warehouse & platform based on monthly targets
+                    <Bi e="Calculate daily order estimations per warehouse & platform based on monthly targets" c="基于月度金额目标，计算每日对应各发货平台与仓库的预估分单量" />
                 </Text>
             </div>
 
@@ -232,10 +232,10 @@ const WarehouseOrder = () => {
                 <Col xs={24} lg={9}>
                     {/* General Params */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="⚙️">General Parameters</SectionHeading>
+                        <SectionHeading emoji="⚙️"><Bi e="General Parameters" c="通用参数" /></SectionHeading>
                         <Row gutter={12}>
                             <Col span={14}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Average Order Value (AOV)</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}><Bi e="Average Order Value (AOV)" c="客单单价均值 (AOV)" /></div>
                                 <InputNumber
                                     value={aov}
                                     onChange={setAov}
@@ -248,7 +248,7 @@ const WarehouseOrder = () => {
                                 />
                             </Col>
                             <Col span={10}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Days in Month</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}><Bi e="Days in Month" c="当月总天数" /></div>
                                 <InputNumber
                                     value={totalDays}
                                     onChange={v => setTotalDays(v || 31)}
@@ -262,20 +262,20 @@ const WarehouseOrder = () => {
 
                     {/* Platform Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="🛒">Platform Configuration</SectionHeading>
+                        <SectionHeading emoji="🛒"><Bi e="Platform Configuration" c="平台配置" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                            Leave Target empty to exclude platform from estimation
+                            <Bi e="Leave Target empty to exclude platform from estimation" c="将目标值留空即可把该平台排除出整体预算外" />
                         </Text>
-                        <EditableGrid rows={platforms} setRows={setPlatforms} columns={platCols} addLabel="Add Platform" />
+                        <EditableGrid rows={platforms} setRows={setPlatforms} columns={platCols} addLabel={<Bi e="Add Platform" c="添加平台" />} />
                     </div>
 
                     {/* Warehouse Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="🏭">Warehouse Configuration</SectionHeading>
-                        <EditableGrid rows={warehouses} setRows={setWarehouses} columns={whCols} addLabel="Add Warehouse" />
+                        <SectionHeading emoji="🏭"><Bi e="Warehouse Configuration" c="发货仓配置" /></SectionHeading>
+                        <EditableGrid rows={warehouses} setRows={setWarehouses} columns={whCols} addLabel={<Bi e="Add Warehouse" c="添加发货仓" />} />
                         <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
                             <Text style={{ fontSize: 12, color: '#94a3b8' }}>
-                                Total proportion: <strong style={{ color: warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) === 100 ? '#10b981' : '#f59e0b' }}>
+                                <Bi e="Total proportion:" c="总占比:" /> <strong style={{ color: warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) === 100 ? '#10b981' : '#f59e0b' }}>
                                     {warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0)}%
                                 </strong>
                                 {warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) !== 100 && (
@@ -287,12 +287,11 @@ const WarehouseOrder = () => {
 
                     {/* Event Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="📅">Event Configuration</SectionHeading>
+                        <SectionHeading emoji="📅"><Bi e="Event Configuration" c="活动节点配置" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                            Use <code style={{ color: '#38bdf8' }}>+</code> to specify multiple dates (e.g. <code style={{ color: '#38bdf8' }}>5+6+7+8</code>).
-                            Remaining days become "Regular Day".
+                            <Bi e="Use '+' to specify multiple dates (e.g. 5+6+7+8). Remaining days become Regular Day." c="使用 '+' 指定多个大促日期（例如：5+6+7+8）。未指定的日期将自动成为平销期。" />
                         </Text>
-                        <EditableGrid rows={events} setRows={setEvents} columns={evCols} addLabel="Add Event" />
+                        <EditableGrid rows={events} setRows={setEvents} columns={evCols} addLabel={<Bi e="Add Event" c="添加活动" />} />
                     </div>
 
                     {/* Generate Button */}
@@ -306,7 +305,7 @@ const WarehouseOrder = () => {
                             boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
                         }}
                     >
-                        {loading ? 'Generating Estimation...' : 'Generate Estimation Output'}
+                        {loading ? <Bi e="Generating Estimation..." c="正在生成订单数量..." /> : <Bi e="Generate Estimation Output" c="生成订单分配估算" />}
                     </Button>
                 </Col>
 
@@ -319,8 +318,10 @@ const WarehouseOrder = () => {
                             flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12
                         }}>
                             <div style={{ fontSize: 52 }}>🏭</div>
-                            <Text style={{ fontSize: 16, color: 'var(--text-muted)' }}>Configure parameters on the left and click <strong>Generate</strong></Text>
-                            <Text style={{ fontSize: 13, color: '#475569' }}>The estimation matrix will appear here</Text>
+                            <Text style={{ fontSize: 16, color: 'var(--text-muted)' }}>
+                                <Bi e="Configure parameters on the left and click" c="在左侧设置好参数后点击" /> <strong><Bi e="Generate" c="生成" /></strong>
+                            </Text>
+                            <Text style={{ fontSize: 13, color: '#475569' }}><Bi e="The estimation matrix will appear here" c="订单推演分配矩阵将显示于此" /></Text>
                         </div>
                     )}
 
@@ -341,7 +342,7 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.warehouse_names?.length}
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Warehouses</Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="Warehouses" c="发货仓数" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={12} md={6}>
@@ -349,7 +350,7 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#38bdf8', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.platform_names?.filter(p => result.platforms?.find(pl => pl.name === p && pl.target)).length}
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Active Platforms</Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="Active Platforms" c="计入平台" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={12} md={6}>
@@ -357,14 +358,14 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.total_wh_prop?.toFixed(0)}%
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>WH Coverage</Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="WH Coverage" c="发货仓占比" /></Text>
                                     </div>
                                 </Col>
                             </Row>
 
                             {/* Proportion Summary */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                                <SectionHeading emoji="📊">Proportion Distribution Summary</SectionHeading>
+                                <SectionHeading emoji="📊"><Bi e="Proportion Distribution Summary" c="占比分布摘要" /></SectionHeading>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {result.summary?.map((s, i) => (
                                         <div key={i} style={{
@@ -372,9 +373,9 @@ const WarehouseOrder = () => {
                                             borderRadius: 8, padding: '10px 14px', minWidth: 140
                                         }}>
                                             <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>{s.Event}</Text>
-                                            <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s['Days Count']} days · {s['Each Day (%)']}/day</Text>
+                                            <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s['Days Count']} <Bi e="days" c="天" /> · {s['Each Day (%)']}% /<Bi e="day" c="天" /></Text>
                                             <div style={{ marginTop: 4 }}>
-                                                <Tag color="blue" style={{ fontSize: 10 }}>{s['Total Prop (%)']}</Tag>
+                                                <Tag color="blue" style={{ fontSize: 10 }}>{s['Total Prop (%)']}%</Tag>
                                             </div>
                                         </div>
                                     ))}
@@ -383,9 +384,9 @@ const WarehouseOrder = () => {
 
                             {/* Matrix */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16, overflow: 'hidden' }}>
-                                <SectionHeading emoji="📈">Order Estimation Matrix</SectionHeading>
+                                <SectionHeading emoji="📈"><Bi e="Order Estimation Matrix" c="日均订单分配矩阵" /></SectionHeading>
                                 <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                                    Scroll horizontally to see all days. Values = estimated order count per warehouse per day.
+                                    <Bi e="Scroll horizontally to see all days. Values = estimated order count per warehouse per day." c="水平滚动查看整月日期流。数字 = 每个仓在当天针对对应平台需要发出的预估单量。" />
                                 </Text>
                                 {renderMatrix()}
                             </div>
@@ -399,7 +400,7 @@ const WarehouseOrder = () => {
                                     boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
                                 }}
                             >
-                                Download Estimation Report (.xlsx)
+                                <Bi e="Download Estimation Report (.xlsx)" c="下载最终规划表 (.xlsx)" />
                             </Button>
                         </div>
                     )}

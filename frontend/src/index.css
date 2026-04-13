@@ -280,33 +280,40 @@ h1, h2, h3, h4, h5, h6,
 .ant-divider { border-color: var(--border) !important; }
 
 /* ============================================
-   DIGITAL SPHERE ANIMATION (WHITE/CYAN GLOW)
+   TECH SPATULA ANIMATION (WHITE GLOW)
    ============================================ */
-.digital-sphere {
+.tech-spatula-container {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
   position: relative;
-  transform-style: preserve-3d;
-  animation: rotate-sphere 10s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rotate-spatula 12s linear infinite;
+  margin-right: 8px;
 }
 
-.sphere-ring {
-  position: absolute;
+.tech-spatula-container svg {
   width: 100%;
   height: 100%;
-  border: 1px dashed rgba(255, 255, 255, 0.7);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
 }
 
-.sphere-ring:nth-child(1) { transform: rotateY(0deg); }
-.sphere-ring:nth-child(2) { transform: rotateY(45deg); }
-.sphere-ring:nth-child(3) { transform: rotateY(90deg); }
-.sphere-ring:nth-child(4) { transform: rotateY(135deg); }
-.sphere-ring:nth-child(5) { transform: rotateX(90deg); border: 1px solid rgba(16, 185, 129, 0.4); }
+.tech-spatula-ring {
+  animation: pulse-ring 3s ease-in-out infinite alternate;
+}
 
-@keyframes rotate-sphere {
-  0% { transform: rotateX(20deg) rotateY(0deg); }
-  100% { transform: rotateX(20deg) rotateY(360deg); }
+@keyframes rotate-spatula {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0% { stroke: rgba(255, 255, 255, 0.2); }
+  100% { stroke: rgba(16, 185, 129, 0.6); }
 }

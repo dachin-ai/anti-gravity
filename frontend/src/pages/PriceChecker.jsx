@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import Bi from '../components/Bi';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -182,10 +183,10 @@ const PriceChecker = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                 <div>
                     <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                        Price Checker & Comparator
+                        <Bi e="Price Checker & Comparator" c="价格检查与比较器" />
                     </Title>
                     <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        Supports Listing Method, SKU Method, and Direct Input
+                        <Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />
                     </Text>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
@@ -197,7 +198,7 @@ const PriceChecker = () => {
                             height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
                         }}
                     >
-                        Load Database
+                        <Bi e="Load Database" c="加载数据库" />
                     </Button>
                     <Button
                         icon={<DatabaseOutlined />}
@@ -209,7 +210,7 @@ const PriceChecker = () => {
                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                         }}
                     >
-                        🔄 Sync Prices 🔄
+                        <Bi e="🔄 Sync Prices 🔄" c="🔄 同步价格 🔄" />
                     </Button>
                 </div>
             </div>
@@ -220,9 +221,9 @@ const PriceChecker = () => {
                 onChange={(key) => { setMethod(key); setFileList([]); setDirectResult(null); setBatchOverview(null); }}
                 type="card"
                 items={[
-                    { key: 'Listing', label: <span style={{ fontWeight: 600 }}>📋 Listing Method</span> },
-                    { key: 'SKU',     label: <span style={{ fontWeight: 600 }}>📦 SKU Method</span> },
-                    { key: 'Direct',  label: <span style={{ fontWeight: 600 }}>⚡ Direct Input</span> },
+                    { key: 'Listing', label: <span style={{ fontWeight: 600 }}><Bi e="📋 Listing Method" c="📋 列表法" /></span> },
+                    { key: 'SKU',     label: <span style={{ fontWeight: 600 }}><Bi e="📦 SKU Method" c="📦 SKU法" /></span> },
+                    { key: 'Direct',  label: <span style={{ fontWeight: 600 }}><Bi e="⚡ Direct Input" c="⚡ 直接输入" /></span> },
                 ]}
             />
 
@@ -234,11 +235,11 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading emoji="1️⃣">Download Template</SectionHeading>
+                                    <SectionHeading emoji="1️⃣"><Bi e="Download Template" c="下载模板" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
-                                        Download the Excel template, fill in your data, then upload it in the next step.
+                                        <Bi e="Download the Excel template, fill in your data, then upload it in the next step." c="下载 Excel 模板，填写数据，然后在下一步中上传。" />
                                     </Text>
                                     <Button
                                         icon={<CloudDownloadOutlined />}
@@ -260,7 +261,7 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading emoji="2️⃣">Upload & Process</SectionHeading>
+                                    <SectionHeading emoji="2️⃣"><Bi e="Upload & Process" c="上传并处理" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Dragger
@@ -292,7 +293,7 @@ const PriceChecker = () => {
                                         )}
                                     >
                                         <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                        <p className="ant-upload-text">Click or drag an Excel file here to upload</p>
+                                        <p className="ant-upload-text"><Bi e="Click or drag an Excel file here to upload" c="点击或拖拽 Excel 文件到此处上传" /></p>
                                     </Dragger>
                                     <Button
                                         block
@@ -304,7 +305,7 @@ const PriceChecker = () => {
                                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                                         }}
                                     >
-                                        {calcLoading ? 'Processing...' : 'Start Batch Calculation'}
+                                        {calcLoading ? <Bi e="Processing..." c="处理中..." /> : <Bi e="Start Batch Calculation" c="开始批量计算" />}
                                     </Button>
                                 </div>
                             </div>
@@ -315,7 +316,7 @@ const PriceChecker = () => {
                     {batchOverview && (
                         <div style={{ marginTop: 32 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading emoji="📑">Processing Overview</SectionHeading>
+                            <SectionHeading emoji="📑"><Bi e="Processing Overview" c="处理概览" /></SectionHeading>
 
                             {/* Stats */}
                             <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -324,7 +325,7 @@ const PriceChecker = () => {
                                         <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--indigo)', fontFamily: "'Outfit', sans-serif" }}>
                                             {batchOverview.summary.total}
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Total Rows Processed</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Total Rows Processed" c="处理的总行数" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
@@ -335,7 +336,7 @@ const PriceChecker = () => {
                                                 {batchOverview.summary.valid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Valid Items</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Valid Items" c="有效项目" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
@@ -346,7 +347,7 @@ const PriceChecker = () => {
                                                 {batchOverview.summary.invalid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Invalid / Flagged Items</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Invalid / Flagged Items" c="无效 / 标记项目" /></Text>
                                     </div>
                                 </Col>
                             </Row>
@@ -354,7 +355,7 @@ const PriceChecker = () => {
                             {/* Preview Table (scrollable) */}
                             <div style={{ marginBottom: 6 }}>
                                 <Text style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Data Preview — Top 10 Rows
+                                    <Bi e="Data Preview — Top 10 Rows" c="数据预览 — 前 10 行" />
                                 </Text>
                             </div>
                             <div style={{ marginBottom: 20, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -379,7 +380,7 @@ const PriceChecker = () => {
                                     boxShadow: '0 2px 10px rgba(16,185,129,0.3)', paddingInline: 28,
                                 }}
                             >
-                                Download Full Result (Excel)
+                                <Bi e="Download Full Result (Excel)" c="下载完整结果 (Excel)" />
                             </Button>
                         </div>
                     )}
@@ -391,7 +392,7 @@ const PriceChecker = () => {
                 <div style={{ background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '24px' }}>
                     <Row gutter={[20, 20]}>
                         <Col xs={24} md={16}>
-                            <Label>Bundle SKU &mdash; separate with + or comma</Label>
+                            <Label><Bi e="Bundle SKU — separate with + or comma" c="捆绑 SKU — 用 + 或逗号分隔" /></Label>
                             <Input
                                 size="large"
                                 placeholder="e.g. SKU_A + SKU_B + SKU_C"
@@ -402,7 +403,7 @@ const PriceChecker = () => {
                             />
                         </Col>
                         <Col xs={24} md={8}>
-                            <Label>Target Price (IDR)</Label>
+                            <Label><Bi e="Target Price (IDR)" c="目标价格 (IDR)" /></Label>
                             <InputNumber
                                 size="large"
                                 style={{ width: '100%', borderRadius: 8, height: 46 }}
@@ -426,7 +427,7 @@ const PriceChecker = () => {
                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)', paddingInline: 32,
                         }}
                     >
-                        Calculate Real-time
+                        <Bi e="Calculate Real-time" c="实时计算" />
                     </Button>
 
                     {calcLoading && (
@@ -441,7 +442,7 @@ const PriceChecker = () => {
                             <Divider style={{ borderColor: 'var(--border)' }} />
 
                             {/* Summary */}
-                            <SectionHeading emoji="📊">Bundle Summary</SectionHeading>
+                            <SectionHeading emoji="📊"><Bi e="Bundle Summary" c="捆绑摘要" /></SectionHeading>
                             <Row gutter={16} style={{ marginBottom: 24 }}>
                                 {[
                                     { label: 'Bundle Discount', value: `${Number(directResult.summary.bundle_discount) * 100}%`, color: 'var(--indigo)' },
@@ -458,7 +459,7 @@ const PriceChecker = () => {
                             </Row>
 
                             {/* Breakdown Table */}
-                            <SectionHeading emoji="🧩">Price Composition Breakdown</SectionHeading>
+                            <SectionHeading emoji="🧩"><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
                                 <Table
                                     dataSource={directResult.breakdown}
@@ -471,7 +472,7 @@ const PriceChecker = () => {
                             </div>
 
                             {/* Evaluation Table */}
-                            <SectionHeading emoji="📈">Price Evaluation by Tier</SectionHeading>
+                            <SectionHeading emoji="📈"><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                                 <Table
                                     dataSource={directResult.evaluation}

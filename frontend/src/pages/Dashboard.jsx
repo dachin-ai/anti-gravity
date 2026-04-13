@@ -6,25 +6,28 @@ import { CaretRightOutlined } from '@ant-design/icons';
 const { Title, Text } = Typography;
 
 const TOOLS_CATALOG = [
-    { name: "Price Checker", desc: "Competitor price monitoring across multiple platforms.", main_user: "Account Responsible", platform: "Multiplatform", icon: "🏷️", path: "/price-checker", active: true, category: "operations" },
-    { name: "Order Loss Review", desc: "Analysis of lost orders and cancellation reasons.", main_user: "Platform Responsible", platform: "Qianyi ERP", icon: "📉", path: "/order-loss", active: true, category: "operations" },
-    { name: "Order Failed Delivery", desc: "Tracking and resolving failed delivery orders.", main_user: "Platform Responsible", platform: "TikTok", icon: "🚚", path: "/failed-delivery", active: true, category: "operations" },
-    { name: "Pre-Sales Estimation", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: "🔮", path: "/pre-sales", active: true, category: "planning" },
-    { name: "New ERP OOS Calculate", desc: "Out of Stock (OOS) calculation based on new ERP data.", main_user: "Customer Service", platform: "ERP Qianyi", icon: "⚡", path: "/erp-oos", active: true, category: "operations" },
-    { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: true, category: "planning" },
-    { name: "Conversion Cleaner", desc: "Data cleaning tool for affiliate conversion reports.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🧹", path: "/conversion-cleaner", active: true, category: "data" },
-    { name: "Order Match Checker", desc: "Cross-reference validation for platform orders vs system ERP codes.", main_user: "Platform Responsible", platform: "Multiplatform", icon: "🔍", path: "/order-match", active: true, category: "operations" },
-    { name: "Warehouse Order Estimator", desc: "Estimate daily order volume per warehouse and platform based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: "🏭", path: "/warehouse-order", active: true, category: "planning" },
-    { name: "Socmed Scraper", desc: "Scrape Instagram & TikTok post/comment data via Apify API. Supports bulk & single-post modes.", main_user: "Content / Social", platform: "IG + TikTok", icon: "📥", path: "/socmed-scraping", active: true, category: "data" },
-    { name: "Coming Soon", desc: "New supply chain forecasting module under development.", main_user: "TBD", platform: "TBD", icon: "⭐", path: "", active: false, category: "upcoming" }
+    { name: "Price Checker", desc: "Competitor price monitoring across multiple platforms.", main_user: "Account Responsible", platform: "Multiplatform", icon: "🏷️", path: "/price-checker", active: true, category: "freemir" },
+    { name: "Order Planner", desc: "Estimate daily order volume per warehouse based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: "🏭", path: "/warehouse-order", active: true, category: "freemir" },
+    
+    // Shopee Suite
+    { name: "Order Review", desc: "Analysis of lost orders and cancellation reasons.", main_user: "Platform Responsible", platform: "Qianyi ERP", icon: "📉", path: "/order-loss", active: true, category: "shopee" },
+    { name: "Affiliate Performance", desc: "Shopee Affiliate performance data tracking.", main_user: "Affiliate Responsible", platform: "Shopee", icon: "🏪", path: "/shopee-affiliate", active: true, category: "shopee" },
+
+    // TikTok Suite
+    { name: "Pre-Sales Checker", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: "🔮", path: "/pre-sales", active: true, category: "tiktok" },
+    { name: "Affiliate Analyzer", desc: "Comprehensive TikTok affiliate data analytics.", main_user: "Affiliate Responsible", platform: "TikTok", icon: "📈", path: "/affiliate-analyzer", active: true, category: "tiktok" },
+
+    // Hidden Tools
+    { name: "New ERP OOS Calculate", desc: "Out of Stock (OOS) calculation based on new ERP data.", main_user: "Customer Service", platform: "ERP Qianyi", icon: "⚡", path: "/erp-oos", active: false, category: "freemir", hidden: true },
+    { name: "Failed Delivery Tracker", desc: "Tracking and resolving failed delivery orders.", main_user: "Platform Responsible", platform: "TikTok", icon: "🚚", path: "/failed-delivery", active: false, category: "tiktok", hidden: true },
+    { name: "SKU Monthly Plan", desc: "Monthly SKU planning, budgeting, and supply projection.", main_user: "Analyst", platform: "Ding BI", icon: "📅", path: "/sku-plan", active: false, category: "freemir", hidden: true },
+    { name: "Socmed Scraper", desc: "Scrape Instagram & TikTok post/comment data.", main_user: "Content / Social", platform: "IG + TikTok", icon: "📥", path: "/socmed-scraping", active: false, category: "freemir", hidden: true },
 ];
 
 const CATEGORY_META = {
-    "operations": { title: "Operations & Fulfillment", icon: "⚡" },
-    "planning": { title: "Strategy & Planning", icon: "🎯" },
-    "analytics": { title: "Analytics & Performance", icon: "📊" },
-    "data": { title: "Data Engineering", icon: "🛠️" },
-    "upcoming": { title: "In Development", icon: "🚀" }
+    "freemir": { title: "Freemir Suite", icon: "💠" },
+    "shopee": { title: "Shopee Suite", icon: "🛍️" },
+    "tiktok": { title: "TikTok Suite", icon: "🎵" }
 };
 
 const Dashboard = () => {
@@ -44,7 +47,7 @@ const Dashboard = () => {
 
             {/* CATEGORIES GRID */}
             {Object.entries(CATEGORY_META).map(([catKey, meta]) => {
-                const catTools = TOOLS_CATALOG.filter(t => t.category === catKey);
+                const catTools = TOOLS_CATALOG.filter(t => t.category === catKey && !t.hidden);
                 if (catTools.length === 0) return null;
 
                 return (

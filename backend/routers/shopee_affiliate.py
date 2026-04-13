@@ -93,20 +93,27 @@ def get_checker_matrix(month: str, year: str, db: Session = Depends(get_db)):
     return {"matrix": output}
 
 @router.delete("/data")
-def delete_shopee_data(date: str, store_id: Optional[str] = None, db: Session = Depends(get_db)):
-    """Delete all Shopee Affiliate data for a specific date and store."""
-    q_conv = db.query(ShopeeAffConversion).filter(func.date(ShopeeAffConversion.order_time) == date)
-    q_prod = db.query(ShopeeAffProduct).filter(ShopeeAffProduct.date == date)
-    q_crtr = db.query(ShopeeAffCreator).filter(ShopeeAffCreator.date == date)
+def delete_shopee_data(date: str, store_id: Optional[str] = None, data_type: Optional[str] = None, db: Session = Depends(get_db)):
+    """Delete Shopee Affiliate data for a specific date and store. Granular by data_type if provided."""
+    del_conv = 0
+    del_prod = 0
+    del_crtr = 0
 
-    if store_id and store_id != 'ALL':
-        q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
-        q_prod = q_prod.filter(ShopeeAffProduct.store_id == store_id)
-        q_crtr = q_crtr.filter(ShopeeAffCreator.store_id == store_id)
+    if data_type in (None, 'conversion', 'all'):
+        q_conv = db.query(ShopeeAffConversion).filter(func.date(ShopeeAffConversion.order_time) == date)
+        if store_id and store_id != 'ALL': q_conv = q_conv.filter(ShopeeAffConversion.store_id == store_id)
+        del_conv = q_conv.delete(synchronize_session=False)
 
-    del_conv = q_conv.delete(synchronize_session=False)
-    del_prod = q_prod.delete(synchronize_session=False)
-    del_crtr = q_crtr.delete(synchronize_session=False)
+    if data_type in (None, 'product', 'all'):
+        q_prod = db.query(ShopeeAffProduct).filter(ShopeeAffProduct.date == date)
+        if store_id and store_id != 'ALL': q_prod = q_prod.filter(ShopeeAffProduct.store_id == store_id)
+        del_prod = q_prod.delete(synchronize_session=False)
+
+    if data_type in (None, 'creator', 'all'):
+        q_crtr = db.query(ShopeeAffCreator).filter(ShopeeAffCreator.date == date)
+        if store_id and store_id != 'ALL': q_crtr = q_crtr.filter(ShopeeAffCreator.store_id == store_id)
+        del_crtr = q_crtr.delete(synchronize_session=False)
+
     db.commit()
 
     return {"succeed": True, "message": f"Deleted {del_conv} conversions, {del_prod} products, {del_crtr} creators."}
