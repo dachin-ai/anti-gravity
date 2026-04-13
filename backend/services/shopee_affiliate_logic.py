@@ -234,17 +234,16 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 )
                 new_records.append(record)
 
-            # Auto-detect months to replace from the parsed records
-            from sqlalchemy import cast, String
-            months_to_replace = set()
-            for r in new_records:
-                if r.order_time:
-                    months_to_replace.add(r.order_time.strftime('%Y-%m'))
+            # Auto-detect order_ids to replace from the parsed records
+            order_ids_to_replace = list(set([r.order_id for r in new_records if r.order_id]))
             
-            for ym in months_to_replace:
+            # Hapus data pesanan lama yang order_id nya exist di file CSV ini (chunking untuk keamanan query list besar)
+            chunk_size = 500
+            for i in range(0, len(order_ids_to_replace), chunk_size):
+                chunk = order_ids_to_replace[i:i + chunk_size]
                 db.query(ShopeeAffConversion).filter(
                     ShopeeAffConversion.store_id == store_id,
-                    cast(ShopeeAffConversion.order_time, String).like(f"{ym}%")
+                    ShopeeAffConversion.order_id.in_(chunk)
                 ).delete(synchronize_session=False)
 
             db.bulk_save_objects(new_records)
