@@ -138,7 +138,7 @@ def verify_token(token: str) -> Optional[Dict]:
 
 
 def log_activity(username: str, tool_name: str, ip_address: str = ""):
-    """Menyimpan riwayat pengguna (Activity Log) ke PostgreSQL (Neon)."""
+    """Menyimpan riwayat pengguna (Activity Log) ke PostgreSQL (Neon) dan ke DingTalk."""
     try:
         db = SessionLocal()
         
@@ -154,7 +154,13 @@ def log_activity(username: str, tool_name: str, ip_address: str = ""):
         db.add(new_log)
         db.commit()
         db.close()
-        print(f"[Activity Log] ✓ Logged to DB: {username} used {tool_name} at {now_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        time_str = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[Activity Log] ✓ Logged to DB: {username} used {tool_name} at {time_str}")
+        
+        # Kirim notifikasi ke DingTalk
+        from services.dingtalk_service import send_activity_log
+        send_activity_log(username, tool_name, time_str)
 
     except Exception as e:
         print(f"[Activity Log DB Error] {e}")

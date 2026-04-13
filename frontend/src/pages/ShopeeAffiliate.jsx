@@ -136,7 +136,7 @@ const UploadTab = ({ stores, storesLoading }) => {
       if (isConversion)                      fd.append('manual_date', selectedMonth.format('YYYY-MM'));
       if (needsManual && manualDate)         fd.append('manual_date', manualDate.format('YYYY-MM-DD'));
       try {
-        const res = await axios.post(`${API}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res = await api.post(`${API}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         res.data.succeed ? ok++ : (fail++, message.error(`${fo.name}: ${res.data.message}`));
       } catch (e) {
         fail++;
