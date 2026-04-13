@@ -260,23 +260,46 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 ShopeeAffProduct.date == target_date
             ).delete(synchronize_session=False)
 
-            required_cols = ['export_item_id_dashboard_down_item', 'export_item_name_dashboard_down_item', 'export_sales_dashboard_down_item(Rp)', 'export_item_sold_dashboard_down_item', 'export_est_commission_dashboard_down_item(Rp)']
+            actual_cols = list(df.columns)
+            def find_col(candidates):
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.strip().lower() == col.strip().lower():
+                            return col
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.strip().lower() in col.strip().lower():
+                            return col
+                return None
+
+            col_id = find_col(['export_item_id', 'Item id', 'Item ID'])
+            col_name = find_col(['export_item_name', 'Item Name'])
+            col_gmv = find_col(['export_sales', 'Sales(Rp)', 'Sales'])
+            col_sold = find_col(['export_item_sold', 'Item Sold'])
+            col_comm = find_col(['export_est_commission', 'Est. Commission', 'Commission'])
+
+            missing = []
+            if not col_id: missing.append('Item ID')
+            if not col_name: missing.append('Item Name')
+            if not col_gmv: missing.append('Sales')
+            if not col_sold: missing.append('Item Sold')
+            if not col_comm: missing.append('Commission')
             
-            if not all(col in df.columns for col in required_cols):
-                return {"succeed": False, "message": f"CSV Product tidak cocok. Pastikan Headers sama dengan standar Shopee."}
+            if missing:
+                return {"succeed": False, "message": f"CSV Product tidak cocok. Kolom hilang: {missing}. Ditemukan: {actual_cols[:5]}..."}
                 
             new_records = []
             for index, row in df.iterrows():
-                product_id = str(row['export_item_id_dashboard_down_item']).strip()
+                product_id = str(row[col_id]).strip()
                 if not product_id or product_id == 'nan':
                     continue
                 
-                gmv = clean_money_field(row['export_sales_dashboard_down_item(Rp)'])
-                commission = clean_money_field(row['export_est_commission_dashboard_down_item(Rp)'])
+                gmv = clean_money_field(row[col_gmv])
+                commission = clean_money_field(row[col_comm])
                 roi = (gmv / commission) if commission > 0 else 0.0
                 
                 try: 
-                    unit_sold = int(float(row['export_item_sold_dashboard_down_item'])) 
+                    unit_sold = int(float(row[col_sold])) 
                 except: 
                     unit_sold = 0
                 
@@ -284,7 +307,7 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                     date=target_date,
                     store_id=store_id,
                     product_id=product_id,
-                    product_name=str(row['export_item_name_dashboard_down_item']).strip(),
+                    product_name=str(row[col_name]).strip(),
                     gmv=gmv,
                     unit_sold=unit_sold,
                     commission=commission,
@@ -309,32 +332,49 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 ShopeeAffCreator.date == target_date
             ).delete(synchronize_session=False)
 
-            required_cols = ['export_affiliate_username', 'export_sales_affiliate_performance(Rp)', 'export_item_sold', 'export_est_commission_affiliate_performance(Rp)']
+            actual_cols = list(df.columns)
+            def find_col(candidates):
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.strip().lower() == col.strip().lower(): return col
+                for c in candidates:
+                    for col in actual_cols:
+                        if c.strip().lower() in col.strip().lower(): return col
+                return None
+
+            col_username = find_col(['export_affiliate_username', 'Username', 'Affiliate Username'])
+            col_gmv = find_col(['export_sales_affiliate_performance', 'Sales', 'GMV'])
+            col_sold = find_col(['export_item_sold', 'Item Sold'])
+            col_comm = find_col(['export_est_commission_affiliate_performance', 'Est. Commission', 'Commission'])
+            col_name = find_col(['export_affiliate_name', 'Affiliate Name', 'Name'])
+            col_clicks = find_col(['export_clicks', 'Clicks'])
             
-            # Alternative optional
-            has_name = 'export_affiliate_name' in df.columns
-            has_clicks = 'export_clicks' in df.columns
-            
-            if not all(col in df.columns for col in required_cols):
-                return {"succeed": False, "message": f"CSV Creator tidak cocok. Pastikan Headers sama dengan standar Shopee."}
+            missing = []
+            if not col_username: missing.append('Username')
+            if not col_gmv: missing.append('Sales')
+            if not col_sold: missing.append('Item Sold')
+            if not col_comm: missing.append('Commission')
+
+            if missing:
+                return {"succeed": False, "message": f"CSV Creator tidak cocok. Kolom hilang: {missing}. Ditemukan: {actual_cols[:5]}..."}
                 
             new_records = []
             for index, row in df.iterrows():
-                username = str(row['export_affiliate_username']).strip()
+                username = str(row[col_username]).strip()
                 if not username or username == 'nan':
                     continue
                 
-                gmv = clean_money_field(row['export_sales_affiliate_performance(Rp)'])
-                commission = clean_money_field(row['export_est_commission_affiliate_performance(Rp)'])
+                gmv = clean_money_field(row[col_gmv])
+                commission = clean_money_field(row[col_comm])
                 roi = (gmv / commission) if commission > 0 else 0.0
                 
                 try: 
-                    unit_sold = int(float(row['export_item_sold'])) 
+                    unit_sold = int(float(row[col_sold])) 
                 except: 
                     unit_sold = 0
                     
                 try:
-                    clicks = int(float(row['export_clicks'])) if has_clicks else 0
+                    clicks = int(float(row[col_clicks])) if col_clicks else 0
                 except:
                     clicks = 0
                 
@@ -342,7 +382,7 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                     date=target_date,
                     store_id=store_id,
                     affiliate_username=username,
-                    affiliate_name=str(row['export_affiliate_name']).strip() if has_name else "",
+                    affiliate_name=str(row[col_name]).strip() if col_name else "",
                     gmv=gmv,
                     unit_sold=unit_sold,
                     clicks=clicks,
