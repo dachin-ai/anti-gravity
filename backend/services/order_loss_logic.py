@@ -233,28 +233,39 @@ def sanitize_json(val):
 
 def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Warning") -> Tuple[Dict, bytes]:
     df.columns = df.columns.str.strip()
+    actual_cols = list(df.columns)
     
-    col_mapping = {
-        '原始单号': 'Original Order Number',
-        'ERP单号': 'ERP Order Number',
-        '店铺': 'Store',
-        '线上商品编码': 'Online Product Code', 
-        '线上商品SKUid': 'Online Product SKU ID',
-        '系统商品编码': 'System Product Code',
-        '商品明细毛利': 'Product Detail Gross Profit',
-        '商品明细优惠后金额': 'Product Detail Amount After Discount',
-        '商品实付金额': 'Product Detail Amount After Discount',
-        '商品折后明细金额': 'Product Detail Amount After Discount',
-        '卖家优惠券': 'Seller Coupon'
-    }
-    df = df.rename(columns=col_mapping)
+    def find_col(candidates):
+        for c in candidates:
+            if c in actual_cols: return c
+        for c in candidates:
+            for ac in actual_cols:
+                if c.lower() == ac.lower(): return ac
+        for c in candidates:
+            for ac in actual_cols:
+                if c.lower() in ac.lower(): return ac
+        return None
+
+    col_map = {}
+    col_map['Original Order Number'] = find_col(['Original Order Number', '原始单号'])
+    col_map['ERP Order Number'] = find_col(['ERP Order Number', 'ERP Order', 'ERP单号'])
+    col_map['Store'] = find_col(['Store', 'Shop', '店铺'])
+    col_map['Online Product Code'] = find_col(['Online Product Code', 'Online Product', '线上商品编码', '线上商品'])
+    col_map['System Product Code'] = find_col(['System Product Code', 'System Product', '系统商品编码', '系统商品'])
+    col_map['Product Detail Gross Profit'] = find_col(['Product Detail Gross Profit', 'Product Gross Profit', '商品明细毛利', '商品毛利'])
+    col_map['Product Detail Amount After Discount'] = find_col(['Product Detail Amount After Discount', 'Product Actual Amount Paid', 'Product Actual Amount', 'Product Amount After Discount', '商品明细优惠后金额', '商品实付金额', '商品折后明细金额'])
+    col_map['Seller Coupon'] = find_col(['Seller Coupon', '卖家优惠券'])
+    col_map['Order allocated amount'] = find_col(['Order allocated amount', 'Order allocated'])
     
-    req_cols = ['Store', 'Original Order Number', 'ERP Order Number', 'Online Product Code', 'System Product Code', 
+    req_cols_keys = ['Store', 'Original Order Number', 'ERP Order Number', 'Online Product Code', 'System Product Code', 
                 'Product Detail Gross Profit', 'Product Detail Amount After Discount', 'Seller Coupon']
     
-    missing = [c for c in req_cols if c not in df.columns]
+    missing = [k for k in req_cols_keys if not col_map[k]]
     if missing:
-        raise ValueError(f"Missing columns: {', '.join(missing)}")
+        raise ValueError(f"Missing columns for: {', '.join(missing)}. Available columns: {actual_cols[:15]}")
+    
+    rename_dict = {col_map[k]: k for k, v in col_map.items() if v}
+    df = df.rename(columns=rename_dict)
     
     df['Type'] = df['Original Order Number'].apply(detect_type)
     df['Product Detail Gross Profit'] = df['Product Detail Gross Profit'].apply(clean_currency_strict)
