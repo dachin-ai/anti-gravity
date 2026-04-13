@@ -113,7 +113,6 @@ const ShopeeAffiliate = () => {
 const UploadTab = ({ stores, storesLoading }) => {
   const [uploadType,    setUploadType]    = useState('conversion');
   const [selectedStore, setSelectedStore] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(dayjs());     // for conversion
   const [manualDate,    setManualDate]    = useState(null);         // for product/creator (optional)
   const [uploading,     setUploading]     = useState(false);
   const [fileList,      setFileList]      = useState([]);
@@ -124,7 +123,6 @@ const UploadTab = ({ stores, storesLoading }) => {
   const handleUpload = async () => {
     if (!selectedStore)                          return message.warning('Please select a store first.');
     if (!fileList.length)                        return message.warning('Select or drag CSV files to upload.');
-    if (isConversion && fileList.length > 1)     return message.warning('Conversion: only 1 file per month is allowed.');
 
     setUploading(true);
     let ok = 0, fail = 0;
@@ -133,7 +131,6 @@ const UploadTab = ({ stores, storesLoading }) => {
       fd.append('file',       fo.originFileObj);
       fd.append('file_type',  uploadType);
       fd.append('store_id',   selectedStore);
-      if (isConversion)                      fd.append('manual_date', selectedMonth.format('YYYY-MM'));
       if (needsManual && manualDate)         fd.append('manual_date', manualDate.format('YYYY-MM-DD'));
       try {
         const res = await api.post(`${API}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -157,7 +154,7 @@ const UploadTab = ({ stores, storesLoading }) => {
             <Select style={{ width: '100%', marginTop: 6 }} value={uploadType}
               onChange={v => { setUploadType(v); setFileList([]); }}
               options={[
-                { value: 'conversion', label: '📋 Conversion (1 file/month)' },
+                { value: 'conversion', label: '📋 Conversion (batch)' },
                 { value: 'product',    label: '📦 Product (batch)' },
                 { value: 'creator',    label: '🎬 Creator (batch)' },
               ]} />
@@ -170,16 +167,6 @@ const UploadTab = ({ stores, storesLoading }) => {
           </Col>
         </Row>
 
-        {isConversion && (
-          <div>
-            <div style={S.label}>Report Month (Conversion)</div>
-            <DatePicker picker="month" style={{ width: '100%', marginTop: 6 }}
-              value={selectedMonth} onChange={d => d && setSelectedMonth(d)} allowClear={false} />
-            <div style={{ ...S.warnBox, marginTop: 10, fontSize: 12, color: '#faad14' }}>
-              ⚠️ Conversion data for this store and month will be <strong>overwritten</strong> if re-uploaded.
-            </div>
-          </div>
-        )}
         {needsManual && (
           <div>
             <div style={S.label}>
@@ -286,9 +273,9 @@ const CheckerTab = ({ stores }) => {
       title: <span style={{ color: '#93c5fd' }}>{getStoreName(code)}</span>,
       onHeaderCell: getHeaderCell,
       children: [
-        { title: <span style={{ color: '#86efac', fontSize: 10 }}>Prod</span>, align: 'center', width: 52, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} /> },
-        { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Crtr</span>, align: 'center', width: 52, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} /> },
-        { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conv</span>, align: 'center', width: 52, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} /> },
+        { title: <span style={{ color: '#86efac', fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} /> },
+        { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Creator</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} /> },
+        { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conversion</span>, align: 'center', width: 75, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} /> },
       ]
     })),
     {

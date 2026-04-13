@@ -234,12 +234,17 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 )
                 new_records.append(record)
 
-            if manual_date and len(manual_date.split('-')) >= 2:
-                year, month = manual_date.split('-')[:2]
-                from sqlalchemy import cast, String
+            # Auto-detect months to replace from the parsed records
+            from sqlalchemy import cast, String
+            months_to_replace = set()
+            for r in new_records:
+                if r.order_time:
+                    months_to_replace.add(r.order_time.strftime('%Y-%m'))
+            
+            for ym in months_to_replace:
                 db.query(ShopeeAffConversion).filter(
                     ShopeeAffConversion.store_id == store_id,
-                    cast(ShopeeAffConversion.order_time, String).like(f"{year}-{month}%")
+                    cast(ShopeeAffConversion.order_time, String).like(f"{ym}%")
                 ).delete(synchronize_session=False)
 
             db.bulk_save_objects(new_records)
