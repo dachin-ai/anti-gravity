@@ -153,6 +153,13 @@ def clean_sku_list(sku_string: str) -> List[str]:
     parts = re.split(r'[+\-,|]+', str(sku_string))
     return [p.strip() for p in parts if p.strip()]
 
+def parse_idr_price(val: Any) -> float:
+    if val is None or str(val).strip() == "": return 0.0
+    val_str = str(val)
+    digits = re.sub(r'[^\d]', '', val_str)
+    if not digits: return 0.0
+    return float(digits)
+
 def get_bundle_discount_rate(count: int) -> float:
     if count == 1: return 0.0
     elif count == 2: return 0.02
@@ -176,21 +183,17 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
         is_gift = "gift" in cat
         gift_factor = 0.5 if is_gift and sku_count > 1 else 1.0
 
-        c_val = item_data.get("Clearance", 0)
-        is_clearance = False
-        try:
-            if float(str(c_val).replace(',', '')) >= 1: is_clearance = True
-        except: pass
+        # Use robust parser for clearance
+        c_val = parse_idr_price(item_data.get("Clearance", 0))
+        is_clearance = c_val >= 1
 
-        base_price = item_data.get("Warning", 0) 
+        raw_base = item_data.get("Warning", 0)
+        base_price_float = parse_idr_price(raw_base)
 
         if is_clearance:
-            final_price = float(c_val)
+            final_price = c_val
             logic_applied = "Clearance Override"
         else:
-            try: base_price_float = float(str(base_price).replace(',', ''))
-            except: base_price_float = 0.0
-
             final_price = base_price_float * gift_factor * (1 - base_disc)
             logic_list = []
             if is_gift and sku_count > 1: logic_list.append("Gift (50%)")
@@ -200,7 +203,7 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
         breakdown_data.append({
             "SKU": sku,
             "Product Name": name,
-            "Base Price (Warning)": base_price,
+            "Base Price (Warning)": int(base_price_float),
             "Logic Applied": logic_applied,
             "Total Contribution (IDR)": int(round(final_price))
         })
@@ -254,12 +257,9 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
         if "gift" in category: has_gift = True
         
         gift_factor = 0.5 if "gift" in category and sku_count > 1 else 1.0
-        clearance_price = item_data.get(col_clearance)
-        is_clearance_item = False
-        try:
-            c_val = float(str(clearance_price).replace(',', ''))
-            if c_val >= 1: is_clearance_item = True
-        except: pass
+        
+        c_val = parse_idr_price(item_data.get(col_clearance, 0))
+        is_clearance_item = c_val >= 1
             
         if is_clearance_item:
             has_clearance = True
@@ -269,16 +269,11 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
             item_prices = {}
             item_disc = base_discount_rate
             for p_type in PRICE_TYPES:
-                try:
-                    val_str = str(item_data.get(p_type, 0)).replace(',', '')
-                    val = float(val_str)
-                    if val >= 1: item_prices[p_type] = val
-                    else:
-                        item_prices[p_type] = 0
-                        is_valid[p_type] = False 
-                except:
+                val = parse_idr_price(item_data.get(p_type, 0))
+                if val >= 1: item_prices[p_type] = val
+                else:
                     item_prices[p_type] = 0
-                    is_valid[p_type] = False
+                    is_valid[p_type] = False 
 
         for p_type in PRICE_TYPES:
             total_prices[p_type] += item_prices[p_type] * gift_factor * (1 - item_disc)

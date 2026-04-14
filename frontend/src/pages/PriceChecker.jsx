@@ -129,8 +129,8 @@ const PriceChecker = () => {
     /* ─── Table Column Definitions ─── */
     const evalColumns = [
         { title: 'Price Tier',    dataIndex: 'Tier',        key: 'Tier',        width: 160, fixed: 'left' },
-        { title: 'System Price',  dataIndex: 'SystemPrice', key: 'sys',         width: 130, render: v => Number(v)?.toLocaleString?.() ?? v },
-        { title: 'Target Price',  dataIndex: 'TargetPrice', key: 'tgt',         width: 130, render: v => Number(v)?.toLocaleString?.() ?? v },
+        { title: 'System Price',  dataIndex: 'SystemPrice', key: 'sys',         width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'Target Price',  dataIndex: 'TargetPrice', key: 'tgt',         width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
         {
             title: 'Gap (Margin)', dataIndex: 'Gap', key: 'gap', width: 130,
             render: v => {
@@ -157,9 +157,9 @@ const PriceChecker = () => {
     const breakdownColumns = [
         { title: 'SKU',              dataIndex: 'SKU',                        key: 'SKU',   width: 150, fixed: 'left' },
         { title: 'Product Name',     dataIndex: 'Product Name',               key: 'pn',    width: 240, ellipsis: true },
-        { title: 'Base Price',       dataIndex: 'Base Price (Warning)',        key: 'bp',    width: 130, render: v => Number(v)?.toLocaleString?.() ?? v },
+        { title: 'Base Price',       dataIndex: 'Base Price (Warning)',        key: 'bp',    width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
         { title: 'Logic Applied',    dataIndex: 'Logic Applied',              key: 'la',    width: 180 },
-        { title: 'Contribution (IDR)', dataIndex: 'Total Contribution (IDR)', key: 'con',   width: 160, render: v => Number(v)?.toLocaleString?.() ?? v },
+        { title: 'Contribution (IDR)', dataIndex: 'Total Contribution (IDR)', key: 'con',   width: 160, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
     ];
 
     const previewColumns = batchOverview?.preview?.length
