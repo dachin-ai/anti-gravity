@@ -91,6 +91,7 @@ def sync_google_sheets_to_neon() -> int:
             db.query(FreemirPrice).delete()
             db.commit()
             
+            price_objects = []
             for _, row in df_price.iterrows():
                 sku_val = str(row[sku_col]).strip()
                 cat_val = str(row[cat_col]) if cat_col and cat_col in row else ""
@@ -101,9 +102,12 @@ def sync_google_sheets_to_neon() -> int:
                     if pt in row:
                         prices_dict[pt] = str(row[pt])
                 
-                db.add(FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict))
+                price_objects.append(FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict))
                 count += 1
-            db.commit()
+                
+            if price_objects:
+                db.bulk_save_objects(price_objects)
+                db.commit()
 
         # Read All_Name sheet
         try:
@@ -119,12 +123,16 @@ def sync_google_sheets_to_neon() -> int:
                 db.query(FreemirName).delete()
                 db.commit()
                 
+                name_objects = []
                 for _, row in df_names.iterrows():
                     sku_val = str(row[sku_c]).strip()
                     n_val = str(row[name_c]) if name_c else ""
                     l_val = str(row[link_c]) if link_c else ""
-                    db.add(FreemirName(sku=sku_val, product_name=n_val, link=l_val))
-                db.commit()
+                    name_objects.append(FreemirName(sku=sku_val, product_name=n_val, link=l_val))
+                    
+                if name_objects:
+                    db.bulk_save_objects(name_objects)
+                    db.commit()
         except Exception:
             pass
             
