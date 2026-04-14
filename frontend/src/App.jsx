@@ -16,6 +16,7 @@ import WarehouseOrder from './pages/WarehouseOrder';
 import SocmedScraping from './pages/SocmedScraping';
 import AffiliateAnalyzer from './pages/AffiliateAnalyzer';
 import ShopeeAffiliate from './pages/ShopeeAffiliate';
+import TikTokAds from './pages/TikTokAds';
 
 // Protected route wrapper
 function ProtectedApp() {
@@ -56,6 +57,7 @@ function ProtectedApp() {
         <Route path="socmed-scraping" element={<SocmedScraping />} />
         <Route path="affiliate-analyzer" element={<AffiliateAnalyzer />} />
         <Route path="shopee-affiliate" element={<ShopeeAffiliate />} />
+        <Route path="tiktok-ads" element={<TikTokAds />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

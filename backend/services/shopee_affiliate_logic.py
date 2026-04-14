@@ -10,7 +10,7 @@ from models import ShopeeAffConversion, ShopeeAffProduct, ShopeeAffCreator
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GoIpse2K5piWfw5J1urkoZj6KWY3zBo8UX0TAmvUZ1M"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc"
 
 if os.path.exists("/etc/secrets/credentials.json"):
     CREDENTIALS_FILE = "/etc/secrets/credentials.json"

@@ -45,6 +45,7 @@ const MainLayout = () => {
       children: [
         { key: '/pre-sales', label: <Bi e="Pre-Sales Checker" c="预售预估" /> },
         { key: '/affiliate-analyzer', label: <Bi e="Affiliate Analyzer" c="联盟数据分析" /> },
+        { key: '/tiktok-ads', label: <Bi e="Ads Analyzer" c="TikTok 广告分析" /> },
         // Hidden items:
         // { key: '/failed-delivery', label: <Bi e="Failed Delivery Tracker" c="退件追踪" /> },
       ]

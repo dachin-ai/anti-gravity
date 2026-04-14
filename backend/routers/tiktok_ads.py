@@ -15,20 +15,16 @@ class FileItem(BaseModel):
 
 class TikTokAdsRequest(BaseModel):
     files: List[FileItem]
-    mode: str  # "aggregate" | "daily"
 
 
 @router.post("/analyze")
 def analyze_tiktok_ads(body: TikTokAdsRequest):
     try:
-        if body.mode not in ("aggregate", "daily"):
-            raise HTTPException(status_code=400, detail="mode must be 'aggregate' or 'daily'")
         if not body.files:
             raise HTTPException(status_code=400, detail="At least one file is required")
 
         result = process_tiktok_ads(
             files=[f.dict() for f in body.files],
-            mode=body.mode,
         )
         return result
 

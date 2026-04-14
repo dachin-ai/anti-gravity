@@ -16,6 +16,7 @@ const TOOLS_CATALOG = [
     // TikTok Suite
     { name: "Pre-Sales Checker", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: "🔮", path: "/pre-sales", active: true, category: "tiktok" },
     { name: "Affiliate Analyzer", desc: "Comprehensive TikTok affiliate data analytics.", main_user: "Affiliate Responsible", platform: "TikTok", icon: "📈", path: "/affiliate-analyzer", active: true, category: "tiktok" },
+    { name: "Ads Analyzer", desc: "Analyze and consolidate TikTok Ads performance data.", main_user: "Ads Specialist", platform: "TikTok", icon: "📊", path: "/tiktok-ads", active: true, category: "tiktok" },
 
     // Hidden Tools
     { name: "New ERP OOS Calculate", desc: "Out of Stock (OOS) calculation based on new ERP data.", main_user: "Customer Service", platform: "ERP Qianyi", icon: "⚡", path: "/erp-oos", active: false, category: "freemir", hidden: true },
