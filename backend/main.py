@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
+from database import engine, Base
+import models  # noqa: F401 - ensure all models are registered before create_all
 
 app = FastAPI()
+
+# Auto-create any missing tables on startup (safe: does not drop existing tables)
+Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,
