@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: antigravity-backend
+    environment:
+      - DATABASE_URL=postgresql://dena_admin:AntiGrav2026Secure@host.docker.internal:5432/antigravity_db
+      - JWT_SECRET=freemir_antigravity_2026_prod_secret
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    volumes:
+      - ./backend/credentials.json:/app/credentials.json:ro
+
+  frontend:
+    build: ./frontend
+    container_name: antigravity-frontend
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
