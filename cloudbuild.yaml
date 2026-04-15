@@ -1,0 +1,18 @@
+steps:
+  # Deploy Backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'cd backend && gcloud run deploy anti-gravity --source . --region asia-southeast1 --allow-unauthenticated --quiet'
+
+  # Deploy Frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'cd frontend && gcloud run deploy frontend-anti-gravity --source . --region asia-southeast1 --allow-unauthenticated --quiet'
+
+timeout: '1800s'
+options:
+  logging: CLOUD_LOGGING_ONLY
