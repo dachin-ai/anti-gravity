@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user, verify_token, log_activity
+from services.auth_logic import signup_user, login_user, verify_token, log_activity, sync_users_from_sheet
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -74,6 +74,15 @@ def log_tool_activity(body: LogActivityRequest, request: Request):
     print(f"[Auth Router] log-activity: {username} used {body.tool_name}")
     log_activity(username, body.tool_name, ip)
     return {"logged": True, "username": username, "tool": body.tool_name}
+
+
+@router.post("/sync-users")
+def sync_users():
+    """Sync all users from Google Sheets Account tab into the PostgreSQL database."""
+    success, msg = sync_users_from_sheet()
+    if not success:
+        raise HTTPException(status_code=500, detail=msg)
+    return {"message": msg}
 
 
 @router.get("/test-sheet")

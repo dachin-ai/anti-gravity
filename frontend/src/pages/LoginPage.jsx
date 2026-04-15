@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, message, Tabs, Typography } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined, SyncOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import { syncUsers } from '../api';
 
 const { Title, Text, Link } = Typography;
 
@@ -10,8 +11,21 @@ const LoginPage = () => {
     const { login, signup } = useAuth();
     const [loadingLogin, setLoadingLogin] = useState(false);
     const [loadingSignup, setLoadingSignup] = useState(false);
+    const [loadingSync, setLoadingSync] = useState(false);
     const [activeTab, setActiveTab] = useState('login');
     const [signupDone, setSignupDone] = useState(false);
+
+    const onSyncUsers = async () => {
+        setLoadingSync(true);
+        try {
+            const res = await syncUsers();
+            message.success(res.data?.message || 'Users synced successfully!');
+        } catch (err) {
+            message.error(err.response?.data?.detail || 'Failed to sync users.');
+        } finally {
+            setLoadingSync(false);
+        }
+    };
 
     const onLogin = async (values) => {
         setLoadingLogin(true);
@@ -233,6 +247,28 @@ const LoginPage = () => {
                         <Text style={{ color: '#475569', fontSize: 11 }}>
                             Access controlled · Sessions valid for 24 hours
                         </Text>
+                    </div>
+                    <div style={{ marginTop: 14, borderTop: '1px solid rgba(99,102,241,0.1)', paddingTop: 14 }}>
+                        <Button
+                            icon={<SyncOutlined spin={loadingSync} />}
+                            loading={loadingSync}
+                            onClick={onSyncUsers}
+                            size="small"
+                            style={{
+                                background: 'rgba(99,102,241,0.1)',
+                                border: '1px solid rgba(99,102,241,0.25)',
+                                color: '#94a3b8',
+                                borderRadius: 8,
+                                fontSize: 12,
+                                height: 32,
+                                paddingInline: 14,
+                            }}
+                        >
+                            Refresh Users
+                        </Button>
+                        <div style={{ color: '#334155', fontSize: 10, marginTop: 6 }}>
+                            Admin: sync user data from Google Sheets
+                        </div>
                     </div>
                 </div>
             </div>

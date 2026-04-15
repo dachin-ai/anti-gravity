@@ -7,7 +7,7 @@ import traceback
 from typing import Optional, Dict, Tuple
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import ActivityLog
+from models import ActivityLog, AccountUser
 
 # Same spreadsheet as price checker
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc"
@@ -51,22 +51,59 @@ def get_users() -> list:
         raise RuntimeError(f"Failed to access Account sheet: {e}")
 
 
-def find_user_by_username(username: str) -> Optional[Dict]:
-    """Find a user by username (case-insensitive)."""
-    users = get_users()
-    for user in users:
-        if str(user.get("Username", "")).strip().lower() == username.strip().lower():
-            return user
-    return None
+def sync_users_from_sheet() -> Tuple[bool, str]:
+    """Sync all users from the Account sheet to the PostgreSQL database."""
+    try:
+        users = get_users()
+        db = SessionLocal()
+        try:
+            db.query(AccountUser).delete()
+            for user in users:
+                new_user = AccountUser(
+                    email=str(user.get("Email", "")).strip(),
+                    username=str(user.get("Username", "")).strip(),
+                    password=str(user.get("Password", "")).strip(),
+                    approval=str(user.get("Approval", "")).strip()
+                )
+                db.add(new_user)
+            db.commit()
+            return True, "Users synched to database successfully."
+        finally:
+            db.close()
+    except Exception as e:
+        return False, f"Failed to sync users: {str(e)}"
 
+def find_user_by_username(username: str) -> Optional[Dict]:
+    """Find a user by username from the database (case-insensitive)."""
+    db = SessionLocal()
+    try:
+        user = db.query(AccountUser).filter(AccountUser.username.ilike(username.strip())).first()
+        if user:
+            return {
+                "Email": user.email,
+                "Username": user.username,
+                "Password": user.password,
+                "Approval": user.approval
+            }
+        return None
+    finally:
+        db.close()
 
 def find_user_by_email(email: str) -> Optional[Dict]:
-    """Find a user by email (case-insensitive)."""
-    users = get_users()
-    for user in users:
-        if str(user.get("Email", "")).strip().lower() == email.strip().lower():
-            return user
-    return None
+    """Find a user by email from the database (case-insensitive)."""
+    db = SessionLocal()
+    try:
+        user = db.query(AccountUser).filter(AccountUser.email.ilike(email.strip())).first()
+        if user:
+            return {
+                "Email": user.email,
+                "Username": user.username,
+                "Password": user.password,
+                "Approval": user.approval
+            }
+        return None
+    finally:
+        db.close()
 
 
 def signup_user(email: str, username: str, password: str) -> Tuple[bool, str]:
