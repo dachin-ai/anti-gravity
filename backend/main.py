@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
 from database import engine, Base
 import models  # noqa: F401 - ensure all models are registered before create_all
@@ -8,6 +9,35 @@ app = FastAPI()
 
 # Auto-create any missing tables on startup (safe: does not drop existing tables)
 Base.metadata.create_all(bind=engine)
+
+# --- Inline migration: add missing columns to existing tables ---
+# create_all() does NOT alter existing tables, so we must add new columns manually.
+def _run_migrations():
+    migrations = [
+        # Add 'permissions' JSON column to account_users (added for permission-based access control)
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'account_users' AND column_name = 'permissions'
+            ) THEN
+                ALTER TABLE account_users ADD COLUMN permissions JSON;
+            END IF;
+        END
+        $$;
+        """,
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            conn.execute(text(sql))
+        conn.commit()
+    print("[Startup] ✓ Database migrations checked / applied.")
+
+try:
+    _run_migrations()
+except Exception as e:
+    print(f"[Startup] ⚠ Migration warning: {e}")
 
 app.add_middleware(
     CORSMiddleware,
