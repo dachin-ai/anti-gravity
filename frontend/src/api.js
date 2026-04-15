@@ -9,6 +9,16 @@ const api = axios.create({
   baseURL,
 });
 
+// Auto-attach Bearer token to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('fm_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const syncUsers = () => api.post('/auth/sync-users');
 
 export default api;
+
