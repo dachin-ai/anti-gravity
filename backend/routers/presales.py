@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from services.permission_guard import require_tool_access
 from fastapi.responses import JSONResponse
 import traceback
 import base64
@@ -7,7 +8,7 @@ from services.presales_logic import process_presales
 
 router = APIRouter(prefix="/api/pre-sales", tags=["Pre-Sales"])
 
-@router.post("/calculate")
+@router.post("/calculate", dependencies=[Depends(require_tool_access("pre_sales"))])
 async def calculate_presales(
     file: UploadFile = File(...)
 ):

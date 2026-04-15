@@ -1,11 +1,12 @@
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
+from services.permission_guard import require_tool_access
 from fastapi.responses import JSONResponse
 import traceback
 from services.affiliate_logic import analyze_affiliates
 
 router = APIRouter(prefix="/api/affiliate", tags=["Affiliate Analyzer"])
 
-@router.post("/analyze")
+@router.post("/analyze", dependencies=[Depends(require_tool_access("affiliate_analyzer"))])
 async def analyze(
     mode: str = Form(...),
     file_a: UploadFile = File(...),

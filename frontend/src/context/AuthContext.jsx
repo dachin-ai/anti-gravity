@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
         // Verify token with backend
         api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` } })
             .then(res => {
-                setUser({ username: res.data.username, email: res.data.email });
+                setUser({ username: res.data.username, email: res.data.email, permissions: res.data.permissions || {} });
             })
             .catch(() => {
                 logout();
@@ -59,11 +59,16 @@ export function AuthProvider({ children }) {
 
         // Verify & get user info
         const verify = await api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` } });
-        const userData = { username: verify.data.username, email: verify.data.email };
+        const userData = { username: verify.data.username, email: verify.data.email, permissions: verify.data.permissions || {} };
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         setUser(userData);
         return userData;
     }, []);
+
+    const hasAccess = useCallback((toolKey) => {
+        if (!user || !user.permissions) return false;
+        return user.permissions[toolKey] === 1;
+    }, [user]);
 
     const signup = useCallback(async (email, username, password) => {
         const res = await api.post('/auth/signup', { email, username, password });
@@ -92,7 +97,7 @@ export function AuthProvider({ children }) {
     }, [user, getToken]);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, signup, logActivity, getToken }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, signup, logActivity, getToken, hasAccess }}>
             {children}
         </AuthContext.Provider>
     );

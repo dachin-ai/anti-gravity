@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from services.permission_guard import require_tool_access
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -35,7 +36,7 @@ class WarehouseOrderRequest(BaseModel):
     events: List[EventItem]
 
 
-@router.post("/calculate")
+@router.post("/calculate", dependencies=[Depends(require_tool_access("order_planner"))])
 def calculate_warehouse_order(body: WarehouseOrderRequest):
     try:
         if body.aov <= 0:

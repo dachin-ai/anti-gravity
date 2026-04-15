@@ -17,6 +17,7 @@ import SocmedScraping from './pages/SocmedScraping';
 import AffiliateAnalyzer from './pages/AffiliateAnalyzer';
 import ShopeeAffiliate from './pages/ShopeeAffiliate';
 import TikTokAds from './pages/TikTokAds';
+import PermissionGate from './components/PermissionGate';
 
 // Protected route wrapper
 function ProtectedApp() {
@@ -45,19 +46,19 @@ function ProtectedApp() {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Dashboard />} />
-        <Route path="price-checker" element={<PriceChecker />} />
-        <Route path="order-loss" element={<OrderLossReview />} />
+        <Route path="price-checker" element={<PermissionGate toolKey="price_checker"><PriceChecker /></PermissionGate>} />
+        <Route path="order-loss" element={<PermissionGate toolKey="order_review"><OrderLossReview /></PermissionGate>} />
         <Route path="failed-delivery" element={<FailedDelivery />} />
-        <Route path="pre-sales" element={<PreSalesEstimation />} />
+        <Route path="pre-sales" element={<PermissionGate toolKey="pre_sales"><PreSalesEstimation /></PermissionGate>} />
         <Route path="erp-oos" element={<ErpOosCalculate />} />
         <Route path="sku-plan" element={<SkuMonthlyPlan />} />
         <Route path="conversion-cleaner" element={<ConversionCleaner />} />
         <Route path="order-match" element={<OrderMatchChecker />} />
-        <Route path="warehouse-order" element={<WarehouseOrder />} />
+        <Route path="warehouse-order" element={<PermissionGate toolKey="order_planner"><WarehouseOrder /></PermissionGate>} />
         <Route path="socmed-scraping" element={<SocmedScraping />} />
-        <Route path="affiliate-analyzer" element={<AffiliateAnalyzer />} />
-        <Route path="shopee-affiliate" element={<ShopeeAffiliate />} />
-        <Route path="tiktok-ads" element={<TikTokAds />} />
+        <Route path="affiliate-analyzer" element={<PermissionGate toolKey="affiliate_analyzer"><AffiliateAnalyzer /></PermissionGate>} />
+        <Route path="shopee-affiliate" element={<PermissionGate toolKey="affiliate_performance"><ShopeeAffiliate /></PermissionGate>} />
+        <Route path="tiktok-ads" element={<PermissionGate toolKey="ads_analyzer"><TikTokAds /></PermissionGate>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

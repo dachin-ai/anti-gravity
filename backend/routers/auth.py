@@ -51,7 +51,7 @@ def verify(request: Request):
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
-    return {"valid": True, "username": payload["username"], "email": payload.get("email", "")}
+    return {"valid": True, "username": payload["username"], "email": payload.get("email", ""), "permissions": payload.get("permissions", {})}
 
 
 @router.post("/log-activity")

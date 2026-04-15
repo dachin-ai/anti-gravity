@@ -1,4 +1,5 @@
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Response
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Response, Depends
+from services.permission_guard import require_tool_access
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
@@ -27,7 +28,7 @@ def get_db():
         refresh_db()
     return db_cache["price_db"], db_cache["name_map"], db_cache["link_map"]
 
-@router.post("/sync-neon")
+@router.post("/sync-neon", dependencies=[Depends(require_tool_access("price_checker"))])
 def sync_neon():
     try:
         count = sync_google_sheets_to_neon()
@@ -39,7 +40,7 @@ def sync_neon():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
 
-@router.get("/refresh")
+@router.get("/refresh", dependencies=[Depends(require_tool_access("price_checker"))])
 def refresh_db():
     global db_cache
     db_cache["price_db"] = None
@@ -54,7 +55,7 @@ def refresh_db():
     db_cache["link_map"] = l
     return {"message": "Success", "records": len(p)}
 
-@router.get("/template/{method}")
+@router.get("/template/{method}", dependencies=[Depends(require_tool_access("price_checker"))])
 def get_template(method: str):
     if method not in ["Listing", "SKU"]:
         raise HTTPException(status_code=400, detail="Method must be Listing or SKU")
@@ -68,7 +69,7 @@ class DirectInput(BaseModel):
     sku_string: str
     target_price: float
 
-@router.post("/calculate-direct")
+@router.post("/calculate-direct", dependencies=[Depends(require_tool_access("price_checker"))])
 def calc_direct(body: DirectInput):
     price_db, name_map, link_map = get_db()
     if not price_db:
@@ -105,7 +106,7 @@ def calc_direct(body: DirectInput):
         "evaluation": eval_data
     }
 
-@router.post("/calculate-batch")
+@router.post("/calculate-batch", dependencies=[Depends(require_tool_access("price_checker"))])
 async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
     if method not in ["Listing", "SKU"]:
         raise HTTPException(status_code=400, detail="Method must be Listing or SKU")

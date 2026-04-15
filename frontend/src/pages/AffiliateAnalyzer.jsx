@@ -10,15 +10,15 @@ const { Dragger } = Upload;
 const NEGATIVE_METRICS = ['Refunded GMV', 'Refunded Items', 'Cancellation Rate'];
 
 const MetricCard = ({ label, value, sub }) => (
-    <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
-        <Text style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</Text>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#0c2461', marginTop: 4 }}>{value}</div>
-        <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{sub}</Text>
+    <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
+        <Text style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</Text>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#e2e8f0', marginTop: 4 }}>{value}</div>
+        <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{sub}</Text>
     </div>
 );
 
 const SectionHeader = ({ icon, text }) => (
-    <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', margin: '24px 0 16px', paddingBottom: 8, borderBottom: '2px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0', margin: '24px 0 16px', paddingBottom: 8, borderBottom: '2px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 20 }}>{icon}</span> {text}
     </div>
 );
@@ -37,8 +37,8 @@ function fmtNum(val) {
 }
 
 const Top5Box = ({ title, data }) => (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: '4px solid #1e3a6e', borderRadius: 8, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid #f1f5f9' }}>
+    <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(99,102,241,0.2)', borderLeft: '4px solid #6366f1', borderRadius: 8, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
             {title}
         </div>
         {data && data.length > 0 ? data.map((item, i) => {
@@ -49,12 +49,12 @@ const Top5Box = ({ title, data }) => (
 
             return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
-                    <span style={{ color: '#94a3b8', fontWeight: 600, minWidth: 22 }}>{i + 1}.</span>
-                    <span style={{ flex: 1, color: '#1e293b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-                    <span style={{ fontWeight: 700, color: '#0c2461', marginLeft: 12, whiteSpace: 'nowrap' }}>{valStr}</span>
+                    <span style={{ color: '#64748b', fontWeight: 600, minWidth: 22 }}>{i + 1}.</span>
+                    <span style={{ flex: 1, color: '#cbd5e1', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                    <span style={{ fontWeight: 700, color: '#a5b4fc', marginLeft: 12, whiteSpace: 'nowrap' }}>{valStr}</span>
                 </div>
             );
-        }) : <Text style={{ color: '#94a3b8', fontSize: 12 }}>No data</Text>}
+        }) : <Text style={{ color: '#64748b', fontSize: 12 }}>No data</Text>}
     </div>
 );
 
@@ -116,7 +116,7 @@ const AffiliateAnalyzer = () => {
         ];
 
         if (mode === 'Product') {
-            cols.push({ title: 'Product ID', dataIndex: 'Product ID', key: 'Product ID', width: 140, fixed: 'left', render: v => <Text style={{ fontSize: 11, color: '#475569' }}>{v}</Text> });
+            cols.push({ title: 'Product ID', dataIndex: 'Product ID', key: 'Product ID', width: 140, fixed: 'left', render: v => <Text style={{ fontSize: 11, color: '#94a3b8' }}>{v}</Text> });
             cols.push({ title: 'Product Name', dataIndex: 'Product Name', key: 'Product Name', width: 200, fixed: 'left', ellipsis: true });
         } else {
             cols.push({ title: 'Creator Name', dataIndex: 'Creator Name', key: 'Creator Name', width: 220, fixed: 'left', ellipsis: true });
@@ -174,9 +174,9 @@ const AffiliateAnalyzer = () => {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={8}>
                     {/* Controls */}
-                    <div style={{ background: '#fff', padding: 24, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.6)', padding: 24, borderRadius: 12, border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(10px)' }}>
                         <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Analysis Mode</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8, color: '#e2e8f0' }}>Analysis Mode</div>
                             <Radio.Group value={mode} onChange={e => setMode(e.target.value)} optionType="button" buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
                                 <Radio.Button value="Creator" style={{ flex: 1, textAlign: 'center' }}>Creator</Radio.Button>
                                 <Radio.Button value="Product" style={{ flex: 1, textAlign: 'center' }}>Product</Radio.Button>
@@ -184,7 +184,7 @@ const AffiliateAnalyzer = () => {
                         </div>
 
                         <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>File A — Older Period</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8, color: '#e2e8f0' }}>File A — Older Period</div>
                             <Dragger maxCount={1} beforeUpload={f => { setFileA(f); return false; }} onRemove={() => setFileA(null)}>
                                 <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#38bdf8' }} /></p>
                                 <p className="ant-upload-text">Upload File A</p>
@@ -192,7 +192,7 @@ const AffiliateAnalyzer = () => {
                         </div>
 
                         <div style={{ marginBottom: 24 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>File B — Newer Period</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8, color: '#e2e8f0' }}>File B — Newer Period</div>
                             <Dragger maxCount={1} beforeUpload={f => { setFileB(f); return false; }} onRemove={() => setFileB(null)}>
                                 <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#4ade80' }} /></p>
                                 <p className="ant-upload-text">Upload File B</p>
@@ -212,14 +212,14 @@ const AffiliateAnalyzer = () => {
 
                 <Col xs={24} lg={16}>
                     {!result && (
-                        <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 12, height: '100%', minHeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                        <div style={{ background: 'rgba(15,23,42,0.4)', border: '1px dashed rgba(99,102,241,0.3)', borderRadius: 12, height: '100%', minHeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                             <div style={{ fontSize: 48 }}>📊</div>
                             <Text style={{ color: '#64748b', fontSize: 16, fontWeight: 500 }}>Upload both files and click Start Analysis</Text>
                         </div>
                     )}
 
                     {result && (
-                        <div style={{ background: '#fff', padding: 24, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                        <div style={{ background: 'rgba(15,23,42,0.6)', padding: 24, borderRadius: 12, border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(10px)' }}>
                             <SectionHeader icon="📋" text="Summary Overview" />
                             <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
                                 <Col xs={12} md={8}><MetricCard label={`Total ${mode}s`} value={result.summary.total_entities} sub="Across both periods" /></Col>

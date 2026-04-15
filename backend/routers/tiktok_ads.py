@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from services.permission_guard import require_tool_access
 from pydantic import BaseModel
 from typing import List
 import traceback
@@ -17,7 +18,7 @@ class TikTokAdsRequest(BaseModel):
     files: List[FileItem]
 
 
-@router.post("/analyze")
+@router.post("/analyze", dependencies=[Depends(require_tool_access("ads_analyzer"))])
 def analyze_tiktok_ads(body: TikTokAdsRequest):
     try:
         if not body.files:

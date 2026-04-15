@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from services.permission_guard import require_tool_access
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
@@ -10,7 +11,7 @@ from services.order_loss_logic import run_order_loss_audit
 
 router = APIRouter(prefix="/api/order-loss", tags=["Order Loss"])
 
-@router.post("/calculate")
+@router.post("/calculate", dependencies=[Depends(require_tool_access("order_review"))])
 async def calculate_order_loss(
     file: UploadFile = File(...),
     price_type: str = Form("Warning"),

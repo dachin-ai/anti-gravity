@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Avatar, Button, Tooltip } from 'antd';
-import { TagOutlined, SettingOutlined, LogoutOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
+import { Layout, Menu, Typography, Avatar, Button, Tooltip, message } from 'antd';
+import { TagOutlined, LogoutOutlined, UserOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
@@ -12,21 +12,30 @@ const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, hasAccess } = useAuth();
+
+  // Helper: build label with optional lock for restricted items
+  const lockedLabel = (label, toolKey) => {
+    if (toolKey && !hasAccess(toolKey)) {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 6 }}>
+          <span style={{ opacity: 0.5 }}>{label}</span>
+          <LockOutlined style={{ color: '#f87171', fontSize: 11, flexShrink: 0 }} />
+        </span>
+      );
+    }
+    return label;
+  };
 
   const menuItems = [
-    { key: '/', icon: <HomeOutlined />, label: <Bi e="Dashboard Lobby" c="总大厅" /> },
+    { key: '/', icon: <HomeOutlined />, label: <Bi e="BI Hub" c="智能中心" /> },
     {
       key: 'group-freemir',
       label: <Bi e="Freemir Suite" c="Freemir 套件" />,
       icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M16 4h-3c-2.76 0-5 2.24-5 5v3H5v4h3v8h4v-8h4v-4h-4V9c0-.55.45-1 1-1h3V4z"/></svg></span>,
       children: [
-        { key: '/price-checker', label: <Bi e="Price Checker" c="查价仪" /> },
-        { key: '/warehouse-order', label: <Bi e="Order Planner" c="海外仓备货预估" /> },
-        // Hidden items:
-        // { key: '/sku-plan', label: <Bi e="SKU Monthly Plan" c="SKU 月度计划" /> },
-        // { key: '/socmed-scraping', label: <Bi e="Socmed Scraper" c="社媒抓取" /> },
-        // { key: '/erp-oos', label: <Bi e="ERP OOS Calculator" c="ERP 缺货计算" /> },
+        { key: '/price-checker', label: lockedLabel(<Bi e="Price Checker" c="查价仪" />, 'price_checker'), style: !hasAccess('price_checker') ? { opacity: 0.6 } : {} },
+        { key: '/warehouse-order', label: lockedLabel(<Bi e="Order Planner" c="海外仓备货预估" />, 'order_planner'), style: !hasAccess('order_planner') ? { opacity: 0.6 } : {} },
       ]
     },
     {
@@ -34,8 +43,8 @@ const MainLayout = () => {
       label: <Bi e="Shopee Suite" c="Shopee 套件" />,
       icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></span>,
       children: [
-        { key: '/order-loss', label: <Bi e="Order Review" c="订单亏损审查" /> },
-        { key: '/shopee-affiliate', label: <Bi e="Affiliate Performance" c="Shopee 联盟中心" /> },
+        { key: '/order-loss', label: lockedLabel(<Bi e="Order Review" c="订单亏损审查" />, 'order_review'), style: !hasAccess('order_review') ? { opacity: 0.6 } : {} },
+        { key: '/shopee-affiliate', label: lockedLabel(<Bi e="Affiliate Performance" c="Shopee 联盟中心" />, 'affiliate_performance'), style: !hasAccess('affiliate_performance') ? { opacity: 0.6 } : {} },
       ]
     },
     {
@@ -43,14 +52,32 @@ const MainLayout = () => {
       label: <Bi e="TikTok Suite" c="TikTok 套件" />,
       icon: <span className="anticon"><svg viewBox="0 0 448 512" width="1em" height="1em" fill="currentColor"><path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25v178.72A162.55 162.55 0 1 1 185.85 188.31v89.89a74.62 74.62 0 1 0 52.23 71.18V0h88a121.18 121.18 0 0 0 1.86 22.17A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/></svg></span>,
       children: [
-        { key: '/pre-sales', label: <Bi e="Pre-Sales Checker" c="预售预估" /> },
-        { key: '/affiliate-analyzer', label: <Bi e="Affiliate Analyzer" c="联盟数据分析" /> },
-        { key: '/tiktok-ads', label: <Bi e="Ads Analyzer" c="TikTok 广告分析" /> },
-        // Hidden items:
-        // { key: '/failed-delivery', label: <Bi e="Failed Delivery Tracker" c="退件追踪" /> },
+        { key: '/pre-sales', label: lockedLabel(<Bi e="Pre-Sales Checker" c="预售预估" />, 'pre_sales'), style: !hasAccess('pre_sales') ? { opacity: 0.6 } : {} },
+        { key: '/affiliate-analyzer', label: lockedLabel(<Bi e="Affiliate Analyzer" c="联盟数据分析" />, 'affiliate_analyzer'), style: !hasAccess('affiliate_analyzer') ? { opacity: 0.6 } : {} },
+        { key: '/tiktok-ads', label: lockedLabel(<Bi e="Ads Analyzer" c="TikTok 广告分析" />, 'ads_analyzer'), style: !hasAccess('ads_analyzer') ? { opacity: 0.6 } : {} },
       ]
     }
   ];
+
+  // Map route → toolKey to determine if restricted
+  const ROUTE_TOOL_MAP = {
+    '/price-checker': 'price_checker',
+    '/warehouse-order': 'order_planner',
+    '/order-loss': 'order_review',
+    '/shopee-affiliate': 'affiliate_performance',
+    '/pre-sales': 'pre_sales',
+    '/affiliate-analyzer': 'affiliate_analyzer',
+    '/tiktok-ads': 'ads_analyzer',
+  };
+
+  const handleMenuClick = ({ key }) => {
+    const toolKey = ROUTE_TOOL_MAP[key];
+    if (toolKey && !hasAccess(toolKey)) {
+      message.warning({ content: '🔒 Access restricted. Contact admin to request access.', key: 'restricted-tool', duration: 3 });
+      return;
+    }
+    navigate(key);
+  };
 
   /* Automatically auto-expand all menus based on current location */
   const openKeys = menuItems.filter(i => i.children?.some(c => c.key === location.pathname)).map(i => i.key);
@@ -71,7 +98,7 @@ const MainLayout = () => {
         }}
       >
         <div style={{
-          height: 64,
+          height: 72,
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
@@ -81,17 +108,17 @@ const MainLayout = () => {
           gap: 12,
         }}>
           {!collapsed ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img src="/logo.png" alt="Freemir Logo" style={{ height: 32, objectFit: 'contain' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src="/logo.png" alt="Freemir Logo" style={{ height: 44, objectFit: 'contain' }} />
             </div>
           ) : (
             <div style={{
-              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-              background: 'var(--indigo)',
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(99,102,241,0.5)',
+              boxShadow: '0 4px 14px rgba(99,102,241,0.5)',
             }}>
-              <span style={{ color: '#fff', fontSize: 18, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>F</span>
+              <span style={{ color: '#fff', fontSize: 20, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>F</span>
             </div>
           )}
         </div>
@@ -102,7 +129,7 @@ const MainLayout = () => {
           defaultOpenKeys={openKeys}
           mode="inline"
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={handleMenuClick}
           style={{ background: 'transparent', border: 'none', padding: '0 8px' }}
           theme="dark"
         />
@@ -123,7 +150,7 @@ const MainLayout = () => {
           boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         }}>
           <Text style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            <Bi e="freemir Tools Dashboard" c="freemir 工具仪表板" />
+            <Bi e="Business Intelligence Tools" c="商业智能工具" />
           </Text>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className="tech-spatula-container" title="Freemir Kitchen Tech" style={{ width: 36, height: 36 }}>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.sql import func
 from database import Base
 
@@ -18,6 +18,7 @@ class AccountUser(Base):
     username = Column(String, unique=True, index=True)
     password = Column(String)
     approval = Column(String)
+    permissions = Column(JSON)
 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import JSON

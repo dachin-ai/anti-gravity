@@ -22,6 +22,12 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "freemir_tools_2026_secret_key_change_
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
+# Tool keys matching Google Sheets column names for per-user access control
+TOOL_KEYS = [
+    "price_checker", "order_planner", "order_review",
+    "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer"
+]
+
 
 def hash_password(password: str) -> str:
     """Simple SHA-256 hash for password storage."""
@@ -59,11 +65,18 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
         try:
             db.query(AccountUser).delete()
             for user in users:
+                # Parse tool permission columns (1 = access, 0 = no access)
+                perms = {}
+                for tk in TOOL_KEYS:
+                    val = str(user.get(tk, "0")).strip()
+                    perms[tk] = 1 if val == "1" else 0
+
                 new_user = AccountUser(
                     email=str(user.get("Email", "")).strip(),
                     username=str(user.get("Username", "")).strip(),
                     password=str(user.get("Password", "")).strip(),
-                    approval=str(user.get("Approval", "")).strip()
+                    approval=str(user.get("Approval", "")).strip(),
+                    permissions=perms
                 )
                 db.add(new_user)
             db.commit()
@@ -83,7 +96,8 @@ def find_user_by_username(username: str) -> Optional[Dict]:
                 "Email": user.email,
                 "Username": user.username,
                 "Password": user.password,
-                "Approval": user.approval
+                "Approval": user.approval,
+                "permissions": user.permissions or {}
             }
         return None
     finally:
@@ -150,9 +164,11 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
             return False, "Your account has been rejected or is inactive.", None
 
         # Generate JWT
+        permissions = user.get("permissions", {})
         payload = {
             "username": user["Username"],
             "email": user.get("Email", ""),
+            "permissions": permissions,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_EXPIRE_HOURS),
             "iat": datetime.datetime.utcnow(),
         }

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from services.permission_guard import require_tool_access
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, String, case
@@ -14,7 +15,7 @@ router = APIRouter()
 # ─────────────────────────────────────────────────────────────────────────────
 # STORES
 # ─────────────────────────────────────────────────────────────────────────────
-@router.get("/stores")
+@router.get("/stores", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def fetch_stores():
     stores = get_shopee_stores()
     return {"stores": stores}
@@ -22,7 +23,7 @@ def fetch_stores():
 # ─────────────────────────────────────────────────────────────────────────────
 # UPLOAD (ETL)
 # ─────────────────────────────────────────────────────────────────────────────
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 async def upload_shopee_csv(
     file: UploadFile = File(...),
     file_type: str = Form(...),
@@ -44,7 +45,7 @@ async def upload_shopee_csv(
 # ─────────────────────────────────────────────────────────────────────────────
 # CHECKER MATRIX
 # ─────────────────────────────────────────────────────────────────────────────
-@router.get("/checker-matrix")
+@router.get("/checker-matrix", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def get_checker_matrix(month: str, year: str, db: Session = Depends(get_db)):
     from calendar import monthrange
     import datetime
@@ -92,7 +93,7 @@ def get_checker_matrix(month: str, year: str, db: Session = Depends(get_db)):
     output = [{"date": d, "stores": matrix[d]} for d in sorted(matrix.keys())]
     return {"matrix": output}
 
-@router.delete("/data")
+@router.delete("/data", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def delete_shopee_data(date: str, store_id: Optional[str] = None, data_type: Optional[str] = None, db: Session = Depends(get_db)):
     """Delete Shopee Affiliate data for a specific date and store. Granular by data_type if provided."""
     del_conv = 0
@@ -121,7 +122,7 @@ def delete_shopee_data(date: str, store_id: Optional[str] = None, data_type: Opt
 # ─────────────────────────────────────────────────────────────────────────────
 # ANALYTICS (quick top-list)
 # ─────────────────────────────────────────────────────────────────────────────
-@router.get("/analytics")
+@router.get("/analytics", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def get_analytics(start_date: str, end_date: str, store_id: Optional[str] = None, db: Session = Depends(get_db)):
     base_prod = db.query(
         ShopeeAffProduct.product_id,
@@ -268,7 +269,7 @@ def _build_by_product(db, start_date, end_date, store_id=None):
     result.sort(key=lambda x: x["gmv_potential"], reverse=True)
     return result
 
-@router.get("/report")
+@router.get("/report", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def get_full_report(
     start_date: str,
     end_date:   str,
@@ -434,7 +435,7 @@ def _build_excel(data, report_type, period_label):
     return out
 
 
-@router.get("/report/download")
+@router.get("/report/download", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def download_report(
     start_date:  str,
     end_date:    str,
@@ -477,7 +478,7 @@ def _aggregate_for_comparison(db, start_date, end_date, dimension, store_id=None
         return {r["product_id"]: r for r in rows}
     return {}
 
-@router.get("/comparison")
+@router.get("/comparison", dependencies=[Depends(require_tool_access("affiliate_performance"))])
 def get_comparison(
     period_a_start: str,
     period_a_end:   str,
