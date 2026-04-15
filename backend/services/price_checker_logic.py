@@ -120,6 +120,9 @@ def sync_google_sheets_to_neon() -> int:
                 name_c = df_names.columns[1] if len(df_names.columns) > 1 else None
                 link_c = df_names.columns[2] if len(df_names.columns) > 2 else None
                 
+                # Prevent IntegrityError by removing duplicate SKUs
+                df_names = df_names.drop_duplicates(subset=[sku_c], keep='last')
+                
                 db.query(FreemirName).delete()
                 db.commit()
                 
@@ -176,14 +179,41 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
     base_disc = get_bundle_discount_rate(sku_count)
     breakdown_data = []
 
+    has_normal = False
+    for sku in skus:
+        cat = str(price_db.get(sku, {}).get("Category", "")).lower()
+        if "gift" not in cat:
+            has_normal = True
+
+    total_raw_warning = 0.0
+    total_discounted_warning = 0.0
+    for sku in skus:
+        item_data = price_db.get(sku, {})
+        cat = str(item_data.get("Category", "")).lower()
+        is_gift = "gift" in cat
+        gift_factor = 0.5 if is_gift and sku_count > 1 and has_normal else 1.0
+
+        c_val = parse_idr_price(item_data.get("Clearance", 0))
+        is_clearance = c_val >= 1
+        raw_base = item_data.get("Warning", 0)
+        base_price_float = parse_idr_price(raw_base)
+
+        if is_clearance:
+            total_raw_warning += c_val
+            total_discounted_warning += c_val
+        else:
+            total_raw_warning += base_price_float
+            total_discounted_warning += base_price_float * gift_factor * (1 - base_disc)
+
+    hit_floor = total_discounted_warning < total_raw_warning
+
     for sku in skus:
         item_data = price_db.get(sku, {})
         name = name_map.get(sku, "-")
         cat = str(item_data.get("Category", "")).lower()
         is_gift = "gift" in cat
-        gift_factor = 0.5 if is_gift and sku_count > 1 else 1.0
+        gift_factor = 0.5 if is_gift and sku_count > 1 and has_normal else 1.0
 
-        # Use robust parser for clearance
         c_val = parse_idr_price(item_data.get("Clearance", 0))
         is_clearance = c_val >= 1
 
@@ -194,11 +224,15 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
             final_price = c_val
             logic_applied = "Clearance Override"
         else:
-            final_price = base_price_float * gift_factor * (1 - base_disc)
-            logic_list = []
-            if is_gift and sku_count > 1: logic_list.append("Gift (50%)")
-            if base_disc > 0: logic_list.append(f"Bundle Disc ({base_disc*100}%)")
-            logic_applied = " + ".join(logic_list) if logic_list else "Normal Price"
+            if hit_floor:
+                final_price = base_price_float
+                logic_applied = "Floor Protection Applied"
+            else:
+                final_price = base_price_float * gift_factor * (1 - base_disc)
+                logic_list = []
+                if is_gift and sku_count > 1 and has_normal: logic_list.append("Gift (50%)")
+                if base_disc > 0: logic_list.append(f"Bundle Disc ({base_disc*100}%)")
+                logic_applied = " + ".join(logic_list) if logic_list else "Normal Price"
 
         breakdown_data.append({
             "SKU": sku,
@@ -249,6 +283,22 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
         })
         return result
 
+    has_normal = False
+    absolute_floor = 0.0
+
+    for sku in skus:
+        item_data = price_db.get(sku)
+        cat = str(item_data.get("Category", "")).lower()
+        if "gift" not in cat:
+            has_normal = True
+        
+        c_val = parse_idr_price(item_data.get("Clearance", 0))
+        if c_val >= 1:
+            absolute_floor += c_val
+        else:
+            w_val = parse_idr_price(item_data.get("Warning", 0))
+            absolute_floor += w_val
+
     for sku in skus:
         item_data = price_db.get(sku)
         col_cat, col_clearance = "Category", "Clearance"
@@ -256,7 +306,7 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
         category = str(item_data.get(col_cat, "")).lower()
         if "gift" in category: has_gift = True
         
-        gift_factor = 0.5 if "gift" in category and sku_count > 1 else 1.0
+        gift_factor = 0.5 if "gift" in category and sku_count > 1 and has_normal else 1.0
         
         c_val = parse_idr_price(item_data.get(col_clearance, 0))
         is_clearance_item = c_val >= 1
@@ -287,7 +337,11 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
     })
     
     for p_type in PRICE_TYPES:
-        if is_valid[p_type]: result[p_type] = int(round(total_prices[p_type]))
+        if is_valid[p_type]: 
+            calc_val = total_prices[p_type]
+            if calc_val < absolute_floor:
+                calc_val = absolute_floor
+            result[p_type] = int(round(calc_val))
         else: result[p_type] = "Invalid"
 
     return result
