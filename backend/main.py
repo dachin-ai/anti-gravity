@@ -8,7 +8,12 @@ import models  # noqa: F401 - ensure all models are registered before create_all
 app = FastAPI()
 
 # Auto-create any missing tables on startup (safe: does not drop existing tables)
-Base.metadata.create_all(bind=engine)
+# Wrapped in try-except to allow server to start even if DB is temporarily unavailable
+try:
+    Base.metadata.create_all(bind=engine)
+    print("[Startup] ✓ Database tables created/verified.")
+except Exception as e:
+    print(f"[Startup] ⚠ Database not yet available: {e}")
 
 # --- Inline migration: add missing columns to existing tables ---
 # create_all() does NOT alter existing tables, so we must add new columns manually.

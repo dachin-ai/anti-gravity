@@ -10,10 +10,17 @@ load_dotenv()
 # Ambil URL koneksi
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Buat engine SQLAlchemy
-# Pool_pre_ping digunakan untuk memastikan koneksi yang mati di-recycle (sangat berguna untuk cloud DB)
+# Buat engine SQLAlchemy dengan optimized connection pooling
+# Pool_pre_ping untuk memastikan koneksi yang mati di-recycle
+# Pool_size untuk concurrent connections
+# max_overflow untuk buffer connections
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, pool_pre_ping=True
+    SQLALCHEMY_DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=20,           # Jumlah koneksi yang di-maintain
+    max_overflow=10,        # Buffer koneksi tambahan
+    pool_recycle=3600,      # Recycle koneksi setiap jam (untuk VPS PostgreSQL)
+    echo=False              # Set to True untuk debug SQL queries
 )
 
 # Buat session local untuk setiap request FastAPI

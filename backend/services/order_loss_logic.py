@@ -14,15 +14,28 @@ def detect_type(order_number):
     return "Sales | 销售"
 
 def clean_currency_strict(x):
-    if pd.isna(x) or str(x).strip() == '': return 0
-    s = str(x).strip().upper()
-    s = re.sub(r'[^\d\.\,\-]', '', s)
-    if '.' in s: s = s.split('.')[0]
-    if ',' in s: s = s.split(',')[0]
+    # Convert to string first, handle any type
     try:
-        if not s or s == '-': return 0
+        x_str = str(x).strip()
+    except:
+        return 0
+    
+    if x_str == '' or x_str == 'nan' or x_str == 'None':
+        return 0
+    
+    s = x_str.upper()
+    # Remove non-numeric characters except minus and decimal
+    s = re.sub(r'[^\d\.\,\-]', '', s)
+    if '.' in s: 
+        s = s.split('.')[0]
+    if ',' in s: 
+        s = s.split(',')[0]
+    
+    try:
+        if not s or s == '-': 
+            return 0
         return int(s)
-    except ValueError:
+    except (ValueError, TypeError):
         return 0
 
 def clean_sku_list(sku_string):
@@ -108,13 +121,17 @@ def get_order_brand_details(sys_codes_list, online_skus_list, price_db, price_ty
     return [int(round(total_brand_price)), mark_gift, mark_clearance]
 
 def evaluate_second_judge(setting_price, brand_price, pct_voucher):
-    if pct_voucher > 0.03:
+    # Convert to float to handle NaN and ensure scalar comparison
+    pct = float(pct_voucher) if pd.notna(pct_voucher) else 0
+    sp = float(setting_price) if pd.notna(setting_price) else 0
+    bp = float(brand_price) if pd.notna(brand_price) else 0
+    
+    if pct > 0.03:
+        return "Need Review | 需要审查"
+    elif sp < bp:
         return "Need Review | 需要审查"
     else:
-        if setting_price < brand_price:
-            return "Need Review | 需要审查"
-        else:
-            return "Safe | 安全"
+        return "Safe | 安全"
 
 def get_diagnostic_reason(row):
     reasons = []
@@ -168,7 +185,7 @@ def process_data_grouped(df, group_col, order_metrics=None):
     grouped['Total Profit | 总利润'] = grouped['Profit | 利润']
     grouped['Final Profit | 最终利润'] = grouped['Total Net']
     grouped['First Judge | 第一判断'] = grouped['Final Profit | 最终利润'].apply(
-        lambda x: "Need Review | 需要审查" if x <= 0 else "Safe | 安全"
+        lambda x: "Need Review | 需要审查" if float(x) <= 0 else "Safe | 安全"
     )
     
     grouped = grouped.sort_values(by='Total Loss | 总损失', ascending=True)
@@ -241,7 +258,7 @@ def sanitize_json(val):
     return val
 
 def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Warning", method: str = "Profit Review") -> Tuple[Dict, bytes]:
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # CRITICAL: Strip whitespace from column names!
     actual_cols = list(df.columns)
     
     def find_col(candidates):
@@ -264,7 +281,7 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     col_map['Product Detail Gross Profit'] = find_col(['Product Detail Gross Profit', 'Product Gross Profit', '商品明细毛利', '商品毛利'])
     col_map['Product Detail Amount After Discount'] = find_col(['Product Detail Amount After Discount', 'Product Actual Amount Paid', 'Product Actual Amount', 'Product Amount After Discount', '商品明细优惠后金额', '商品实付金额', '商品折后明细金额'])
     col_map['Seller Coupon'] = find_col(['Seller Coupon', '卖家优惠券'])
-    col_map['Order allocated amount'] = find_col(['Order allocated amount', 'Order allocated'])
+    col_map['Order allocated amount'] = find_col(['订单分摊金额', 'Discount Code', 'Order allocated amount', 'Order allocated'])
     col_map['Qty'] = find_col(['商品数量', 'Qty', 'Quantity', 'Item Quantity'])
     col_map['Order Label'] = find_col(['Order Label', 'Pesanan Berlabel', '订单标签', 'Label'])
     
@@ -343,11 +360,12 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     # =============== PROFIT REVIEW Logic ===============
     has_allocated_amount = 'Order allocated amount' in df.columns
     if has_allocated_amount:
-        df['Order allocated amount'] = df['Order allocated amount'].apply(clean_currency_strict)
+        # Use map with error handling instead of apply
+        df['Order allocated amount'] = df['Order allocated amount'].map(lambda x: clean_currency_strict(x))
     
     # ---------------------------------------------------------
     zero_amount_flag = df.groupby('Original Order Number')['Product Detail Amount After Discount'].apply(
-        lambda x: (x.fillna(0) == 0).any()
+        lambda x: bool((x.fillna(0).astype(float) == 0).any())
     ).reset_index(name='Has_Zero_Amount')
     
     agg_rules = {
@@ -366,12 +384,18 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     order_metrics = order_metrics.rename(columns={'Store': 'Store | 店铺'})
     
     if has_allocated_amount:
-        order_metrics['Setting Price | 设定价格'] = order_metrics['Order allocated amount']
+        # Handle DataFrame vs Series result from aggregation
+        col_val = order_metrics['Order allocated amount']
+        if isinstance(col_val, pd.DataFrame):
+            col_val = col_val.iloc[:, 0]
+        order_metrics['Setting Price | 设定价格'] = col_val.astype(float)
     else:
-        order_metrics['Setting Price | 设定价格'] = order_metrics.apply(
-            lambda row: row['Seller Coupon'] * 10 if row['Has_Zero_Amount'] else (row['Product Detail Amount After Discount'] + row['Seller Coupon']),
-            axis=1
-        )
+        # Fallback: Jika kolom 订单分摊金额 atau Discount Code TIDAK ditemukan,
+        # gunakan 'Product Detail Amount After Discount' (first value per order) sebagai Setting Price
+        col_val = order_metrics['Product Detail Amount After Discount']
+        if isinstance(col_val, pd.DataFrame):
+            col_val = col_val.iloc[:, 0]
+        order_metrics['Setting Price | 设定价格'] = col_val.astype(float)
     
     # Batch apply brand details
     brand_details = order_metrics.apply(
@@ -388,7 +412,9 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     order_metrics['Voucher | 优惠券'] = order_metrics['Seller Coupon']
     
     order_metrics['% Voucher | 优惠券比例'] = order_metrics.apply(
-        lambda x: (x['Voucher | 优惠券'] / x['Setting Price | 设定价格']) if x['Setting Price | 设定价格'] != 0 else 0, 
+        lambda x: (float(x['Voucher | 优惠券']) / float(x['Setting Price | 设定价格'])) 
+                  if (pd.notna(x['Setting Price | 设定价格']) and float(x['Setting Price | 设定价格']) != 0) 
+                  else 0, 
         axis=1
     )
     

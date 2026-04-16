@@ -4,7 +4,8 @@ import hashlib
 import jwt
 import datetime
 import traceback
-from typing import Optional, Dict, Tuple
+import time
+from typing import Optional, Dict, Tuple, List
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import ActivityLog, AccountUser
@@ -28,14 +29,12 @@ TOOL_KEYS = [
     "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer"
 ]
 
-
-def hash_password(password: str) -> str:
-    """Simple SHA-256 hash for password storage."""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
+# === CACHING LAYER ===
 _cached_client = None
 _cached_sh = None
+_cached_users_timestamp = 0
+_cached_users = []
+CACHE_DURATION = 300  # Cache Google Sheets data for 5 minutes
 
 def get_sheet_client():
     global _cached_client, _cached_sh
@@ -46,51 +45,118 @@ def get_sheet_client():
     return _cached_sh
 
 
-def get_users() -> list:
-    """Fetch all users from Account sheet."""
+def hash_password(password: str) -> str:
+    """Simple SHA-256 hash for password storage."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def get_users() -> List[Dict]:
+    """
+    Fetch all users from Account sheet with caching.
+    Cache expires after CACHE_DURATION seconds.
+    """
+    global _cached_users, _cached_users_timestamp
+    
+    now = time.time()
+    # Return cached data jika masih valid
+    if _cached_users and (now - _cached_users_timestamp) < CACHE_DURATION:
+        return _cached_users
+    
     try:
         sh = get_sheet_client()
         ws = sh.worksheet("Account")
         rows = ws.get_all_records()
+        
+        # Update cache
+        _cached_users = rows
+        _cached_users_timestamp = now
+        
         return rows
     except Exception as e:
+        # Jika error & ada cache lama, return cache (fallback)
+        if _cached_users:
+            print(f"[Auth] Failed to fetch users from sheet, using stale cache: {e}")
+            return _cached_users
         raise RuntimeError(f"Failed to access Account sheet: {e}")
 
 
 def sync_users_from_sheet() -> Tuple[bool, str]:
-    """Sync all users from the Account sheet to the PostgreSQL database."""
+    """
+    Sync users from Google Sheet to PostgreSQL dengan incremental update (lebih cepat).
+    - Hanya update/insert yang berubah
+    - Hanya delete users yang sudah tidak ada di sheet
+    """
     try:
         users = get_users()
         db = SessionLocal()
         try:
-            db.query(AccountUser).delete()
+            # Get usernames dari sheet
+            sheet_usernames = set(user.get("Username", "").strip() for user in users if user.get("Username", "").strip())
+            
+            # Get existing usernames dari DB
+            existing_users = db.query(AccountUser.username).all()
+            existing_usernames = set(u.username for u in existing_users)
+            
+            # Delete users yang tidak ada di sheet anymore
+            to_delete = existing_usernames - sheet_usernames
+            if to_delete:
+                db.query(AccountUser).filter(AccountUser.username.in_(to_delete)).delete()
+            
+            # Insert/Update users dari sheet
             for user in users:
-                # Parse tool permission columns (1 = access, 0 = no access)
+                username = str(user.get("Username", "")).strip()
+                if not username:
+                    continue
+                    
+                # Parse permissions
                 perms = {}
                 for tk in TOOL_KEYS:
                     val = str(user.get(tk, "0")).strip()
                     perms[tk] = 1 if val == "1" else 0
-
-                new_user = AccountUser(
-                    email=str(user.get("Email", "")).strip(),
-                    username=str(user.get("Username", "")).strip(),
-                    password=str(user.get("Password", "")).strip(),
-                    approval=str(user.get("Approval", "")).strip(),
-                    permissions=perms
-                )
-                db.add(new_user)
+                
+                # Check if user exists
+                existing = db.query(AccountUser).filter(
+                    AccountUser.username.ilike(username)
+                ).first()
+                
+                if existing:
+                    # Update existing user
+                    existing.email = str(user.get("Email", "")).strip()
+                    existing.password = str(user.get("Password", "")).strip()
+                    existing.approval = str(user.get("Approval", "")).strip()
+                    existing.permissions = perms
+                else:
+                    # Insert new user
+                    new_user = AccountUser(
+                        email=str(user.get("Email", "")).strip(),
+                        username=username,
+                        password=str(user.get("Password", "")).strip(),
+                        approval=str(user.get("Approval", "")).strip(),
+                        permissions=perms
+                    )
+                    db.add(new_user)
+            
             db.commit()
-            return True, "Users synched to database successfully."
+            
+            # Clear cache setelah sync
+            global _cached_users_timestamp
+            _cached_users_timestamp = 0
+            
+            return True, f"Users synched successfully. (Added/Updated: {len(sheet_usernames)}, Deleted: {len(to_delete)})"
         finally:
             db.close()
     except Exception as e:
+        print(f"[Sync Users Error] {e}")
         return False, f"Failed to sync users: {str(e)}"
 
 def find_user_by_username(username: str) -> Optional[Dict]:
     """Find a user by username from the database (case-insensitive)."""
     db = SessionLocal()
     try:
-        user = db.query(AccountUser).filter(AccountUser.username.ilike(username.strip())).first()
+        user = db.query(AccountUser).filter(
+            AccountUser.username.ilike(username.strip().lower())
+        ).first()
+        
         if user:
             return {
                 "Email": user.email,
@@ -103,21 +169,71 @@ def find_user_by_username(username: str) -> Optional[Dict]:
     finally:
         db.close()
 
+
 def find_user_by_email(email: str) -> Optional[Dict]:
     """Find a user by email from the database (case-insensitive)."""
     db = SessionLocal()
     try:
-        user = db.query(AccountUser).filter(AccountUser.email.ilike(email.strip())).first()
+        user = db.query(AccountUser).filter(
+            AccountUser.email.ilike(email.strip().lower())
+        ).first()
+        
         if user:
             return {
                 "Email": user.email,
                 "Username": user.username,
                 "Password": user.password,
-                "Approval": user.approval
+                "Approval": user.approval,
+                "permissions": user.permissions or {}
             }
         return None
     finally:
         db.close()
+
+
+def login_user_optimized(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
+    """
+    Optimized login dengan single DB query.
+    """
+    try:
+        db = SessionLocal()
+        try:
+            # Single query untuk find user
+            user = db.query(AccountUser).filter(
+                AccountUser.username.ilike(username.strip().lower())
+            ).first()
+            
+            if not user:
+                return False, "Username not found.", None
+            
+            # Check password
+            hashed = hash_password(password)
+            if hashed != user.password.strip():
+                return False, "Incorrect password.", None
+            
+            # Check approval status
+            approval = str(user.approval).strip().lower()
+            if approval == "waiting":
+                return False, "Your account is pending admin approval.", None
+            if approval != "approve":
+                return False, "Your account has been rejected or is inactive.", None
+            
+            # Generate JWT
+            permissions = user.permissions or {}
+            payload = {
+                "username": user.username,
+                "email": user.email or "",
+                "permissions": permissions,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_EXPIRE_HOURS),
+                "iat": datetime.datetime.utcnow(),
+            }
+            token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+            return True, "Login successful.", token
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[Login Error] {e}")
+        return False, f"Login error: {str(e)}", None
 
 
 def signup_user(email: str, username: str, password: str) -> Tuple[bool, str]:

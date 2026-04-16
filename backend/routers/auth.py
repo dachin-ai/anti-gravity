@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user, verify_token, log_activity, sync_users_from_sheet
+from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -33,7 +33,7 @@ def signup(body: SignupRequest):
 @router.post("/login")
 def login(body: LoginRequest, request: Request):
     ip = request.client.host if request.client else ""
-    success, msg, token = login_user(body.username.strip(), body.password)
+    success, msg, token = login_user_optimized(body.username.strip(), body.password)
     if not success:
         raise HTTPException(status_code=401, detail=msg)
     return {
