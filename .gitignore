@@ -21,4 +21,8 @@ client_secret.json
 
 # Scratch and Context
 scratch*.py
-context/
+#context/  # Allow documentation files to be tracked
+
+# But ignore non-MD files in context (like test data)
+context/*.xlsx
+context/API\ Key/
