@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
+from database import engine, Base
+import models  # noqa: F401 - ensure all models are registered before create_all
 import os
 
 # AI Chat router is optional (only loaded if GEMINI_API_KEY is configured)
