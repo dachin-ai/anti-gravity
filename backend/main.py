@@ -2,8 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
-from database import engine, Base
-import models  # noqa: F401 - ensure all models are registered before create_all
+import os
+
+# AI Chat router is optional (only loaded if GEMINI_API_KEY is configured)
+ai_chat_available = False
+if os.getenv("GEMINI_API_KEY"):
+    try:
+        from routers import ai_chat
+        ai_chat_available = True
+    except Exception as e:
+        print(f"[Startup] ⚠ AI Chat not available: {e}")
+else:
+    print("[Startup] ℹ GEMINI_API_KEY not configured. AI Chat endpoint will not be available.")
 
 app = FastAPI()
 
@@ -65,6 +75,11 @@ app.include_router(warehouse_order.router)
 app.include_router(socmed.router)
 app.include_router(affiliate.router)
 app.include_router(tiktok_ads.router)
+
+# Include AI Chat router only if GEMINI_API_KEY is set
+if ai_chat_available:
+    app.include_router(ai_chat.router)
+    print("[Startup] ✓ AI Chat endpoint registered.")
 
 from routers import shopee_affiliate
 app.include_router(shopee_affiliate.router, prefix="/api/shopee-affiliate", tags=["shopee-affiliate"])

@@ -20,5 +20,7 @@ api.interceptors.request.use((config) => {
 
 export const syncUsers = () => api.post('/auth/sync-users');
 
+export const askAssistant = (messages) => api.post('/chat/ask', { messages });
+
 export default api;
 

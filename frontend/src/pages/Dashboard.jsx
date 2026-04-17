@@ -1,5 +1,6 @@
 import React from 'react';
 import { Typography, Row, Col, Card, Tag, Tooltip } from 'antd';
+import AiAssistant from '../components/AiAssistant';
 import { useNavigate } from 'react-router-dom';
 import { CaretRightOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
@@ -174,6 +175,7 @@ const Dashboard = () => {
                     </div>
                 );
             })}
+            {/* <AiAssistant /> */}
         </div>
     );
 };

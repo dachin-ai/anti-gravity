@@ -67,7 +67,7 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
     finally:
         db.close()
 
-def sync_google_sheets_to_neon() -> int:
+def sync_google_sheets_to_vps_postgres() -> int:
     try:
         client = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = client.open_by_url(SPREADSHEET_URL)
