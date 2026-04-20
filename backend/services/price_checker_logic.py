@@ -67,7 +67,8 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
     finally:
         db.close()
 
-def sync_google_sheets_to_vps_postgres() -> int:
+def sync_google_sheets_to_neon() -> int:
+    """Sync Google Sheets price data to Neon PostgreSQL database"""
     try:
         client = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = client.open_by_url(SPREADSHEET_URL)
@@ -88,26 +89,38 @@ def sync_google_sheets_to_vps_postgres() -> int:
             cat_col = "Category" if "Category" in cols else None
             clear_col = "Clearance" if "Clearance" in cols else None
             
+            # Clear old data
             db.query(FreemirPrice).delete()
             db.commit()
             
-            price_objects = []
+            # Sync new data
             for _, row in df_price.iterrows():
                 sku_val = str(row[sku_col]).strip()
                 cat_val = str(row[cat_col]) if cat_col and cat_col in row else ""
                 clear_val = str(row[clear_col]) if clear_col and clear_col in row else ""
                 
+                # Extract prices as dict (JSON-compatible)
                 prices_dict = {}
                 for pt in PRICE_TYPES:
-                    if pt in row:
-                        prices_dict[pt] = str(row[pt])
+                    if pt in row and str(row[pt]).strip():
+                        try:
+                            prices_dict[pt] = float(str(row[pt]).replace(",", ""))
+                        except:
+                            pass
                 
-                price_objects.append(FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict))
+                # Insert or update
+                price_obj = db.query(FreemirPrice).filter(FreemirPrice.sku == sku_val).first()
+                if price_obj:
+                    price_obj.category = cat_val
+                    price_obj.clearance = clear_val
+                    price_obj.prices = prices_dict
+                else:
+                    price_obj = FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict)
+                    db.add(price_obj)
+                
                 count += 1
-                
-            if price_objects:
-                db.bulk_save_objects(price_objects)
-                db.commit()
+            
+            db.commit()
 
         # Read All_Name sheet
         try:
@@ -123,31 +136,45 @@ def sync_google_sheets_to_vps_postgres() -> int:
                 # Prevent IntegrityError by removing duplicate SKUs
                 df_names = df_names.drop_duplicates(subset=[sku_c], keep='last')
                 
+                # Clear old data
                 db.query(FreemirName).delete()
                 db.commit()
                 
-                name_objects = []
+                # Sync new data
                 for _, row in df_names.iterrows():
                     sku_val = str(row[sku_c]).strip()
                     n_val = str(row[name_c]) if name_c else ""
                     l_val = str(row[link_c]) if link_c else ""
-                    name_objects.append(FreemirName(sku=sku_val, product_name=n_val, link=l_val))
                     
-                if name_objects:
-                    db.bulk_save_objects(name_objects)
-                    db.commit()
-        except Exception:
-            pass
+                    name_obj = db.query(FreemirName).filter(FreemirName.sku == sku_val).first()
+                    if name_obj:
+                        name_obj.product_name = n_val
+                        name_obj.link = l_val
+                    else:
+                        name_obj = FreemirName(sku=sku_val, product_name=n_val, link=l_val)
+                        db.add(name_obj)
+                
+                db.commit()
+        except Exception as e:
+            print(f"Warning: Could not sync product names: {e}")
             
         db.close()
         
-        # Invalidate cache
-        global _cached_price_db
+        # Invalidate cache so new data is loaded on next request
+        global _cached_price_db, _cached_name_map, _cached_link_map
         _cached_price_db = None
+        _cached_name_map = None
+        _cached_link_map = None
         
         return count
     except Exception as e:
-        print(f"Error syncing gspread to neon: {e}")
+        print(f"Error syncing Google Sheets to Neon: {e}")
+        raise
+
+# Keep old function name for backward compatibility
+def sync_google_sheets_to_vps_postgres() -> int:
+    """Deprecated: Use sync_google_sheets_to_neon() instead"""
+    return sync_google_sheets_to_neon()
         import traceback; traceback.print_exc()
         raise e
 

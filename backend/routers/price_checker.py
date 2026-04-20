@@ -11,7 +11,8 @@ from services.price_checker_logic import (
     PRICE_TYPES,
     generate_template_file,
     convert_df_to_excel_multisheet,
-    sync_google_sheets_to_vps_postgres
+    sync_google_sheets_to_vps_postgres,
+    sync_google_sheets_to_neon
 )
 from pydantic import BaseModel
 
@@ -30,13 +31,31 @@ def get_db():
 
 @router.post("/sync-vps-postgres", dependencies=[Depends(require_tool_access("price_checker"))])
 def sync_vps_postgres():
+    """Sync Google Sheets to VPS PostgreSQL (deprecated: use /sync-neon instead)"""
     try:
         count = sync_google_sheets_to_vps_postgres()
         global db_cache
         db_cache["price_db"] = None
         db_cache["name_map"] = None
         db_cache["link_map"] = None
-        return {"message": f"Successfully synced {count} rows from Google Sheets to VPS PostgreSQL."}
+        return {"message": f"Successfully synced {count} rows from Google Sheets to Neon PostgreSQL."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
+
+@router.post("/sync-neon", dependencies=[Depends(require_tool_access("price_checker"))])
+def sync_to_neon():
+    """Sync Google Sheets price data to Neon PostgreSQL database"""
+    try:
+        count = sync_google_sheets_to_neon()
+        global db_cache
+        db_cache["price_db"] = None
+        db_cache["name_map"] = None
+        db_cache["link_map"] = None
+        return {
+            "success": True,
+            "message": f"Successfully synced {count} price records from Google Sheets to Neon PostgreSQL.",
+            "records_synced": count
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
 
