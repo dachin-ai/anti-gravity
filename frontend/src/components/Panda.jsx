@@ -88,8 +88,8 @@ const Panda = () => {
   const [visible, setVisible] = useState(!document.hidden);
   const [x, setX]             = useState(10);
   const [dir, setDir]         = useState(1);       // 1 = right, -1 = left
-  const [sitting, setSitting] = useState(false);
-  const stRef = useRef({ x: 10, dir: 1, sitting: false });
+  const [sitting, setSitting] = useState(true);    // starts sitting
+  const stRef = useRef({ x: 10, dir: 1, sitting: true });
 
   // Hide when tab is hidden / window minimised
   useEffect(() => {
@@ -116,7 +116,7 @@ const Panda = () => {
     return () => clearInterval(id);
   }, []);
 
-  // Click → toggle sit / resume walking
+  // Click → toggle walk / sit
   const handleClick = () => {
     const next = !sitting;
     stRef.current.sitting = next;

@@ -40,16 +40,29 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    /* top-left indigo nebula */
-    radial-gradient(ellipse 55% 40% at 10% 8%,  rgba(99, 102, 241, 0.10) 0%, transparent 70%),
-    /* center-right pink cloud */
-    radial-gradient(ellipse 45% 35% at 88% 30%,  rgba(236, 72, 153, 0.07) 0%, transparent 65%),
-    /* bottom-center orange ember */
-    radial-gradient(ellipse 50% 30% at 50% 95%,  rgba(249, 115, 22, 0.06) 0%, transparent 65%),
-    /* mid-left teal whisper */
-    radial-gradient(ellipse 30% 25% at 18% 60%,  rgba(20, 184, 166, 0.05) 0%, transparent 60%),
-    /* wide faint core glow */
-    radial-gradient(ellipse 80% 60% at 50% 50%,  rgba(99, 102, 241, 0.04) 0%, transparent 70%);
+    /* warm sun glow — bottom-left corner, bleeds up */
+    radial-gradient(ellipse 55% 45% at 0% 100%,  rgba(251,191,36,0.18)  0%, rgba(249,115,22,0.12) 35%, transparent 70%),
+    /* warm corona bleed — slightly inward */
+    radial-gradient(ellipse 30% 25% at 4%  96%,  rgba(255,237,180,0.22) 0%, transparent 60%),
+
+    /* galactic core — diagonal center-ish, tilted upper-right */
+    radial-gradient(ellipse 14% 10% at 58% 40%,  rgba(220,210,255,0.22) 0%, rgba(139,92,246,0.14) 50%, transparent 78%),
+    /* diagonal disk — tilted ~35deg, sweeps from bottom-left to top-right */
+    radial-gradient(ellipse 80% 6%  at 50% 50%,  rgba(99,102,241,0.10)  0%, transparent 100%),
+    /* spiral arm — upper-right */
+    radial-gradient(ellipse 38% 13% at 80% 18%,  rgba(139,92,246,0.09)  0%, transparent 80%),
+    /* spiral arm — lower-left (blends into warm glow area) */
+    radial-gradient(ellipse 35% 12% at 20% 82%,  rgba(120,100,200,0.07) 0%, transparent 80%),
+    /* spiral arm — upper-left faint */
+    radial-gradient(ellipse 25% 10% at 14% 18%,  rgba(167,139,250,0.06) 0%, transparent 75%),
+    /* spiral arm — lower-right faint */
+    radial-gradient(ellipse 25% 10% at 86% 82%,  rgba(99,102,241,0.06)  0%, transparent 75%),
+    /* outer halo */
+    radial-gradient(ellipse 95% 75% at 55% 42%,  rgba(99,102,241,0.04)  0%, transparent 100%),
+    /* accent nebula — top-right pink */
+    radial-gradient(ellipse 28% 20% at 92% 8%,   rgba(236,72,153,0.05)  0%, transparent 70%);
+  transform: rotate(-32deg) scale(1.55);
+  transform-origin: 50% 50%;
 }
 
 /* keep all content above the galaxy layer */
@@ -59,7 +72,7 @@ body > #root,
   z-index: 1;
 }
 
-/* star-field overlay — tiny scattered dots */
+/* star-field + constellation map — bottom-right corner */
 body::after {
   content: '';
   position: fixed;
@@ -67,12 +80,29 @@ body::after {
   pointer-events: none;
   z-index: 0;
   background-image:
-    radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px),
-    radial-gradient(circle, rgba(200,200,255,0.30) 1px, transparent 1px);
-  background-size: 320px 320px, 500px 500px, 220px 220px;
-  background-position: 0 0, 160px 80px, 80px 200px;
-  opacity: 0.45;
+    /* bright foreground stars */
+    radial-gradient(circle, rgba(255,255,255,0.85) 1px,   transparent 1px),
+    /* medium stars */
+    radial-gradient(circle, rgba(255,255,255,0.50) 1px,   transparent 1px),
+    /* faint blue-white stars */
+    radial-gradient(circle, rgba(200,210,255,0.45) 1px,   transparent 1px),
+    /* tiny dim stars — dense layer */
+    radial-gradient(circle, rgba(255,255,255,0.28) 0.5px, transparent 0.5px),
+    /* slightly larger accent stars */
+    radial-gradient(circle, rgba(230,225,255,0.40) 1.5px, transparent 1.5px);
+  background-size:
+    353px 353px,
+    521px 433px,
+    211px 317px,
+    151px 233px,
+    631px 491px;
+  background-position:
+    0    0,
+    177px 88px,
+    106px 159px,
+    75px  44px,
+    315px 245px;
+  opacity: 0.58;
 }
 
 /* ============================================
