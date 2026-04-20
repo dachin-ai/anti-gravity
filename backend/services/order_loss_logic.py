@@ -281,7 +281,7 @@ def run_order_loss_audit(df: pd.DataFrame, price_db: Dict, price_type: str = "Wa
     col_map['Product Detail Gross Profit'] = find_col(['Product Detail Gross Profit', 'Product Gross Profit', '商品明细毛利', '商品毛利'])
     col_map['Product Detail Amount After Discount'] = find_col(['Product Detail Amount After Discount', 'Product Actual Amount Paid', 'Product Actual Amount', 'Product Amount After Discount', '商品明细优惠后金额', '商品实付金额', '商品折后明细金额'])
     col_map['Seller Coupon'] = find_col(['Seller Coupon', '卖家优惠券'])
-    col_map['Order allocated amount'] = find_col(['订单分摊金额', 'Discount Code', 'Order allocated amount', 'Order allocated'])
+    col_map['Order allocated amount'] = find_col(['订单分摊金额', 'Order allocated amount', 'Order allocated', 'Discount Code'])
     col_map['Qty'] = find_col(['商品数量', 'Qty', 'Quantity', 'Item Quantity'])
     col_map['Order Label'] = find_col(['Order Label', 'Pesanan Berlabel', '订单标签', 'Label'])
     
