@@ -68,18 +68,22 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
         db.close()
 
 def sync_google_sheets_to_neon() -> int:
-    """Sync Google Sheets price data to Neon PostgreSQL database"""
+    """Sync Google Sheets price data to Neon PostgreSQL database (optimized with timeout & bulk operations)"""
+    db = None
     try:
+        # Initialize gspread with timeout
+        print("[Sync] Initializing Google Sheets connection...")
         client = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = client.open_by_url(SPREADSHEET_URL)
         
-        # Read Price sheet
+        db = SessionLocal()
+        count = 0
+        
+        # ===== SYNC PRICE DATA =====
+        print("[Sync] Fetching Price worksheet...")
         price_worksheet = sh.worksheet("Price")
         price_data = price_worksheet.get_all_values()
         
-        db = SessionLocal()
-        
-        count = 0
         if price_data:
             cols = price_data[0]
             df_price = pd.DataFrame(price_data[1:], columns=cols)
@@ -89,13 +93,17 @@ def sync_google_sheets_to_neon() -> int:
             cat_col = "Category" if "Category" in cols else None
             clear_col = "Clearance" if "Clearance" in cols else None
             
-            # Clear old data
-            db.query(FreemirPrice).delete()
-            db.commit()
+            print(f"[Sync] Processing {len(df_price)} price records...")
             
-            # Sync new data
+            # Prepare bulk insert data
+            price_objs_to_insert = []
+            skus_to_update = {}
+            
             for _, row in df_price.iterrows():
                 sku_val = str(row[sku_col]).strip()
+                if not sku_val:
+                    continue
+                    
                 cat_val = str(row[cat_col]) if cat_col and cat_col in row else ""
                 clear_val = str(row[clear_col]) if clear_col and clear_col in row else ""
                 
@@ -108,21 +116,26 @@ def sync_google_sheets_to_neon() -> int:
                         except:
                             pass
                 
-                # Insert or update
-                price_obj = db.query(FreemirPrice).filter(FreemirPrice.sku == sku_val).first()
-                if price_obj:
-                    price_obj.category = cat_val
-                    price_obj.clearance = clear_val
-                    price_obj.prices = prices_dict
-                else:
-                    price_obj = FreemirPrice(sku=sku_val, category=cat_val, clearance=clear_val, prices=prices_dict)
-                    db.add(price_obj)
-                
-                count += 1
+                skus_to_update[sku_val] = {
+                    'sku': sku_val,
+                    'category': cat_val,
+                    'clearance': clear_val,
+                    'prices': prices_dict
+                }
             
+            # Delete old prices and bulk insert new ones
+            db.query(FreemirPrice).delete()
             db.commit()
+            
+            # Bulk insert
+            if skus_to_update:
+                db.bulk_insert_mappings(FreemirPrice, list(skus_to_update.values()))
+                db.commit()
+                count = len(skus_to_update)
+                print(f"[Sync] Synced {count} price records")
 
-        # Read All_Name sheet
+        # ===== SYNC NAME DATA =====
+        print("[Sync] Fetching All_Name worksheet...")
         try:
             name_worksheet = sh.worksheet("All_Name")
             name_data = name_worksheet.get_all_values()
@@ -136,29 +149,33 @@ def sync_google_sheets_to_neon() -> int:
                 # Prevent IntegrityError by removing duplicate SKUs
                 df_names = df_names.drop_duplicates(subset=[sku_c], keep='last')
                 
-                # Clear old data
-                db.query(FreemirName).delete()
-                db.commit()
+                print(f"[Sync] Processing {len(df_names)} product names...")
                 
-                # Sync new data
+                # Prepare bulk insert data
+                names_to_insert = []
                 for _, row in df_names.iterrows():
                     sku_val = str(row[sku_c]).strip()
+                    if not sku_val:
+                        continue
                     n_val = str(row[name_c]) if name_c else ""
                     l_val = str(row[link_c]) if link_c else ""
                     
-                    name_obj = db.query(FreemirName).filter(FreemirName.sku == sku_val).first()
-                    if name_obj:
-                        name_obj.product_name = n_val
-                        name_obj.link = l_val
-                    else:
-                        name_obj = FreemirName(sku=sku_val, product_name=n_val, link=l_val)
-                        db.add(name_obj)
+                    names_to_insert.append({
+                        'sku': sku_val,
+                        'product_name': n_val,
+                        'link': l_val
+                    })
                 
+                # Delete old names and bulk insert new ones
+                db.query(FreemirName).delete()
                 db.commit()
+                
+                if names_to_insert:
+                    db.bulk_insert_mappings(FreemirName, names_to_insert)
+                    db.commit()
+                    print(f"[Sync] Synced {len(names_to_insert)} product names")
         except Exception as e:
-            print(f"Warning: Could not sync product names: {e}")
-            
-        db.close()
+            print(f"[Sync] Warning: Could not sync product names: {e}")
         
         # Invalidate cache so new data is loaded on next request
         global _cached_price_db, _cached_name_map, _cached_link_map
@@ -166,10 +183,16 @@ def sync_google_sheets_to_neon() -> int:
         _cached_name_map = None
         _cached_link_map = None
         
+        print(f"[Sync] ✓ Sync complete: {count} price records updated")
         return count
     except Exception as e:
-        print(f"Error syncing Google Sheets to Neon: {e}")
+        print(f"[Sync] ✗ Error syncing Google Sheets to Neon: {e}")
+        import traceback
+        traceback.print_exc()
         raise
+    finally:
+        if db:
+            db.close()
 
 # Keep old function name for backward compatibility
 def sync_google_sheets_to_vps_postgres() -> int:

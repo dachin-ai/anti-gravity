@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Typography, Button, Row, Col, Upload, message, Divider, Table, Tabs, Tag } from 'antd';
 import { InboxOutlined, ScanOutlined, FileExcelOutlined, CheckCircleFilled, WarningFilled, AimOutlined } from '@ant-design/icons';
 import api from '../api';

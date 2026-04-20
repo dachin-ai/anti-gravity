@@ -67,8 +67,8 @@ const PriceChecker = () => {
         try {
             const res = await api.get('/price-checker/refresh');
             message.success(`Database loaded! ${res.data.records} SKU pricing records available.`);
-        } catch {
-            message.error('Failed to connect to database');
+        } catch (err) {
+            message.error(err.response?.data?.detail || 'Failed to connect to database');
         } finally { setLoadingDb(false); }
     };
 
@@ -89,7 +89,7 @@ const PriceChecker = () => {
             const res = await api.get(`/price-checker/template/${tplMethod}`, { responseType: 'blob' });
             const url = URL.createObjectURL(new Blob([res.data]));
             Object.assign(document.createElement('a'), { href: url, download: `PC_${tplMethod}_Template.xlsx` }).click();
-        } catch { message.error('Failed to download template'); }
+        } catch (err) { message.error(err.response?.data?.detail || 'Failed to download template'); }
     };
 
     const doCalculateDirect = async () => {
@@ -99,7 +99,7 @@ const PriceChecker = () => {
             const res = await api.post('/price-checker/calculate-direct', { sku_string: skuInput, target_price: targetPrice });
             setDirectResult(res.data);
             logActivity('Price Checker (Direct)');
-        } catch { message.error('Calculation failed');
+        } catch (err) { message.error(err.response?.data?.detail || 'Calculation failed');
         } finally { setCalcLoading(false); }
     };
 
@@ -114,7 +114,7 @@ const PriceChecker = () => {
             setBatchOverview(res.data);
             message.success('Batch calculation complete! See overview below.');
             logActivity('Price Checker (Batch)');
-        } catch { message.error('Batch calculation failed');
+        } catch (err) { message.error(err.response?.data?.detail || 'Batch calculation failed');
         } finally { setCalcLoading(false); }
     };
 
