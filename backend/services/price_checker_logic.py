@@ -217,11 +217,20 @@ def clean_sku_list(sku_string: str) -> List[str]:
     return [p.strip() for p in parts if p.strip()]
 
 def parse_idr_price(val: Any) -> float:
-    if val is None or str(val).strip() == "": return 0.0
-    val_str = str(val)
+    if val is None: return 0.0
+    # Already numeric (from Neon DB JSON) — return directly, avoid stripping decimal point
+    if isinstance(val, (int, float)):
+        return 0.0 if val != val else float(val)  # guard NaN
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() in ('', 'nan', 'none'): return 0.0
+    # Try direct float first (handles "15000.0", "15000")
+    try:
+        return float(val_str)
+    except ValueError:
+        pass
+    # Last resort: strip everything except digits (e.g. "Rp 15,000" from raw sheets)
     digits = re.sub(r'[^\d]', '', val_str)
-    if not digits: return 0.0
-    return float(digits)
+    return float(digits) if digits else 0.0
 
 def get_bundle_discount_rate(count: int) -> float:
     if count == 1: return 0.0
