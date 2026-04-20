@@ -1,18 +1,76 @@
 steps:
-  # Deploy Backend to Cloud Run
+  # Check what changed in this commit
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'check-changes'
     entrypoint: bash
     args:
       - '-c'
-      - 'cd backend && gcloud run deploy anti-gravity --source . --region asia-southeast1 --allow-unauthenticated --quiet'
+      - |
+        echo "=== Checking what changed ==="
+        if git show --name-only | grep -q "^backend/"; then
+          echo "BACKEND_CHANGED=true" > /workspace/changed.txt
+          echo "✓ Backend code changed - will redeploy"
+        else
+          echo "BACKEND_CHANGED=false" > /workspace/changed.txt
+          echo "- Backend unchanged - skipping rebuild"
+        fi
+        
+        if git show --name-only | grep -q "^frontend/"; then
+          echo "FRONTEND_CHANGED=true" >> /workspace/changed.txt
+          echo "✓ Frontend code changed - will redeploy"
+        else
+          echo "FRONTEND_CHANGED=false" >> /workspace/changed.txt
+          echo "- Frontend unchanged - skipping rebuild"
+        fi
+        cat /workspace/changed.txt
 
-  # Deploy Frontend to Cloud Run
+  # Deploy Backend ONLY if backend/ changed
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-backend'
     entrypoint: bash
     args:
       - '-c'
-      - 'cd frontend && gcloud run deploy frontend-anti-gravity --source . --region asia-southeast1 --allow-unauthenticated --quiet'
+      - |
+        source /workspace/changed.txt
+        if [ "$BACKEND_CHANGED" = "true" ]; then
+          echo "🚀 Deploying Backend..."
+          cd backend && \
+          gcloud run deploy anti-gravity \
+            --source . \
+            --region asia-southeast1 \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars JWT_SECRET=$_JWT_SECRET
+          echo "✅ Backend deployed successfully"
+        else
+          echo "⏭️  Backend unchanged - skipping deployment"
+        fi
+
+  # Deploy Frontend ONLY if frontend/ changed
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-frontend'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        source /workspace/changed.txt
+        if [ "$FRONTEND_CHANGED" = "true" ]; then
+          echo "🚀 Deploying Frontend..."
+          cd frontend && \
+          gcloud run deploy frontend-anti-gravity \
+            --source . \
+            --region asia-southeast1 \
+            --allow-unauthenticated \
+            --quiet
+          echo "✅ Frontend deployed successfully"
+        else
+          echo "⏭️  Frontend unchanged - skipping deployment"
+        fi
 
 timeout: '1800s'
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'N1_HIGHCPU_8'  # Faster builds
+
+substitutions:
+  _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
