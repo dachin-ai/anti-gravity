@@ -5,10 +5,8 @@ services:
     build: ./backend
     container_name: antigravity-backend
     environment:
-      - DATABASE_URL=postgresql://dena_admin:AntiGrav2026Secure@host.docker.internal:5432/antigravity_db
+      - DATABASE_URL=postgresql://neondb_owner:npg_e1Jl3rWoTcAR@ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - JWT_SECRET=freemir_antigravity_2026_prod_secret
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     volumes:
       - ./backend/credentials.json:/app/credentials.json:ro
