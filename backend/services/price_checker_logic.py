@@ -175,8 +175,6 @@ def sync_google_sheets_to_neon() -> int:
 def sync_google_sheets_to_vps_postgres() -> int:
     """Deprecated: Use sync_google_sheets_to_neon() instead"""
     return sync_google_sheets_to_neon()
-        import traceback; traceback.print_exc()
-        raise e
 
 def clean_sku_list(sku_string: str) -> List[str]:
     if pd.isna(sku_string) or not sku_string: return []
