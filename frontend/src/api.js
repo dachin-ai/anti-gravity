@@ -7,6 +7,7 @@ const baseURL = isProduction
 
 const api = axios.create({
   baseURL,
+  timeout: 15000, // 15 second timeout for all requests
 });
 
 // Auto-attach Bearer token to every request
@@ -17,6 +18,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Handle timeout errors with better messaging
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.code === 'ECONNABORTED' || error.message === 'timeout of 15000ms exceeded') {
+      error.response = error.response || {};
+      error.response.data = error.response.data || {};
+      error.response.data.detail = 'Request timeout. Server may be slow or unavailable. Try again in a moment.';
+      error.response.status = 504;
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const syncUsers = () => api.post('/auth/sync-users');
 

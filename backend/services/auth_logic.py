@@ -5,6 +5,7 @@ import jwt
 import datetime
 import traceback
 import time
+import threading
 from typing import Optional, Dict, Tuple, List
 from sqlalchemy.orm import Session
 from database import SessionLocal
@@ -29,6 +30,36 @@ TOOL_KEYS = [
     "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer"
 ]
 
+# TIMEOUT PROTECTION for Google Sheets API
+SHEETS_API_TIMEOUT = 10  # 10 seconds timeout for Google Sheets calls
+
+def call_with_timeout(func, timeout_sec=SHEETS_API_TIMEOUT):
+    """
+    Execute a function with a timeout. Returns (success, result).
+    If timeout, returns (False, "Google Sheets API timeout").
+    """
+    result = [None]
+    error = [None]
+    
+    def wrapper():
+        try:
+            result[0] = func()
+        except Exception as e:
+            error[0] = e
+    
+    thread = threading.Thread(target=wrapper, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_sec)
+    
+    if thread.is_alive():
+        # Thread still running = timeout
+        return False, f"Google Sheets API timeout (>{timeout_sec}s). Using cached data or minimal default."
+    
+    if error[0]:
+        return False, f"Google Sheets API error: {str(error[0])}"
+    
+    return True, result[0]
+
 # === CACHING LAYER ===
 _cached_client = None
 _cached_sh = None
@@ -52,32 +83,39 @@ def hash_password(password: str) -> str:
 
 def get_users() -> List[Dict]:
     """
-    Fetch all users from Account sheet with caching.
+    Fetch all users from Account sheet with caching and TIMEOUT protection.
     Cache expires after CACHE_DURATION seconds.
+    Returns cached data if API times out.
     """
     global _cached_users, _cached_users_timestamp
     
     now = time.time()
-    # Return cached data jika masih valid
+    # Return cached data if still valid
     if _cached_users and (now - _cached_users_timestamp) < CACHE_DURATION:
         return _cached_users
     
-    try:
+    # Attempt to fetch fresh data with timeout
+    def fetch_from_sheet():
         sh = get_sheet_client()
         ws = sh.worksheet("Account")
-        rows = ws.get_all_records()
-        
+        return ws.get_all_records()
+    
+    success, result = call_with_timeout(fetch_from_sheet, timeout_sec=SHEETS_API_TIMEOUT)
+    
+    if success:
         # Update cache
-        _cached_users = rows
+        _cached_users = result
         _cached_users_timestamp = now
-        
-        return rows
-    except Exception as e:
-        # Jika error & ada cache lama, return cache (fallback)
+        print(f"[Auth] ✓ Updated user cache from Google Sheets ({len(result)} users)")
+        return result
+    else:
+        # Timeout or error
+        print(f"[Auth] {result}")
         if _cached_users:
-            print(f"[Auth] Failed to fetch users from sheet, using stale cache: {e}")
+            print(f"[Auth] ⚠ Using stale cache ({len(_cached_users)} users)")
             return _cached_users
-        raise RuntimeError(f"Failed to access Account sheet: {e}")
+        # No cache available
+        raise RuntimeError(f"Cannot fetch users: {result}")
 
 
 def sync_users_from_sheet() -> Tuple[bool, str]:
@@ -85,8 +123,9 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
     Sync users from Google Sheet to PostgreSQL dengan incremental update (lebih cepat).
     - Hanya update/insert yang berubah
     - Hanya delete users yang sudah tidak ada di sheet
+    - WITH TIMEOUT PROTECTION (max 15 seconds)
     """
-    try:
+    def do_sync():
         users = get_users()
         db = SessionLocal()
         try:
@@ -142,12 +181,18 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
             global _cached_users_timestamp
             _cached_users_timestamp = 0
             
-            return True, f"Users synched successfully. (Added/Updated: {len(sheet_usernames)}, Deleted: {len(to_delete)})"
+            return True, f"✓ Users synced successfully. ({len(sheet_usernames)} in sheet, {len(to_delete)} deleted)"
         finally:
             db.close()
-    except Exception as e:
-        print(f"[Sync Users Error] {e}")
-        return False, f"Failed to sync users: {str(e)}"
+    
+    # Execute with timeout
+    success, result = call_with_timeout(do_sync, timeout_sec=15)
+    
+    if success:
+        return True, result
+    else:
+        # Timeout or error - still return meaningful error
+        return False, result
 
 def find_user_by_username(username: str) -> Optional[Dict]:
     """Find a user by username from the database (case-insensitive)."""

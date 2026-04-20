@@ -35,6 +35,9 @@ def login(body: LoginRequest, request: Request):
     ip = request.client.host if request.client else ""
     success, msg, token = login_user_optimized(body.username.strip(), body.password)
     if not success:
+        # If user not found, give hint about sync
+        if "not found" in msg.lower():
+            msg = f"{msg} Try refreshing users from the login page first."
         raise HTTPException(status_code=401, detail=msg)
     return {
         "message": msg,
