@@ -146,9 +146,6 @@ def sync_google_sheets_to_neon() -> int:
                 name_c = df_names.columns[1] if len(df_names.columns) > 1 else None
                 link_c = df_names.columns[2] if len(df_names.columns) > 2 else None
                 
-                # Prevent IntegrityError by removing duplicate SKUs
-                df_names = df_names.drop_duplicates(subset=[sku_c], keep='last')
-                
                 print(f"[Sync] Processing {len(df_names)} product names...")
                 
                 # Prepare bulk insert data
@@ -157,23 +154,38 @@ def sync_google_sheets_to_neon() -> int:
                     sku_val = str(row[sku_c]).strip()
                     if not sku_val:
                         continue
+                    
+                    # Handle combined SKUs (e.g., "SKU1+SKU2+SKU3")
+                    skus = [s.strip() for s in sku_val.replace('+', ',').replace('|', ',').split(',')]
+                    skus = [s for s in skus if s]  # Remove empty
+                    
                     n_val = str(row[name_c]) if name_c else ""
                     l_val = str(row[link_c]) if link_c else ""
                     
-                    names_to_insert.append({
-                        'sku': sku_val,
-                        'product_name': n_val,
-                        'link': l_val
-                    })
+                    # Insert each SKU separately
+                    for sku in skus:
+                        names_to_insert.append({
+                            'sku': sku,
+                            'product_name': n_val,
+                            'link': l_val
+                        })
                 
                 # Delete old names and bulk insert new ones
                 db.query(FreemirName).delete()
                 db.commit()
                 
                 if names_to_insert:
-                    db.bulk_insert_mappings(FreemirName, names_to_insert)
+                    # Remove duplicates keeping first occurrence
+                    seen = set()
+                    unique_names = []
+                    for item in names_to_insert:
+                        if item['sku'] not in seen:
+                            seen.add(item['sku'])
+                            unique_names.append(item)
+                    
+                    db.bulk_insert_mappings(FreemirName, unique_names)
                     db.commit()
-                    print(f"[Sync] Synced {len(names_to_insert)} product names")
+                    print(f"[Sync] Synced {len(unique_names)} product names (from {len(names_to_insert)} total entries)")
         except Exception as e:
             print(f"[Sync] Warning: Could not sync product names: {e}")
         
