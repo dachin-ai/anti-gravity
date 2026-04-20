@@ -8,15 +8,14 @@ const getBaseURL = () => {
     return 'http://localhost:8000/api';
   }
   
-  // Production: Check for environment variable (set via Cloud Run or build)
+  // Production: Check for environment variable first
   const envBackend = import.meta.env.VITE_API_URL;
   if (envBackend) {
     return envBackend;
   }
   
-  // Fallback: Use relative URL with /api proxy (requires nginx proxy_pass)
-  // This works if frontend and backend are behind same origin
-  return '/api';
+  // Fallback: Use Render backend (production deployment)
+  return 'https://render-anti-gravity.onrender.com/api';
 };
 
 const baseURL = getBaseURL();

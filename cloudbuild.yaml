@@ -9,44 +9,23 @@ steps:
         echo "=== Checking what changed ==="
         if git show --name-only | grep -q "^backend/"; then
           echo "BACKEND_CHANGED=true" > /workspace/changed.txt
-          echo "✓ Backend code changed - will redeploy"
+          echo "✓ Backend code changed (note: backend is on Render, skipping)"
         else
           echo "BACKEND_CHANGED=false" > /workspace/changed.txt
-          echo "- Backend unchanged - skipping rebuild"
+          echo "- Backend unchanged"
         fi
         
         if git show --name-only | grep -q "^frontend/"; then
           echo "FRONTEND_CHANGED=true" >> /workspace/changed.txt
-          echo "✓ Frontend code changed - will redeploy"
+          echo "✓ Frontend code changed - will redeploy to Cloud Run"
         else
           echo "FRONTEND_CHANGED=false" >> /workspace/changed.txt
           echo "- Frontend unchanged - skipping rebuild"
         fi
         cat /workspace/changed.txt
 
-  # Deploy Backend ONLY if backend/ changed
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-backend'
-    entrypoint: bash
-    args:
-      - '-c'
-      - |
-        source /workspace/changed.txt
-        if [ "$BACKEND_CHANGED" = "true" ]; then
-          echo "🚀 Deploying Backend..."
-          cd backend && \
-          gcloud run deploy anti-gravity \
-            --source . \
-            --region asia-southeast1 \
-            --allow-unauthenticated \
-            --quiet \
-            --set-env-vars JWT_SECRET=$_JWT_SECRET
-          echo "✅ Backend deployed successfully"
-        else
-          echo "⏭️  Backend unchanged - skipping deployment"
-        fi
-
-  # Deploy Frontend ONLY if frontend/ changed
+  # Deploy Frontend ONLY to Cloud Run
+  # Backend is deployed separately on Render
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-frontend'
     entrypoint: bash
@@ -55,17 +34,34 @@ steps:
       - |
         source /workspace/changed.txt
         if [ "$FRONTEND_CHANGED" = "true" ]; then
-          echo "🚀 Deploying Frontend..."
+          echo "🚀 Deploying Frontend to Cloud Run..."
           cd frontend && \
           gcloud run deploy frontend-anti-gravity \
             --source . \
             --region asia-southeast1 \
             --allow-unauthenticated \
             --quiet
-          echo "✅ Frontend deployed successfully"
+          echo "✅ Frontend deployed successfully to Cloud Run"
         else
           echo "⏭️  Frontend unchanged - skipping deployment"
         fi
+  
+  # Note: Backend deployment info
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'info'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        echo ""
+        echo "=== DEPLOYMENT SUMMARY ==="
+        echo "✅ Frontend: Cloud Run (asia-southeast1)"
+        echo "✅ Backend: Render (render-anti-gravity.onrender.com)"
+        echo "✅ Database: Neon PostgreSQL"
+        echo ""
+        echo "Frontend URL: https://frontend-anti-gravity-XXXXX.asia-southeast1.run.app"
+        echo "Backend URL: https://render-anti-gravity.onrender.com"
+        echo ""
 
 timeout: '1800s'
 options:
