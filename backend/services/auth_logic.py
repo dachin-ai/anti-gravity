@@ -181,7 +181,7 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
             global _cached_users_timestamp
             _cached_users_timestamp = 0
             
-            return True, f"✓ Users synced successfully. ({len(sheet_usernames)} in sheet, {len(to_delete)} deleted)"
+            return f"✓ Users synced successfully. ({len(sheet_usernames)} in sheet, {len(to_delete)} deleted)"
         finally:
             db.close()
     
