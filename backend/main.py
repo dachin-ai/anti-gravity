@@ -56,10 +56,13 @@ try:
 except Exception as e:
     print(f"[Startup] ⚠ Migration warning: {e}")
 
+# Frontend uses Bearer token in Authorization header (not cookies),
+# so allow_credentials=False is correct and safer.
+_cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

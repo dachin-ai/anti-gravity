@@ -1,4 +1,5 @@
 import os
+import sys
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -10,16 +11,20 @@ load_dotenv()
 # Ambil URL koneksi
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not SQLALCHEMY_DATABASE_URL:
+    print("[FATAL] DATABASE_URL environment variable is not set. Backend cannot start.", file=sys.stderr)
+    sys.exit(1)
+
 # Buat engine SQLAlchemy dengan optimized connection pooling
-# Pool_pre_ping untuk memastikan koneksi yang mati di-recycle
-# Pool_size untuk concurrent connections
-# max_overflow untuk buffer connections
+# Pool_pre_ping: test koneksi sebelum dipakai (handles dead connections)
+# pool_recycle=300: recycle setiap 5 menit agar tidak melebihi Neon idle timeout
+# pool_size=5: cukup untuk Neon pgBouncer pooler mode
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=20,           # Jumlah koneksi yang di-maintain
-    max_overflow=10,        # Buffer koneksi tambahan
-    pool_recycle=3600,      # Recycle koneksi setiap jam (untuk VPS PostgreSQL)
+    pool_size=5,            # Neon pgBouncer: pakai pool kecil
+    max_overflow=5,         # Buffer koneksi tambahan
+    pool_recycle=300,       # Recycle setiap 5 menit (Neon idle timeout)
     echo=False              # Set to True untuk debug SQL queries
 )
 

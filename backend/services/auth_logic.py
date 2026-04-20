@@ -284,21 +284,29 @@ def login_user_optimized(username: str, password: str) -> Tuple[bool, str, Optio
 def signup_user(email: str, username: str, password: str) -> Tuple[bool, str]:
     """Register a new user with Waiting status."""
     try:
-        # Check duplicates
+        # Check duplicates (DB queries — fast)
         if find_user_by_email(email):
             return False, "Email already registered."
         if find_user_by_username(username):
             return False, "Username already taken."
 
-        sh = get_sheet_client()
-        ws = sh.worksheet("Account")
-
         hashed = hash_password(password)
-        ws.append_row([email, username, hashed, "Waiting"])
+
+        # Write to Google Sheets WITH timeout protection
+        def write_to_sheet():
+            sh = get_sheet_client()
+            ws = sh.worksheet("Account")
+            ws.append_row([email, username, hashed, "Waiting"])
+
+        success, result = call_with_timeout(write_to_sheet, timeout_sec=SHEETS_API_TIMEOUT)
+        if not success:
+            return False, f"Registration failed: Google Sheets unavailable ({result}). Please try again."
+
         return True, "Registration successful. Please wait for admin approval."
 
     except Exception as e:
         return False, f"Registration failed: {str(e)}"
+
 
 
 def login_user(username: str, password: str) -> Tuple[bool, str, Optional[str]]:

@@ -38,7 +38,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.code === 'ECONNABORTED' || error.message === 'timeout of 15000ms exceeded') {
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
       error.response = error.response || {};
       error.response.data = error.response.data || {};
       error.response.data.detail = 'Request timeout. Server may be slow or unavailable. Try again in a moment.';
