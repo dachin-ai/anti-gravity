@@ -1,13 +1,29 @@
 import axios from 'axios';
 
-const isProduction = import.meta.env.MODE === 'production';
-const baseURL = isProduction 
-  ? 'https://render-anti-gravity.onrender.com/api'
-  : 'http://localhost:8000/api';
+// Determine API endpoint dynamically
+const getBaseURL = () => {
+  const isDev = import.meta.env.MODE === 'development';
+  
+  if (isDev) {
+    return 'http://localhost:8000/api';
+  }
+  
+  // Production: Check for environment variable (set via Cloud Run or build)
+  const envBackend = import.meta.env.VITE_API_URL;
+  if (envBackend) {
+    return envBackend;
+  }
+  
+  // Fallback: Use relative URL with /api proxy (requires nginx proxy_pass)
+  // This works if frontend and backend are behind same origin
+  return '/api';
+};
+
+const baseURL = getBaseURL();
 
 const api = axios.create({
   baseURL,
-  timeout: 15000, // 15 second timeout for all requests
+  timeout: 60000, // 60 second timeout for Render cold starts
 });
 
 // Auto-attach Bearer token to every request
