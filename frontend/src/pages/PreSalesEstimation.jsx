@@ -4,18 +4,21 @@ import {
 } from 'antd';
 import {
     InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
-    ShoppingCartOutlined, CheckCircleOutlined, CodeSandboxOutlined
+    ShoppingCartOutlined, CheckCircleOutlined, CodeSandboxOutlined,
+    SettingOutlined, FolderOpenOutlined, FileTextOutlined, TableOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 
-const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span>{emoji}</span> {children}
+const SectionHeading = ({ icon, children, color = '#ec4899' }) => (
+    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+        {children}
     </div>
 );
 
@@ -70,20 +73,16 @@ const PreSalesEstimation = () => {
 
     return (
         <div>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                    <Bi e="Pre-Sales Dashboard" c="预售看板" />
-                </Title>
-                <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                    <Bi e="Automated Logistics Intelligence & SKU Orchestration" c="自动化物流智能与 SKU 协同" />
-                </Text>
-            </div>
+            <PageHeader
+                title={<Bi e="Pre-Sales Dashboard" c="预售看板" />}
+                subtitle={<Bi e="Automated Logistics Intelligence & SKU Orchestration" c="自动化物流智能与 SKU 协同" />}
+                accent="#ec4899"
+            />
 
             <Row gutter={24}>
                 <Col xs={24} md={8}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                         <SectionHeading emoji="⚙️"><Bi e="Engine Processing" c="处理引擎" /></SectionHeading>
+                         <SectionHeading icon={<SettingOutlined />}><Bi e="Engine Processing" c="处理引擎" /></SectionHeading>
                          <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
                             <Bi e="Extract raw data from TikTok Shop Seller Center. Ensure you include Column AM (Warehouse)." c="从 TikTok 卖家中心提取原始数据，请确保报表包含 AM 列（发货仓）。" />
                          </Text>
@@ -98,7 +97,7 @@ const PreSalesEstimation = () => {
 
                 <Col xs={24} md={16}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                        <SectionHeading emoji="📂"><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
+                        <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
                         <Dragger
                             maxCount={1}
                             beforeUpload={(file) => { setFileList([file]); return false; }}
@@ -143,7 +142,7 @@ const PreSalesEstimation = () => {
                     {result && !loading && (
                         <div style={{ marginTop: 32 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading emoji="📑"><Bi e="Executive Summary" c="执行摘要" /></SectionHeading>
+                            <SectionHeading icon={<FileTextOutlined />}><Bi e="Executive Summary" c="执行摘要" /></SectionHeading>
 
                             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                                 <Col xs={24} md={8}>
@@ -166,7 +165,7 @@ const PreSalesEstimation = () => {
                                 </Col>
                             </Row>
 
-                            <SectionHeading emoji="🧮"><Bi e="Analysis Matrix (Preview)" c="分析矩阵（预览）" /></SectionHeading>
+                            <SectionHeading icon={<TableOutlined />}><Bi e="Analysis Matrix (Preview)" c="分析矩阵（预览）" /></SectionHeading>
                             <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
                                 <Table 
                                     columns={topColumns} 

@@ -4,19 +4,22 @@ import {
 } from 'antd';
 import {
     InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
-    WarningOutlined, CheckCircleFilled, DollarOutlined, LineChartOutlined
+    WarningOutlined, CheckCircleFilled, DollarOutlined, LineChartOutlined,
+    SettingOutlined, UnorderedListOutlined, FolderOpenOutlined, BarChartOutlined, FundOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 const { Option } = Select;
 
-const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span>{emoji}</span> {children}
+const SectionHeading = ({ icon, children, color = '#f97316' }) => (
+    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+        {children}
     </div>
 );
 
@@ -78,21 +81,17 @@ const OrderLossReview = () => {
 
     return (
         <div>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                    <Bi e="Order Review" c="订单审核" />
-                </Title>
-                <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                    <Bi e="Double-Layer Pricing & Profitability Audit System" c="双层定价和盈利审计系统" />
-                </Text>
-            </div>
+            <PageHeader
+                title={<Bi e="Order Review" c="订单审核" />}
+                subtitle={<Bi e="Double-Layer Pricing & Profitability Audit System" c="双层定价和盈利审计系统" />}
+                accent="#f97316"
+            />
 
             <Row gutter={24}>
                 {/* CONFIGURATION */}
                 <Col xs={24} md={8}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                        <SectionHeading emoji="⚙️"><Bi e="Audit Configuration" c="审计配置" /></SectionHeading>
+                        <SectionHeading icon={<SettingOutlined />}><Bi e="Audit Configuration" c="审计配置" /></SectionHeading>
                         <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
                             <Bi e="Select Processing Method" c="选择处理方法" />
                         </Text>
@@ -127,7 +126,7 @@ const OrderLossReview = () => {
 
                         <Divider style={{ borderColor: 'var(--border)', margin: '24px 0' }} />
 
-                        <SectionHeading emoji="📋"><Bi e="Requirements" c="文件要求" /></SectionHeading>
+                            <SectionHeading icon={<UnorderedListOutlined />}><Bi e="Requirements" c="文件要求" /></SectionHeading>
                         <ul style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 20, margin: 0 }}>
                             <li style={{ marginBottom: 6 }}>Store (店铺)</li>
                             <li style={{ marginBottom: 6 }}>Original Order Number (原始单号)</li>
@@ -154,7 +153,7 @@ const OrderLossReview = () => {
                 {/* UPLOAD & PROCESS */}
                 <Col xs={24} md={16}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                        <SectionHeading emoji="📂"><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
+                            <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
                         <Dragger
                             maxCount={1}
                             beforeUpload={(file) => { setFileList([file]); return false; }}
@@ -207,7 +206,7 @@ const OrderLossReview = () => {
                     {result && !loading && (
                         <div style={{ marginTop: 24 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading emoji="📊"><Bi e="Audit Output Summary" c="审计输出摘要" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Audit Output Summary" c="审计输出摘要" /></SectionHeading>
 
                             {method === 'Profit Review' ? (
                                 <>
@@ -244,7 +243,7 @@ const OrderLossReview = () => {
                                         </Col>
                                     </Row>
 
-                                    <SectionHeading emoji="💰">Financial Summary | 财务摘要</SectionHeading>
+                                    <SectionHeading icon={<FundOutlined />}>Financial Summary | 财务摘要</SectionHeading>
                                     
                                     <Row gutter={[16, 16]} style={{ marginBottom: 32, display: 'flex' }}>
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>

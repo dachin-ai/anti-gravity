@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip, message } from 'antd';
-import { TagOutlined, LogoutOutlined, UserOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
+import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import Panda from '../components/Panda';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -14,12 +15,11 @@ const MainLayout = () => {
   const location = useLocation();
   const { user, logout, hasAccess } = useAuth();
 
-  // Helper: build label with optional lock for restricted items
   const lockedLabel = (label, toolKey) => {
     if (toolKey && !hasAccess(toolKey)) {
       return (
         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 6 }}>
-          <span style={{ opacity: 0.5 }}>{label}</span>
+          <span style={{ opacity: 0.45 }}>{label}</span>
           <LockOutlined style={{ color: '#f87171', fontSize: 11, flexShrink: 0 }} />
         </span>
       );
@@ -28,33 +28,33 @@ const MainLayout = () => {
   };
 
   const menuItems = [
-    { key: '/', icon: <HomeOutlined />, label: <Bi e="BI Hub" c="智能中心" /> },
+    { key: '/', icon: <HomeOutlined />, label: <Bi e="Lobby" c="智能中心" /> },
     {
       key: 'group-freemir',
       label: <Bi e="Freemir Suite" c="Freemir 套件" />,
-      icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M16 4h-3c-2.76 0-5 2.24-5 5v3H5v4h3v8h4v-8h4v-4h-4V9c0-.55.45-1 1-1h3V4z"/></svg></span>,
+      icon: <AppstoreOutlined />,
       children: [
         { key: '/price-checker', label: lockedLabel(<Bi e="Price Checker" c="查价仪" />, 'price_checker'), style: !hasAccess('price_checker') ? { opacity: 0.6 } : {} },
-        { key: '/warehouse-order', label: lockedLabel(<Bi e="Order Planner" c="海外仓备货预估" />, 'order_planner'), style: !hasAccess('order_planner') ? { opacity: 0.6 } : {} },
+        { key: '/warehouse-order', label: lockedLabel(<Bi e="Order Planner" c="备货预估" />, 'order_planner'), style: !hasAccess('order_planner') ? { opacity: 0.6 } : {} },
       ]
     },
     {
       key: 'group-shopee',
       label: <Bi e="Shopee Suite" c="Shopee 套件" />,
-      icon: <span className="anticon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></span>,
+      icon: <ShoppingOutlined />,
       children: [
         { key: '/order-loss', label: lockedLabel(<Bi e="Order Review" c="订单亏损审查" />, 'order_review'), style: !hasAccess('order_review') ? { opacity: 0.6 } : {} },
-        { key: '/shopee-affiliate', label: lockedLabel(<Bi e="Affiliate Performance" c="Shopee 联盟中心" />, 'affiliate_performance'), style: !hasAccess('affiliate_performance') ? { opacity: 0.6 } : {} },
+        { key: '/shopee-affiliate', label: lockedLabel(<Bi e="Affiliate Performance" c="联盟中心" />, 'affiliate_performance'), style: !hasAccess('affiliate_performance') ? { opacity: 0.6 } : {} },
       ]
     },
     {
       key: 'group-tiktok',
       label: <Bi e="TikTok Suite" c="TikTok 套件" />,
-      icon: <span className="anticon"><svg viewBox="0 0 448 512" width="1em" height="1em" fill="currentColor"><path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25v178.72A162.55 162.55 0 1 1 185.85 188.31v89.89a74.62 74.62 0 1 0 52.23 71.18V0h88a121.18 121.18 0 0 0 1.86 22.17A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/></svg></span>,
+      icon: <PlaySquareOutlined />,
       children: [
         { key: '/pre-sales', label: lockedLabel(<Bi e="Pre-Sales Checker" c="预售预估" />, 'pre_sales'), style: !hasAccess('pre_sales') ? { opacity: 0.6 } : {} },
         { key: '/affiliate-analyzer', label: lockedLabel(<Bi e="Affiliate Analyzer" c="联盟数据分析" />, 'affiliate_analyzer'), style: !hasAccess('affiliate_analyzer') ? { opacity: 0.6 } : {} },
-        { key: '/tiktok-ads', label: lockedLabel(<Bi e="Ads Analyzer" c="TikTok 广告分析" />, 'ads_analyzer'), style: !hasAccess('ads_analyzer') ? { opacity: 0.6 } : {} },
+        { key: '/tiktok-ads', label: lockedLabel(<Bi e="Ads Analyzer" c="广告分析" />, 'ads_analyzer'), style: !hasAccess('ads_analyzer') ? { opacity: 0.6 } : {} },
       ]
     }
   ];
@@ -95,6 +95,7 @@ const MainLayout = () => {
           background: 'var(--bg-card)',
           borderRight: '1px solid var(--border)',
           boxShadow: '2px 0 16px rgba(0,0,0,0.5)',
+          position: 'relative',
         }}
       >
         <div style={{
@@ -133,6 +134,9 @@ const MainLayout = () => {
           style={{ background: 'transparent', border: 'none', padding: '0 8px' }}
           theme="dark"
         />
+
+        {/* 🐼 Panda mascot */}
+        <Panda />
       </Sider>
 
       {/* ── MAIN AREA ── */}
@@ -153,29 +157,43 @@ const MainLayout = () => {
             <Bi e="Business Intelligence Tools" c="商业智能工具" />
           </Text>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="tech-spatula-container" title="Freemir Kitchen Tech" style={{ width: 36, height: 36 }}>
-              <svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ overflow: 'visible' }}>
-                {/* Tech Glow effect under spatula */}
-                <circle cx="32" cy="32" r="14" fill="rgba(16,185,129,0.3)" filter="blur(8px)" stroke="none" />
-                
-                {/* Spatula Head: Narrower and rounded trapezoid */}
-                <path d="M22 14 Q32 10 42 14 L38 33 Q32 35 26 33 Z" fill="rgba(255,255,255,0.1)" strokeWidth="2.5" />
-                
-                {/* 5 Vertical Slots inside narrower head */}
-                <line x1="25.5" y1="16" x2="27" y2="30" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
-                <line x1="28.5" y1="14.5" x2="29.5" y2="31" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
-                <line x1="32" y1="14" x2="32" y2="32" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
-                <line x1="35.5" y1="14.5" x2="34.5" y2="31" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
-                <line x1="38.5" y1="16" x2="37" y2="30" strokeWidth="1.5" stroke="rgba(255,255,255,0.7)" />
-                
-                {/* Handle matching the reference (tapered and rounded at bottom) */}
-                <path d="M30 34 C 31 38, 31 56, 31 58 A 1 1 0 0 0 33 58 C 33 56, 33 38, 34 34" strokeWidth="3" />
-                
-                {/* Hanging hole at bottom of handle */}
-                <ellipse cx="32" cy="56" rx="1" ry="2" strokeWidth="1" />
-                
-                {/* Tech Ring (Perfectly dotted) */}
-                <circle className="tech-spatula-ring" cx="32" cy="35" r="28" strokeDasharray="1 6" strokeLinecap="round" strokeWidth="2.5" />
+            <div className="wajan-container" title="Freemir Wajan Tech" style={{ width: 40, height: 40 }}>
+              <svg viewBox="0 0 64 64" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ overflow: 'visible', width: '100%', height: '100%' }}>
+                {/* Outer glow blob */}
+                <circle cx="32" cy="32" r="20" fill="rgba(99,102,241,0.18)" stroke="none" />
+
+                {/* Wok rim (outer wall) */}
+                <circle cx="32" cy="32" r="18" stroke="rgba(255,255,255,0.88)" strokeWidth="2.2" />
+
+                {/* Wok concave side walls */}
+                <circle cx="32" cy="32" r="12" stroke="rgba(255,255,255,0.38)" strokeWidth="1.4" fill="rgba(255,255,255,0.025)" />
+
+                {/* Wok flat base */}
+                <circle cx="32" cy="32" r="6" stroke="rgba(99,102,241,0.95)" strokeWidth="1.5" fill="rgba(99,102,241,0.14)" />
+
+                {/* Center heat dot */}
+                <circle cx="32" cy="32" r="2" fill="rgba(99,102,241,1)" stroke="none" />
+
+                {/* Scan crosshair inside */}
+                <line x1="32" y1="20" x2="32" y2="44" stroke="rgba(99,102,241,0.32)" strokeWidth="0.8" strokeDasharray="2 3" />
+                <line x1="20" y1="32" x2="44" y2="32" stroke="rgba(99,102,241,0.32)" strokeWidth="0.8" strokeDasharray="2 3" />
+
+                {/* Long handle (gagang) - top view, slightly tapered */}
+                <path d="M50 30.2 L62 29 L62 35 L50 33.8 Z" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.82)" strokeWidth="1.7" strokeLinejoin="round" />
+                {/* Handle grip ridges */}
+                <line x1="53.5" y1="30.6" x2="53.5" y2="33.4" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1="56.5" y1="30.3" x2="56.5" y2="33.7" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1="59.5" y1="29.9" x2="59.5" y2="34.1" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+
+                {/* Small ear handle (kuping) opposite side */}
+                <path d="M14 29.5 Q7.5 32 14 34.5" stroke="rgba(255,255,255,0.75)" strokeWidth="2.3" fill="none" />
+
+                {/* Scan nodes at top & bottom of rim */}
+                <circle cx="32" cy="14" r="1.8" fill="rgba(99,102,241,0.85)" stroke="rgba(99,102,241,0.4)" strokeWidth="1" />
+                <circle cx="32" cy="50" r="1.8" fill="rgba(99,102,241,0.85)" stroke="rgba(99,102,241,0.4)" strokeWidth="1" />
+
+                {/* Futuristic orbit ring */}
+                <circle className="wajan-ring" cx="32" cy="32" r="27" strokeDasharray="1.2 5" strokeLinecap="round" strokeWidth="1.8" />
               </svg>
             </div>
             {user && (

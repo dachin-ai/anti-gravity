@@ -5,11 +5,14 @@ import {
 } from 'antd';
 import {
     ThunderboltOutlined, FileExcelOutlined,
-    PlusOutlined, DeleteOutlined, WarningOutlined
+    PlusOutlined, DeleteOutlined, WarningOutlined,
+    SettingOutlined, ShoppingOutlined, InboxOutlined,
+    CalendarOutlined, BarChartOutlined, TableOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 
@@ -28,9 +31,10 @@ const EditableNumberInput = ({ value, onChange, placeholder, min, style, formatt
     />
 );
 
-const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span>{emoji}</span> {children}
+const SectionHeading = ({ icon, children, color = '#6366f1' }) => (
+    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+        {children}
     </div>
 );
 
@@ -217,22 +221,18 @@ const WarehouseOrder = () => {
 
     return (
         <div>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                    🏭 <Bi e="Order Planner" c="订单规划器" />
-                </Title>
-                <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                    <Bi e="Calculate daily order estimations per warehouse & platform based on monthly targets" c="基于月度金额目标，计算每日对应各发货平台与仓库的预估分单量" />
-                </Text>
-            </div>
+            <PageHeader
+                title={<Bi e="Order Planner" c="订单规划器" />}
+                subtitle={<Bi e="Calculate daily order estimations per warehouse & platform based on monthly targets" c="基于月度金额目标，计算每日对应各发货平台与仓库的预估分单量" />}
+                accent="#6366f1"
+            />
 
             <Row gutter={[20, 20]}>
                 {/* LEFT: Config Panel */}
                 <Col xs={24} lg={9}>
                     {/* General Params */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="⚙️"><Bi e="General Parameters" c="通用参数" /></SectionHeading>
+                        <SectionHeading icon={<SettingOutlined />}><Bi e="General Parameters" c="通用参数" /></SectionHeading>
                         <Row gutter={12}>
                             <Col span={14}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}><Bi e="Average Order Value (AOV)" c="客单单价均值 (AOV)" /></div>
@@ -262,7 +262,7 @@ const WarehouseOrder = () => {
 
                     {/* Platform Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="🛒"><Bi e="Platform Configuration" c="平台配置" /></SectionHeading>
+                        <SectionHeading icon={<ShoppingOutlined />}><Bi e="Platform Configuration" c="平台配置" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
                             <Bi e="Leave Target empty to exclude platform from estimation" c="将目标值留空即可把该平台排除出整体预算外" />
                         </Text>
@@ -271,7 +271,7 @@ const WarehouseOrder = () => {
 
                     {/* Warehouse Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="🏭"><Bi e="Warehouse Configuration" c="发货仓配置" /></SectionHeading>
+                        <SectionHeading icon={<InboxOutlined />}><Bi e="Warehouse Configuration" c="发货仓配置" /></SectionHeading>
                         <EditableGrid rows={warehouses} setRows={setWarehouses} columns={whCols} addLabel={<Bi e="Add Warehouse" c="添加发货仓" />} />
                         <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
                             <Text style={{ fontSize: 12, color: '#94a3b8' }}>
@@ -287,7 +287,7 @@ const WarehouseOrder = () => {
 
                     {/* Event Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading emoji="📅"><Bi e="Event Configuration" c="活动节点配置" /></SectionHeading>
+                        <SectionHeading icon={<CalendarOutlined />}><Bi e="Event Configuration" c="活动节点配置" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
                             <Bi e="Use '+' to specify multiple dates (e.g. 5+6+7+8). Remaining days become Regular Day." c="使用 '+' 指定多个大促日期（例如：5+6+7+8）。未指定的日期将自动成为平销期。" />
                         </Text>
@@ -365,7 +365,7 @@ const WarehouseOrder = () => {
 
                             {/* Proportion Summary */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                                <SectionHeading emoji="📊"><Bi e="Proportion Distribution Summary" c="占比分布摘要" /></SectionHeading>
+                                     <SectionHeading icon={<BarChartOutlined />}><Bi e="Proportion Distribution Summary" c="占比分布摘要" /></SectionHeading>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {result.summary?.map((s, i) => (
                                         <div key={i} style={{
@@ -384,7 +384,7 @@ const WarehouseOrder = () => {
 
                             {/* Matrix */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16, overflow: 'hidden' }}>
-                                <SectionHeading emoji="📈"><Bi e="Order Estimation Matrix" c="日均订单分配矩阵" /></SectionHeading>
+                                     <SectionHeading icon={<TableOutlined />}><Bi e="Order Estimation Matrix" c="日均订单分配矩阵" /></SectionHeading>
                                 <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
                                     <Bi e="Scroll horizontally to see all days. Values = estimated order count per warehouse per day." c="水平滚动查看整月日期流。数字 = 每个仓在当天针对对应平台需要发出的预估单量。" />
                                 </Text>

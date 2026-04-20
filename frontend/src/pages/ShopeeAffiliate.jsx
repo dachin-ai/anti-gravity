@@ -10,9 +10,10 @@ import {
   RiseOutlined, FallOutlined, MinusOutlined,
   DeleteOutlined, ExclamationCircleFilled,
   CloudUploadOutlined, AppstoreOutlined, LineChartOutlined,
-  SwapOutlined
+  SwapOutlined, CalendarOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 import { Modal } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -78,22 +79,11 @@ const ShopeeAffiliate = () => {
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12,
-          background: 'linear-gradient(135deg,#ff4d4f,#ff7a45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(255,77,79,0.4)' }}>
-          <ShopOutlined style={{ color: '#fff', fontSize: 22 }} />
-        </div>
-        <div>
-          <Title level={3} style={{ margin: 0, color: '#f1f5f9', fontFamily: "'Outfit',sans-serif" }}>
-            <Bi e="Shopee Affiliate Hub" c="Shopee 联盟中心" />
-          </Title>
-          <Text style={{ color: '#64748b', fontSize: 13, display: 'block', marginTop: 4 }}>
-            <Bi e="Centralized data integration & analytics for Product · Creator · Conversion" c="产品、创作者、转化的集中数据集成与分析" />
-          </Text>
-        </div>
-      </div>
+      <PageHeader
+        title={<Bi e="Shopee Affiliate Hub" c="Shopee 联盟中心" />}
+        subtitle={<Bi e="Centralized data integration & analytics for Product · Creator · Conversion" c="产品、创作者、转化的集中数据集成与分析" />}
+        accent="#f97316"
+      />
 
       <Card style={S.card} bodyStyle={{ padding: 0 }}>
         <Tabs size="large" style={{ padding: '0 8px' }} items={[
@@ -155,9 +145,9 @@ const UploadTab = ({ stores, storesLoading }) => {
             <Select style={{ width: '100%', marginTop: 6 }} value={uploadType}
               onChange={v => { setUploadType(v); setFileList([]); }}
               options={[
-                { value: 'conversion', label: '📋 Conversion (batch)' },
-                { value: 'product',    label: '📦 Product (batch)' },
-                { value: 'creator',    label: '🎬 Creator (batch)' },
+                { value: 'conversion', label: 'Conversion (batch)' },
+                { value: 'product',    label: 'Product (batch)' },
+                { value: 'creator',    label: 'Creator (batch)' },
               ]} />
           </Col>
           <Col span={12}>
@@ -182,12 +172,14 @@ const UploadTab = ({ stores, storesLoading }) => {
             />
             {manualDate
               ? (
-                <div style={{ ...S.warnBox, marginTop: 8, fontSize: 12, color: '#faad14' }}>
-                  📅 All uploaded files in this batch will be tagged as <strong>{manualDate.format('DD MMMM YYYY')}</strong>.
+                <div style={{ ...S.warnBox, marginTop: 8, fontSize: 12, color: '#faad14', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <CalendarOutlined style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span>All uploaded files in this batch will be tagged as <strong>{manualDate.format('DD MMMM YYYY')}</strong>.</span>
                 </div>
               ) : (
-                <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12, marginTop: 8 }}>
-                  💡 Dates are <strong>auto-detected</strong> from filenames (e.g. <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> or <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch uploading is allowed.
+                <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <InfoCircleOutlined style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span>Dates are <strong>auto-detected</strong> from filenames (e.g. <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> or <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch uploading is allowed.</span>
                 </div>
               )
             }
@@ -422,9 +414,9 @@ const AnalyticsTab = ({ stores }) => {
 // ④ Laporan Lengkap
 // ─────────────────────────────────────────────────────────────────────────────
 const REPORT_DIMS = [
-  { value: 'by_store',   label: '🏪 By Store' },
-  { value: 'by_creator', label: '🎬 By Creator' },
-  { value: 'by_product', label: '📦 By Product' },
+  { value: 'by_store',   label: 'By Store' },
+  { value: 'by_creator', label: 'By Creator' },
+  { value: 'by_product', label: 'By Product' },
 ];
 
 const ReportTab = ({ stores }) => {
@@ -742,12 +734,12 @@ const ComparisonTab = ({ stores }) => {
       {/* Period pickers */}
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col span={7}>
-          <div style={S.label}>📅 Period A (Baseline)</div>
+          <div style={S.label}><CalendarOutlined style={{ marginRight: 5 }} />Period A (Baseline)</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={periodA} onChange={setPeriodA}
             placeholder={['A Start', 'A End']} />
         </Col>
         <Col span={7}>
-          <div style={S.label}>📅 Period B (Comparison)</div>
+          <div style={S.label}><CalendarOutlined style={{ marginRight: 5 }} />Period B (Comparison)</div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={periodB} onChange={setPeriodB}
             placeholder={['B Start', 'B End']} />
         </Col>

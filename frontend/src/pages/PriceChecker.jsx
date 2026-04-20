@@ -7,11 +7,14 @@ import {
 import {
     InboxOutlined, SyncOutlined, CloudDownloadOutlined,
     CheckCircleFilled, CloseCircleFilled, FileExcelOutlined,
-    DatabaseOutlined
+    DatabaseOutlined, DownloadOutlined, UploadOutlined,
+    FileTextOutlined, BarChartOutlined, AppstoreOutlined, RiseOutlined,
+    UnorderedListOutlined, BarcodeOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -23,9 +26,10 @@ const Label = ({ children }) => (
     </div>
 );
 
-const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span>{emoji}</span> {children}
+const SectionHeading = ({ icon, children, color = '#6366f1' }) => (
+    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+        {children}
     </div>
 );
 
@@ -179,24 +183,16 @@ const PriceChecker = () => {
     /* ─── RENDER ─── */
     return (
         <div>
-            {/* PAGE HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-                <div>
-                    <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                        <Bi e="Price Checker & Comparator" c="价格检查与比较器" />
-                    </Title>
-                    <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        <Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />
-                    </Text>
-                </div>
-                <div style={{ display: 'flex', gap: 12 }}>
+            <PageHeader
+                title={<Bi e="Price Checker & Comparator" c="价格检查与比较器" />}
+                subtitle={<Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />}
+                accent="#6366f1"
+                actions={<>
                     <Button
                         icon={<DatabaseOutlined />}
                         onClick={fetchReferenceData}
                         loading={loadingDb}
-                        style={{
-                            height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
-                        }}
+                        style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
                     >
                         <Bi e="Load Database" c="加载数据库" />
                     </Button>
@@ -205,15 +201,15 @@ const PriceChecker = () => {
                         onClick={syncNeonData}
                         loading={loadingDb}
                         style={{
-                            height: 40, borderRadius: 8, fontWeight: 600, fontSize: 13,
+                            height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13,
                             background: 'var(--indigo)', color: '#fff', border: 'none',
                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                         }}
                     >
-                        <Bi e="🔄 Sync Prices 🔄" c="🔄 同步价格 🔄" />
+                        <Bi e="Sync Prices" c="同步价格" />
                     </Button>
-                </div>
-            </div>
+                </>}
+            />
 
             {/* TABS */}
             <Tabs
@@ -221,9 +217,9 @@ const PriceChecker = () => {
                 onChange={(key) => { setMethod(key); setFileList([]); setDirectResult(null); setBatchOverview(null); }}
                 type="card"
                 items={[
-                    { key: 'Listing', label: <span style={{ fontWeight: 600 }}><Bi e="📋 Listing Method" c="📋 列表法" /></span> },
-                    { key: 'SKU',     label: <span style={{ fontWeight: 600 }}><Bi e="📦 SKU Method" c="📦 SKU法" /></span> },
-                    { key: 'Direct',  label: <span style={{ fontWeight: 600 }}><Bi e="⚡ Direct Input" c="⚡ 直接输入" /></span> },
+                    { key: 'Listing', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined /><Bi e="Listing Method" c="列表法" /></span> },
+                    { key: 'SKU',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarcodeOutlined /><Bi e="SKU Method" c="SKU法" /></span> },
+                    { key: 'Direct',  label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><ThunderboltOutlined /><Bi e="Direct Input" c="直接输入" /></span> },
                 ]}
             />
 
@@ -235,7 +231,7 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading emoji="1️⃣"><Bi e="Download Template" c="下载模板" /></SectionHeading>
+                                    <SectionHeading icon={<DownloadOutlined />}><Bi e="Download Template" c="下载模板" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
@@ -261,7 +257,7 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading emoji="2️⃣"><Bi e="Upload & Process" c="上传并处理" /></SectionHeading>
+                                    <SectionHeading icon={<UploadOutlined />}><Bi e="Upload & Process" c="上传并处理" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Dragger
@@ -277,7 +273,7 @@ const PriceChecker = () => {
                                                 padding: '8px 12px', marginTop: 8,
                                             }}>
                                                 <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 500 }}>
-                                                    📄 {file.name}
+                                                    <SyncOutlined style={{ color: '#10b981', marginRight: 6 }} />{file.name}
                                         <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
                                             {file.size ? '(' + (file.size / 1024 / 1024 > 1 ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : (file.size / 1024).toFixed(2) + ' KB') + ')' : ''}
                                         </span>
@@ -316,7 +312,7 @@ const PriceChecker = () => {
                     {batchOverview && (
                         <div style={{ marginTop: 32 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading emoji="📑"><Bi e="Processing Overview" c="处理概览" /></SectionHeading>
+                            <SectionHeading icon={<FileTextOutlined />}><Bi e="Processing Overview" c="处理概览" /></SectionHeading>
 
                             {/* Stats */}
                             <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -442,7 +438,7 @@ const PriceChecker = () => {
                             <Divider style={{ borderColor: 'var(--border)' }} />
 
                             {/* Summary */}
-                            <SectionHeading emoji="📊"><Bi e="Bundle Summary" c="捆绑摘要" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Bundle Summary" c="捆绑摘要" /></SectionHeading>
                             <Row gutter={16} style={{ marginBottom: 24 }}>
                                 {[
                                     { label: 'Bundle Discount', value: `${Number(directResult.summary.bundle_discount) * 100}%`, color: 'var(--indigo)' },
@@ -459,7 +455,7 @@ const PriceChecker = () => {
                             </Row>
 
                             {/* Breakdown Table */}
-                            <SectionHeading emoji="🧩"><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
+                            <SectionHeading icon={<AppstoreOutlined />}><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
                                 <Table
                                     dataSource={directResult.breakdown}
@@ -472,7 +468,7 @@ const PriceChecker = () => {
                             </div>
 
                             {/* Evaluation Table */}
-                            <SectionHeading emoji="📈"><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
+                            <SectionHeading icon={<RiseOutlined />}><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                                 <Table
                                     dataSource={directResult.evaluation}

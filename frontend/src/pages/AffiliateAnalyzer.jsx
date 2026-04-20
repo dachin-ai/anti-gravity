@@ -3,6 +3,7 @@ import { Typography, Radio, Button, Row, Col, message, Divider, Table, Upload } 
 import { InboxOutlined, FileExcelOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -162,14 +163,11 @@ const AffiliateAnalyzer = () => {
     return (
         <div>
             {/* Banner */}
-            <div style={{
-                background: 'linear-gradient(135deg, #0a1628 0%, #0c2461 35%, #1e3a6e 65%, #2d5aa0 100%)',
-                padding: '32px 40px', borderRadius: 12, marginBottom: 28, boxShadow: '0 8px 32px rgba(10,22,40,0.35)', position: 'relative', overflow: 'hidden'
-            }}>
-                <div style={{ position: 'absolute', top: '-50%', right: '-20%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)', borderRadius: '50%' }} />
-                <Title level={2} style={{ color: '#fff', margin: '0 0 6px 0', fontWeight: 800 }}>TikTok Affiliate Analyzer</Title>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>Compare affiliate performance across two periods — Supports Creator and Product analysis modes</Text>
-            </div>
+            <PageHeader
+                title="TikTok Affiliate Analyzer"
+                subtitle="Compare affiliate performance across two periods — Supports Creator and Product analysis modes"
+                accent="#ec4899"
+            />
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={8}>

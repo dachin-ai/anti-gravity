@@ -3,18 +3,21 @@ import {
     Typography, Button, Row, Col, Upload, message, Divider, Table, Radio
 } from 'antd';
 import {
-    InboxOutlined, CloudUploadOutlined, FileExcelOutlined
+    InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
+    InfoCircleOutlined, FolderOpenOutlined, BarChartOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import PageHeader from '../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 
-const SectionHeading = ({ emoji, children }) => (
-    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span>{emoji}</span> {children}
+const SectionHeading = ({ icon, children, color = '#ec4899' }) => (
+    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+        {children}
     </div>
 );
 
@@ -110,20 +113,16 @@ const TikTokAds = () => {
 
     return (
         <div>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={3} style={{ margin: 0, fontFamily: "'Outfit', sans-serif", color: 'var(--text-main)', fontWeight: 800 }}>
-                    Ads Analyzer
-                </Title>
-                <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                    <Bi e="Analyze and consolidate your TikTok Ads performance data" c="分析并整合您的 TikTok Ads 表现数据" />
-                </Text>
-            </div>
+            <PageHeader
+                title={<Bi e="Ads Analyzer" c="广告分析" />}
+                subtitle={<Bi e="Analyze and consolidate your TikTok Ads performance data" c="分析并整合您的 TikTok Ads 表现数据" />}
+                accent="#ec4899"
+            />
 
             <Row gutter={24}>
                 <Col xs={24} md={6}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                         <SectionHeading emoji="ℹ️"><Bi e="Instructions" c="操作说明" /></SectionHeading>
+                         <SectionHeading icon={<InfoCircleOutlined />}><Bi e="Instructions" c="操作说明" /></SectionHeading>
                          <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
                             <Bi e="Upload your exported TikTok Ads performance reports. You can upload multiple files at once." c="上传您的 TikTok Ads 表现报告，支持同时上传多个文件。" />
                          </Text>
@@ -139,7 +138,7 @@ const TikTokAds = () => {
 
                 <Col xs={24} md={18}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                        <SectionHeading emoji="📂"><Bi e="Upload Data Export" c="上传数据" /></SectionHeading>
+                        <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Data Export" c="上传数据" /></SectionHeading>
                         <Dragger
                             multiple
                             beforeUpload={beforeUpload}
@@ -174,7 +173,7 @@ const TikTokAds = () => {
                     {result && !loading && (
                         <div style={{ marginTop: 24 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading emoji="📊"><Bi e="Preview: Top 10 Listings" c="预览：前 10 名列表" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Preview: Top 10 Listings" c="预览：前 10 名列表" /></SectionHeading>
 
                             <Row gutter={16}>
                                 <Col xs={24} xl={8}>
