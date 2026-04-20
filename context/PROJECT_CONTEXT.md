@@ -1,5 +1,5 @@
 # 🧠 Antigravity Project — Context & Knowledge Base
-> Terakhir diupdate: 15 April 2026
+> Terakhir diupdate: 20 April 2026
 > Dibuat untuk referensi AI assistant di sesi berikutnya.
 
 ---
@@ -26,16 +26,20 @@
 │  URL: https://anti-gravity-123563250077.asia-southeast1.run.app     │
 │  Tech: FastAPI + Uvicorn (Dockerfile)                               │
 │       │                                                             │
-│       ├──▶ 🐘 VPS PostgreSQL (PRIMARY DATABASE)                    │
-│       │    Host: 34.126.76.58:5432                                  │
-│       │    DB: antigravity_db                                       │
-│       │    User: dena_admin                                         │
-│       │    Pass: AntiGrav2026Secure                                 │
+│       ├──▶ 🐘 Neon PostgreSQL (PRIMARY DATABASE) ← UPDATE 20 Apr    │
+│       │    Host: ep-withered-butterfly-ao66aczs-pooler                │
+│       │          .c-2.ap-southeast-1.aws.neon.tech                    │
+│       │    DB: neondb                                                 │
+│       │    User: neondb_owner                                         │
+│       │    Pass: npg_e1Jl3rWoTcAR                                     │
+│       │    (VPS 34.126.76.58 sudah TIDAK dipakai)                     │
 │       │                                                             │
-│       ├──▶ 📊 Google Sheets (Admin Base)                           │
+│       ├──▶ 📊 Google Sheets (Price + Name Reference)               │
+│       │    Spreadsheet ID: 1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc │
 │       │    URL: https://docs.google.com/spreadsheets/d/             │
 │       │         1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc      │
 │       │    Auth: credentials.json (GCP Service Account)             │
+│       │    Tabs: Price, All_Name (price reference, sync ke Neon)    │
 │       │                                                             │
 │       └──▶ 🔔 DingTalk Webhook (Activity Notifications)            │
 │            Env: DINGTALK_WEBHOOK_URL, DINGTALK_SECRET               │
@@ -48,11 +52,17 @@
 │  User: dachinetech_ai                                               │
 │  Fungsi: Hanya PostgreSQL database server                           │
 │                                                                     │
-│  ☁️ Neon DB (BACKUP — tidak aktif dipakai)                         │
-│  URL: postgresql://neondb_owner:npg_8gALsPeSvFN1                   │
-│       @ep-noisy-paper-a1b3rtgl.ap-southeast-1.aws.neon.tech         │
-│       /neondb?sslmode=require                                       │
-│  Status: Data lama masih ada, bisa dipakai kalau VPS down           │
+│  ☁️ Neon DB (PRIMARY — AKTIF sejak April 2026)                     │
+│  URL: postgresql://neondb_owner:npg_e1Jl3rWoTcAR                   │
+│       @ep-withered-butterfly-ao66aczs-pooler                        │
+│       .c-2.ap-southeast-1.aws.neon.tech                             │
+│       /neondb?sslmode=require&channel_binding=require               │
+│  Region: AWS ap-southeast-1 (Singapore)                             │
+│                                                                     │
+│  🖥️ VPS (antigravity-vps) — TIDAK AKTIF LAGI                      │
+│  IP: 34.126.76.58 (GCP asia-southeast1-b)                          │
+│  DB lama: antigravity_db / dena_admin / AntiGrav2026Secure          │
+│  Status: Standby, data lama masih ada                               │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -69,24 +79,43 @@ Developer PC → git push main → Cloud Build Trigger → Auto-deploy BE + FE k
 
 ## 2. AKUN & KREDENSIAL
 
-| Item | Value |
+### Platform & Akun Utama
+| Platform | Akun / Credential | Notes |
+|---|---|---|
+| **GitHub** | `dachin-ai/anti-gravity` (branch: `main`) | Repo utama, push ke main = auto-deploy |
+| **GCP Project** | ID: `dachin-ai-493209`, Number: `123563250077` | Cloud Run + Cloud Build |
+| **GCP Service Account** | `123563250077-compute@developer.gserviceaccount.com` | Untuk Cloud Build trigger |
+| **GCP Region** | `asia-southeast1` (Singapore) | Semua Cloud Run services |
+| **Render.com** | Backend auto-deploy dari GitHub main | Service: `render-anti-gravity` |
+| **Neon** | `neondb_owner` / `npg_e1Jl3rWoTcAR` | PRIMARY DB sejak April 2026 |
+| **Neon Host** | `ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech` | Pooled connection |
+| **Neon DB Name** | `neondb` | |
+| **VPS (lama)** | `dachinetech_ai@34.126.76.58` (antigravity-vps) | TIDAK AKTIF, standby |
+| **VPS DB lama** | `dena_admin` / `AntiGrav2026Secure` @ `34.126.76.58:5432/antigravity_db` | Sudah tidak dipakai |
+| **JWT Secret** | `freemir_tools_2026_secret_key_change_in_prod` (env: `JWT_SECRET`) | ⚠️ Hardcoded default |
+| **JWT Expiry** | 24 jam | |
+| **Google Sheets** | Spreadsheet ID: `1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc` | Price + Name reference |
+| **Google Sheets Auth** | `credentials.json` (GCP service account key) | Tidak ada di git |
+| **DingTalk** | `DINGTALK_WEBHOOK_URL` + `DINGTALK_SECRET` (env vars) | Notifikasi aktivitas |
+
+### Environment Variables (Backend — Render.com & local .env)
+| Var | Value | Keterangan |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://neondb_owner:npg_e1Jl3rWoTcAR@ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require` | Neon PRIMARY |
+| `JWT_SECRET` | `freemir_tools_2026_secret_key_change_in_prod` | Hardcoded fallback |
+| `DINGTALK_WEBHOOK_URL` | (optional) | Notifikasi |
+| `DINGTALK_SECRET` | (optional) | HMAC signing |
+
+### Frontend Token Storage (localStorage)
+| Key | Isi |
 |---|---|
-| **GCP Project ID** | `dachin-ai-493209` |
-| **GCP Project Number** | `123563250077` |
-| **GitHub Repo** | `dachin-ai/anti-gravity` (branch: `main`) |
-| **VPS SSH User** | `dachinetech_ai@antigravity-vps` |
-| **VPS IP** | `34.126.76.58` |
-| **VPS Zone** | `asia-southeast1-b` |
-| **PostgreSQL (VPS)** | `dena_admin` / `AntiGrav2026Secure` @ `34.126.76.58:5432/antigravity_db` |
-| **Neon DB** | `neondb_owner` / `npg_8gALsPeSvFN1` @ `ep-noisy-paper-a1b3rtgl.ap-southeast-1.aws.neon.tech/neondb` |
-| **JWT Secret** | `freemir_tools_2026_secret_key_change_in_prod` (hardcoded default, env: `JWT_SECRET`) |
-| **JWT Expiry** | 24 jam |
-| **Google Sheets** | Admin Base — via `credentials.json` (GCP service account key) |
-| **DingTalk** | Via env vars `DINGTALK_WEBHOOK_URL` + `DINGTALK_SECRET` |
+| `fm_token` | JWT Bearer token |
+| `fm_user` | JSON user data (username, email, permissions) |
+| `fm_login_date` | Tanggal login (auto-logout kalau beda hari) |
 
 ### File Sensitif (tidak ada di git)
 - `backend/credentials.json` — GCP service account key untuk Google Sheets
-- `backend/.env` — environment variables lokal
+- `backend/.env` — DATABASE_URL + env vars lokal
 
 ---
 
@@ -156,13 +185,14 @@ Developer PC → git push main → Cloud Build Trigger → Auto-deploy BE + FE k
   - **Sync Prices**: Baca Google Sheets (tab "Price" + "All_Name") → TRUNCATE + INSERT ke PostgreSQL
   - **Direct Input**: Input SKU string (misal "SKU_A + SKU_B") + target price → hitung harga bundle
   - **Batch (Listing/SKU)**: Upload Excel → proses semua baris → return Excel hasil + preview
-- **Pricing Logic**:
+- **Pricing Logic** (diperbarui 20 Apr 2026):
   - Bundle Discount: 1 item=0%, 2=2%, 3=3%, 4=4.5%, 5+=5%
-  - Gift items: harga × 50% (jika ada item normal dalam bundle)
-  - Clearance: override semua harga dengan clearance value
-  - Floor Protection: jika total setelah diskon < total Warning price → pakai Warning price
-  - 16 tier harga: Warning, Daily-Discount, Daily-Livestream, dll
-  - Output Excel multi-sheet: All, Reminder (yang under), Account Responsible, Livestreamer, Affiliate
+  - Gift items: harga × 50% (hanya jika ada item NON-gift dalam bundle)
+  - Clearance: override semua harga dengan clearance value, tidak ada diskon
+  - Floor Protection: jika total setelah diskon < total Warning price → pakai Warning price (tanpa diskon)
+  - 16 tier harga: Warning, Daily-Discount, Daily-Livestream, Daily-Mid-Creator, Daily-Top-Creator, Daily-FS, Daily-Shopee-FS, DD-FS, DD-Shoptab, DD-Livestream, DD-Mid-Creator, DD-Top-Creator, PD-Shoptab, PD-Livestream, PD-Mid-Creator, PD-Top-Creator
+  - Output Excel multi-sheet: All, Reminder (yang under warning), Account Responsible, Livestreamer, Affiliate
+  - **Bug fix 20 Apr**: `parse_idr_price()` — nilai float dari Neon DB (misal `15000.0`) tidak boleh di-strip digit karena titik desimal akan ikut terhapus → 10x lipat. Fix: cek `isinstance(val, (int, float))` terlebih dahulu
 
 #### 📦 Order Planner / Warehouse Order (`/warehouse-order`)
 - **Permission**: `order_planner`
@@ -257,14 +287,58 @@ frontend/
 │       ├── ... (14 pages total)
 ```
 
+---
+
+## 10. UI ARCHITECTURE (Update 20 April 2026)
+
 ### Design System
-- **Theme**: Dark mode (bg: `#020617`, `#0f172a`)
-- **Primary Color**: Indigo `#6366f1`
+- **Theme**: Dark mode (bg app: `#020617` Slate 950, bg card: `#0f172a`)
+- **CSS Custom Properties**: `--bg-app`, `--bg-card`, `--border`, `--text-main`, `--text-muted`, `--indigo`
+- **Primary Color**: Indigo `#6366f1` (Freemir Suite)
+- **Accent Colors per Suite**: Shopee `#f97316` (orange), TikTok `#ec4899` (pink)
 - **Font**: Inter (body), Outfit (headings)
-- **UI Library**: Ant Design (dark algorithm)
-- **API URL (production)**: `https://anti-gravity-123563250077.asia-southeast1.run.app/api`
-- **API URL (dev)**: `http://localhost:8000/api`
-- **Brand**: "Freemir Tools" / "Business Intelligence Tools"
+- **UI Library**: Ant Design v6.3.5 (dark algorithm)
+
+### Background Galaxy (`frontend/src/index.css`)
+- `body::before`: Galaksi spiral diagonal (rotate -32deg scale 1.55)
+  - Core terang di ~58% 40%
+  - Diagonal disk tipis (ellipse horizontal)
+  - 4 spiral arms (upper-right, lower-left, upper-left, lower-right)
+  - Warm sun glow pojok kiri bawah: `rgba(251,191,36,0.18)` + corona `rgba(255,237,180,0.22)`
+  - Accent nebula pink pojok kanan atas
+- `body::after`: Star-field 5 layer ukuran prima (353, 521, 211, 151, 631px) — tidak ada pola grid
+
+### Komponen UI Baru
+| File | Deskripsi |
+|---|---|
+| `frontend/src/components/PageHeader.jsx` | Reusable page header: left accent bar + title + subtitle + actions. Props: `title`, `subtitle`, `accent`, `actions` |
+| `frontend/src/components/Panda.jsx` | Panda mascot animasi — fixed bottom-right, strip lebar 260px, mulai duduk, klik = toggle jalan/duduk, hilang saat tab hidden |
+
+### Panda Mascot Detail
+- `position: fixed`, `bottom: 16`, `right: 0`, `width: 260px`
+- State awal: **duduk** (mata ngantuk)
+- **Klik** → toggle jalan ↔ duduk
+- Outline: SVG `<filter>` `feMorphology dilate radius=1.3` → outline putih tipis
+- `overflow="visible"` pada SVG agar kepala/telinga tidak ter-clip
+- Walk speed: 1.3px / 35ms interval
+- Tab hidden → `visibilitychange` → panda hilang
+- CSS classes di `index.css`: `.panda-leg-l`, `.panda-leg-r`, `.panda-walk`
+
+### Wajan SVG (Topbar)
+- Menggantikan spatula lama di topbar `MainLayout.jsx`
+- Animasi: `@keyframes rotate-wajan` (rotasi continuous) + `@keyframes pulse-wajan`
+- Hover: `scale(1.12)` via `transition`, tidak restart animasi
+
+### PageHeader Accent Colors
+| Tool | Accent |
+|---|---|
+| Price Checker | `#6366f1` (indigo) |
+| Order Review | `#f97316` (orange) |
+| Pre-Sales Checker | `#ec4899` (pink) |
+| Warehouse Order | `#6366f1` (indigo) |
+| TikTok Ads | `#ec4899` (pink) |
+| Affiliate Analyzer | `#ec4899` (pink) |
+| Shopee Affiliate | `#f97316` (orange) |
 
 ---
 
@@ -295,7 +369,7 @@ backend/
 ### Environment Variables (Cloud Run)
 | Var | Value | Set via |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://dena_admin:AntiGrav2026Secure@34.126.76.58:5432/antigravity_db` | `--set-env-vars` pada deploy |
+| `DATABASE_URL` | `postgresql://neondb_owner:npg_e1Jl3rWoTcAR@ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require` | Render env vars / `--set-env-vars` |
 | `JWT_SECRET` | default hardcoded (should move to env) | ⚠️ TODO |
 | `DINGTALK_WEBHOOK_URL` | (optional) | env var |
 | `DINGTALK_SECRET` | (optional) | env var |
