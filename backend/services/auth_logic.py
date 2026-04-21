@@ -508,3 +508,59 @@ def reset_password(username: str, email: str) -> Tuple[bool, str]:
         traceback.print_exc()
         return False, f"Reset failed: {str(e)}"
 
+
+def change_password(username: str, current_password: str, new_password: str) -> Tuple[bool, str]:
+    """
+    Change password for a logged-in user.
+    Verifies current password first, then updates to new hashed password in DB + Sheets.
+    """
+    try:
+        db = SessionLocal()
+        try:
+            user = db.query(AccountUser).filter(
+                AccountUser.username.ilike(username.strip())
+            ).first()
+
+            if not user:
+                return False, "User not found."
+
+            # Verify current password
+            if hash_password(current_password) != user.password.strip():
+                return False, "Current password is incorrect."
+
+            if len(new_password) < 6:
+                return False, "New password must be at least 6 characters."
+
+            hashed_new = hash_password(new_password)
+
+            # Update DB
+            user.password = hashed_new
+            db.commit()
+
+            # Update Google Sheets (best-effort)
+            def _update_sheet():
+                sh = get_sheet_client()
+                ws = sh.worksheet("Account")
+                headers = ws.row_values(1)
+                if "Password" not in headers or "Username" not in headers:
+                    return
+                pwd_col = headers.index("Password") + 1
+                uname_col = headers.index("Username") + 1
+                all_usernames = ws.col_values(uname_col)
+                for i, uname in enumerate(all_usernames):
+                    if uname.strip().lower() == username.strip().lower():
+                        ws.update_cell(i + 1, pwd_col, hashed_new)
+                        break
+
+            call_with_timeout(_update_sheet, timeout_sec=SHEETS_API_TIMEOUT)
+
+            return True, "Password changed successfully."
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        print(f"[Change Password] Error: {e}")
+        traceback.print_exc()
+        return False, f"Change failed: {str(e)}"
+

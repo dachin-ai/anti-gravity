@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password
+from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password, change_password
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -20,6 +20,11 @@ class LoginRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     username: str
     email: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class LogActivityRequest(BaseModel):
@@ -53,6 +58,22 @@ def login(body: LoginRequest, request: Request):
 @router.post("/forgot-password")
 def forgot_password(body: ForgotPasswordRequest):
     success, msg = reset_password(body.username.strip(), body.email.strip())
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"message": msg}
+
+
+@router.post("/change-password")
+def change_pwd(body: ChangePasswordRequest, request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = auth_header.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
+    username = payload["username"]
+    success, msg = change_password(username, body.current_password, body.new_password)
     if not success:
         raise HTTPException(status_code=400, detail=msg)
     return {"message": msg}

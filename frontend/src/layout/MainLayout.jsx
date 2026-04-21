@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Typography, Avatar, Button, Tooltip, message } from 'antd';
-import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons';
+import { Layout, Menu, Typography, Avatar, Button, Tooltip, message, Modal, Form, Input } from 'antd';
+import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined, KeyOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Bi from '../components/Bi';
 import Panda from '../components/Panda';
+import { changePassword } from '../api';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
 
 const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [changePwdOpen, setChangePwdOpen] = useState(false);
+  const [changePwdLoading, setChangePwdLoading] = useState(false);
+  const [pwdForm] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasAccess } = useAuth();
@@ -83,6 +87,24 @@ const MainLayout = () => {
 
   /* Automatically auto-expand all menus based on current location */
   const openKeys = menuItems.filter(i => i.children?.some(c => c.key === location.pathname)).map(i => i.key);
+
+  const onChangePwd = async (values) => {
+    if (values.new_password !== values.confirm_password) {
+      message.error('New passwords do not match.');
+      return;
+    }
+    setChangePwdLoading(true);
+    try {
+      const res = await changePassword(values.current_password, values.new_password);
+      message.success(res.data?.message || 'Password changed successfully.');
+      setChangePwdOpen(false);
+      pwdForm.resetFields();
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Failed to change password.');
+    } finally {
+      setChangePwdLoading(false);
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
@@ -221,9 +243,15 @@ const MainLayout = () => {
             </div>
             {user && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar size={32} style={{ background: 'linear-gradient(135deg, #6366f1, #3b82f6)', fontSize: 14, fontWeight: 700 }}>
-                  {user.username[0].toUpperCase()}
-                </Avatar>
+                <Tooltip title="Change Password">
+                  <Avatar
+                    size={32}
+                    style={{ background: 'linear-gradient(135deg, #6366f1, #3b82f6)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => setChangePwdOpen(true)}
+                  >
+                    {user.username[0].toUpperCase()}
+                  </Avatar>
+                </Tooltip>
                 <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 500 }}>{user.username}</Text>
                 <Tooltip title="Logout">
                   <Button
@@ -243,6 +271,34 @@ const MainLayout = () => {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* ── CHANGE PASSWORD MODAL ── */}
+      <Modal
+        open={changePwdOpen}
+        onCancel={() => { setChangePwdOpen(false); pwdForm.resetFields(); }}
+        footer={null}
+        title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><KeyOutlined style={{ color: '#6366f1' }} /> Change Password</span>}
+        width={400}
+        styles={{ content: { background: isDark ? '#1e293b' : '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }, header: { background: isDark ? '#1e293b' : '#ffffff' } }}
+      >
+        <Form form={pwdForm} onFinish={onChangePwd} layout="vertical" requiredMark={false} style={{ marginTop: 16 }}>
+          <Form.Item name="current_password" label="Current Password" rules={[{ required: true, message: 'Enter your current password' }]}>
+            <Input.Password placeholder="Current password" />
+          </Form.Item>
+          <Form.Item name="new_password" label="New Password" rules={[{ required: true, min: 6, message: 'Min. 6 characters' }]}>
+            <Input.Password placeholder="New password (min. 6 characters)" />
+          </Form.Item>
+          <Form.Item name="confirm_password" label="Confirm New Password" rules={[{ required: true, message: 'Please confirm your new password' }]}>
+            <Input.Password placeholder="Repeat new password" />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Button htmlType="submit" type="primary" loading={changePwdLoading} block
+              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)', border: 'none', height: 42, fontWeight: 600 }}>
+              {changePwdLoading ? 'Saving...' : 'Save New Password'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </Layout>
   );
 };

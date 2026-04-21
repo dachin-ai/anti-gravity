@@ -50,6 +50,7 @@ api.interceptors.response.use(
 
 export const syncUsers = () => api.post('/auth/sync-users');
 export const forgotPassword = (username, email) => api.post('/auth/forgot-password', { username, email });
+export const changePassword = (current_password, new_password) => api.post('/auth/change-password', { current_password, new_password });
 
 export const askAssistant = (messages) => api.post('/chat/ask', { messages });
 
