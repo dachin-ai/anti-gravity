@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme, Spin } from 'antd';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import MainLayout from './layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import PriceChecker from './pages/PriceChecker';
@@ -22,11 +23,12 @@ import PermissionGate from './components/PermissionGate';
 // Protected route wrapper
 function ProtectedApp() {
   const { user, loading } = useAuth();
+  const { isDark } = useTheme();
 
   if (loading) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#020617',
+        minHeight: '100vh', background: isDark ? '#020617' : '#f8fafc',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 16
       }}>
@@ -65,17 +67,19 @@ function ProtectedApp() {
   );
 }
 
-function App() {
+function AppContent() {
+  const { isDark } = useTheme();
+
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.darkAlgorithm,
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: '#6366f1',
-          colorBgBase: '#0f172a',
-          colorBgContainer: 'rgba(30, 41, 59, 0.6)',
-          colorBgElevated: 'rgba(30, 41, 59, 0.8)',
-          colorBorder: 'rgba(255, 255, 255, 0.1)',
+          colorBgBase:       isDark ? '#0f172a'              : '#f8fafc',
+          colorBgContainer:  isDark ? 'rgba(30,41,59,0.6)'   : '#ffffff',
+          colorBgElevated:   isDark ? 'rgba(30,41,59,0.8)'   : '#ffffff',
+          colorBorder:       isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
           fontFamily: "'Inter', sans-serif",
           borderRadius: 12,
         },
@@ -87,6 +91,14 @@ function App() {
         </AuthProvider>
       </Router>
     </ConfigProvider>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

@@ -16,7 +16,7 @@ const PageHeader = ({ title, subtitle, accent = '#6366f1', actions }) => (
             <div>
                 <Title level={3} style={{
                     margin: '0 0 3px 0', fontFamily: "'Outfit', sans-serif",
-                    color: '#f1f5f9', fontWeight: 700,
+                    color: 'var(--text-main)', fontWeight: 700,
                 }}>
                     {title}
                 </Title>

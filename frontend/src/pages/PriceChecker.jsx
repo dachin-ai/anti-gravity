@@ -216,6 +216,7 @@ const PriceChecker = () => {
                 activeKey={method}
                 onChange={(key) => { setMethod(key); setFileList([]); setDirectResult(null); setBatchOverview(null); }}
                 type="card"
+                className="tabs-nav-only"
                 items={[
                     { key: 'Listing', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined /><Bi e="Listing Method" c="列表法" /></span> },
                     { key: 'SKU',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarcodeOutlined /><Bi e="SKU Method" c="SKU法" /></span> },

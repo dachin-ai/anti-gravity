@@ -22,6 +22,118 @@
   --success-bg:   #064e3b;
 }
 
+/* ============================================
+   LIGHT MODE OVERRIDES
+   ============================================ */
+:root[data-theme="light"] {
+  --indigo-dim:   #e0e7ff; /* Indigo 100 */
+
+  --bg-app:       #f1f5f9; /* Slate 100 */
+  --bg-panel:     #f8fafc; /* Slate 50  */
+  --bg-card:      #ffffff;
+
+  --text-main:    #0f172a; /* Slate 900 */
+  --text-muted:   #64748b; /* Slate 500 */
+
+  --border:       #e2e8f0; /* Slate 200 */
+  --border-light: #cbd5e1; /* Slate 300 */
+
+  --success-bg:   #ecfdf5;
+}
+
+/* ── Light mode: blue sky + cloud silhouettes ── */
+:root[data-theme="light"] body::before {
+  opacity: 1;
+  transition: opacity 0.35s ease;
+  transform: none;
+  background:
+    /* sky gradient — bright sky blue top → lighter horizon */
+    linear-gradient(180deg,
+      #7dd3fc 0%,
+      #93c5fd 20%,
+      #bae6fd 55%,
+      #e0f2fe 80%,
+      #f0f9ff 100%
+    );
+}
+
+/* Hide stars in light mode */
+:root[data-theme="light"] body::after {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+/* Cloud silhouettes layer */
+:root[data-theme="light"] body {
+  background-image:
+    /* cloud 1 — large, upper-left */
+    radial-gradient(ellipse 18%  9% at 12%  22%, rgba(255,255,255,0.88) 60%, transparent 100%),
+    radial-gradient(ellipse 10%  7% at 18%  19%, rgba(255,255,255,0.82) 50%, transparent 100%),
+    radial-gradient(ellipse  8%  6% at  7%  23%, rgba(255,255,255,0.75) 50%, transparent 100%),
+    /* cloud 2 — mid-right */
+    radial-gradient(ellipse 16%  8% at 75%  35%, rgba(255,255,255,0.85) 60%, transparent 100%),
+    radial-gradient(ellipse  9%  6% at 83%  32%, rgba(255,255,255,0.78) 50%, transparent 100%),
+    radial-gradient(ellipse  7%  5% at 68%  37%, rgba(255,255,255,0.70) 50%, transparent 100%),
+    /* cloud 3 — small, upper-right corner */
+    radial-gradient(ellipse 10%  6% at 92%  14%, rgba(255,255,255,0.80) 55%, transparent 100%),
+    radial-gradient(ellipse  6%  5% at 96%  12%, rgba(255,255,255,0.72) 50%, transparent 100%),
+    /* cloud 4 — lower-left, flatter */
+    radial-gradient(ellipse 14%  6% at 22%  68%, rgba(255,255,255,0.65) 55%, transparent 100%),
+    radial-gradient(ellipse  7%  4% at 30%  66%, rgba(255,255,255,0.58) 50%, transparent 100%),
+    /* cloud 5 — center-bottom faint */
+    radial-gradient(ellipse 12%  5% at 55%  78%, rgba(255,255,255,0.50) 55%, transparent 100%)
+  ;
+  background-attachment: fixed;
+}
+
+/* Light mode body */
+:root[data-theme="light"] body {
+  background-color: var(--bg-app) !important;
+  color: var(--text-main) !important;
+}
+
+/* Subtle transition when switching theme */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode card shadow (less heavy) */
+:root[data-theme="light"] .ant-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
+}
+
+/* Light mode table row hover */
+:root[data-theme="light"] .ant-table-tbody > tr:hover > td {
+  background: #f1f5f9 !important;
+}
+
+/* Light mode tabs */
+:root[data-theme="light"] .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  background: var(--bg-panel) !important;
+}
+:root[data-theme="light"] .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab:hover {
+  background: var(--border) !important;
+}
+:root[data-theme="light"] .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: var(--bg-card) !important;
+}
+:root[data-theme="light"] .ant-tabs-content-holder {
+  background: var(--bg-card) !important;
+}
+
+/* Light mode upload drag */
+:root[data-theme="light"] .ant-upload-drag {
+  background: var(--bg-panel) !important;
+}
+
+/* Light mode alert info */
+:root[data-theme="light"] .ant-alert-info {
+  background: #eef2ff !important;
+  border-color: rgba(99,102,241,0.3) !important;
+}
+
+/* Light mode select / dropdown overrides handled by ConfigProvider algorithm */
+
 /* RESET */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -117,13 +229,22 @@ h1, h2, h3, h4, h5, h6,
 .ant-typography h1,
 .ant-typography h2,
 .ant-typography h3,
-.ant-typography h4 {
+.ant-typography h4,
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography {
   color: var(--text-main) !important;
   font-family: 'Outfit', sans-serif !important;
 }
 
 .ant-typography {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
+}
+
+/* Tabs with no tab-pane content (content rendered outside) */
+.tabs-nav-only .ant-tabs-content-holder {
+  display: none !important;
 }
 
 /* ============================================

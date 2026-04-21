@@ -3,6 +3,7 @@ import { Typography, Row, Col, Card, Tag, Tooltip, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightOutlined, LockOutlined, TagOutlined, InboxOutlined, FileSearchOutlined, BarChartOutlined, FundProjectionScreenOutlined, RiseOutlined, PieChartOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { Title, Text } = Typography;
 
@@ -25,6 +26,7 @@ const CATEGORY_META = {
 const Dashboard = () => {
     const navigate = useNavigate();
     const { hasAccess } = useAuth();
+    const { isDark } = useTheme();
 
     return (
         <div>
@@ -41,13 +43,17 @@ const Dashboard = () => {
                 <div style={{ position: 'absolute', top: 20, right: 300, width: 80, height: 80, borderRadius: '50%', background: 'radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
                 <Title level={1} style={{
                     fontSize: 34, margin: '0 0 10px 0', fontWeight: 800,
-                    background: 'linear-gradient(90deg, #f1f5f9 0%, #c7d2fe 60%, #a5b4fc 100%)',
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    background: isDark
+                        ? 'linear-gradient(90deg, #f1f5f9 0%, #c7d2fe 60%, #a5b4fc 100%)'
+                        : 'none',
+                    WebkitBackgroundClip: isDark ? 'text' : 'unset',
+                    WebkitTextFillColor: isDark ? 'transparent' : '#0f172a',
+                    color: isDark ? undefined : '#0f172a',
                     letterSpacing: '-0.5px',
                 }}>
                     Business Intelligence Tools
                 </Title>
-                <Text style={{ fontSize: 14, color: '#94a3b8' }}>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#64748b' }}>
                     Unified analytics &amp; operations platform — select a module to launch.
                 </Text>
             </div>
@@ -81,7 +87,7 @@ const Dashboard = () => {
                                                 onClick={() => isClickable && navigate(tool.path)}
                                                 className={`lobby-card card-${catKey}`}
                                                 style={{
-                                                    background: '#0d1526',
+                                                    background: isDark ? '#0d1526' : '#ffffff',
                                                     border: `1px solid ${accessible ? `${meta.accent}28` : 'rgba(239,68,68,0.15)'}`,
                                                     borderTop: accessible ? `3px solid ${meta.accent}` : '3px solid rgba(239,68,68,0.4)',
                                                     borderRadius: 12,
@@ -90,40 +96,39 @@ const Dashboard = () => {
                                                     opacity: accessible ? 1 : 0.55,
                                                     transition: 'border-color 0.25s, box-shadow 0.25s, transform 0.25s',
                                                 }}
-                                                styles={{ body: { padding: 24, display: 'flex', flexDirection: 'column', height: '100%' } }}
+                                                styles={{ body: { padding: '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' } }}
                                             >
-                                                {/* Icon + lock */}
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+                                                {/* Icon + title row */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                                                     <div style={{
-                                                        width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                                                        width: 38, height: 38, borderRadius: 9, flexShrink: 0,
                                                         background: accessible ? `${meta.accent}22` : 'rgba(239,68,68,0.1)',
                                                         border: accessible ? `1px solid ${meta.accent}35` : '1px solid rgba(239,68,68,0.2)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 20, color: accessible ? meta.accent : '#f87171',
-                                                        boxShadow: accessible ? `0 0 12px ${meta.accent}25` : 'none',
+                                                        fontSize: 18, color: accessible ? meta.accent : '#f87171',
+                                                        boxShadow: accessible ? `0 0 10px ${meta.accent}25` : 'none',
                                                     }}>
                                                         {tool.icon}
                                                     </div>
-                                                    {!accessible && <LockOutlined style={{ color: '#f87171', fontSize: 14 }} />}
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <Text style={{ fontSize: 14, fontWeight: 700, color: accessible ? (isDark ? '#f1f5f9' : '#1e293b') : '#64748b', display: 'block', lineHeight: 1.3 }}>
+                                                            {tool.name}
+                                                        </Text>
+                                                        <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
+                                                            <Tag style={{ background: `${meta.accent}12`, border: `1px solid ${meta.accent}30`, color: meta.accent, fontSize: 10, borderRadius: 4, lineHeight: '16px', padding: '0 6px', margin: 0 }}>
+                                                                {tool.platform}
+                                                            </Tag>
+                                                            <Tag style={{ background: 'transparent', border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`, color: '#64748b', fontSize: 10, borderRadius: 4, lineHeight: '16px', padding: '0 6px', margin: 0 }}>
+                                                                {tool.main_user}
+                                                            </Tag>
+                                                        </div>
+                                                    </div>
+                                                    {!accessible && <LockOutlined style={{ color: '#f87171', fontSize: 13, flexShrink: 0 }} />}
                                                 </div>
 
-                                                <Text style={{ fontSize: 15, fontWeight: 700, color: accessible ? '#f1f5f9' : '#475569', marginBottom: 8, display: 'block' }}>
-                                                    {tool.name}
-                                                </Text>
-
-                                                <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.65, flexGrow: 1, marginBottom: 18, display: 'block' }}>
+                                                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.6, flexGrow: 1, marginBottom: 12, display: 'block' }}>
                                                     {tool.desc}
                                                 </Text>
-
-                                                {/* Tags */}
-                                                <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-                                                    <Tag style={{ background: `${meta.accent}12`, border: `1px solid ${meta.accent}30`, color: meta.accent, fontSize: 11, borderRadius: 4 }}>
-                                                        {tool.platform}
-                                                    </Tag>
-                                                    <Tag style={{ background: 'transparent', border: '1px solid #334155', color: '#64748b', fontSize: 11, borderRadius: 4 }}>
-                                                        {tool.main_user}
-                                                    </Tag>
-                                                </div>
 
                                                 {/* CTA */}
                                                 {accessible ? (
@@ -136,14 +141,14 @@ const Dashboard = () => {
                                                             borderRadius: 6,
                                                             fontSize: 12,
                                                             fontWeight: 600,
-                                                            height: 30,
+                                                            height: 28,
                                                             background: `${meta.accent}10`,
                                                         }}
                                                     >
                                                         Launch <ArrowRightOutlined style={{ fontSize: 10, marginLeft: 4 }} />
                                                     </Button>
                                                 ) : (
-                                                    <div style={{ color: '#f87171', fontSize: 13, fontWeight: 500 }}>
+                                                    <div style={{ color: '#f87171', fontSize: 12, fontWeight: 500 }}>
                                                         <LockOutlined style={{ marginRight: 6 }} />Access Restricted
                                                     </div>
                                                 )}

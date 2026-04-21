@@ -85,11 +85,12 @@ const PandaSit = () => (
 
 /* ─── Panda component ─── */
 const Panda = () => {
+  const startX = WALK_W - PANDA_W;                 // starts at right edge
   const [visible, setVisible] = useState(!document.hidden);
-  const [x, setX]             = useState(10);
-  const [dir, setDir]         = useState(1);       // 1 = right, -1 = left
+  const [x, setX]             = useState(startX);
+  const [dir, setDir]         = useState(-1);      // 1 = right, -1 = left (starts facing left)
   const [sitting, setSitting] = useState(true);    // starts sitting
-  const stRef = useRef({ x: 10, dir: 1, sitting: true });
+  const stRef = useRef({ x: startX, dir: -1, sitting: true });
 
   // Hide when tab is hidden / window minimised
   useEffect(() => {
@@ -130,7 +131,7 @@ const Panda = () => {
     <div style={{
       position:      'fixed',
       bottom:        16,
-      right:         0,
+      right:         20,
       width:         WALK_W,
       height:        60,
       pointerEvents: 'none',

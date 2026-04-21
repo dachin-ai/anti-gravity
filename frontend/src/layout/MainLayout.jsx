@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip, message } from 'antd';
-import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined } from '@ant-design/icons';
+import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import Bi from '../components/Bi';
 import Panda from '../components/Panda';
 
@@ -14,6 +15,7 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasAccess } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   const lockedLabel = (label, toolKey) => {
     if (toolKey && !hasAccess(toolKey)) {
@@ -94,7 +96,7 @@ const MainLayout = () => {
         style={{
           background: 'var(--bg-card)',
           borderRight: '1px solid var(--border)',
-          boxShadow: '2px 0 16px rgba(0,0,0,0.5)',
+          boxShadow: isDark ? '2px 0 16px rgba(0,0,0,0.5)' : '2px 0 12px rgba(0,0,0,0.08)',
           position: 'relative',
         }}
       >
@@ -132,7 +134,7 @@ const MainLayout = () => {
           items={menuItems}
           onClick={handleMenuClick}
           style={{ background: 'transparent', border: 'none', padding: '0 8px' }}
-          theme="dark"
+          theme={isDark ? 'dark' : 'light'}
         />
 
         {/* 🐼 Panda mascot */}
@@ -157,16 +159,37 @@ const MainLayout = () => {
             <Bi e="Business Intelligence Tools" c="商业智能工具" />
           </Text>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Theme toggle */}
+            <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              <Button
+                type="text"
+                icon={isDark ? <SunOutlined /> : <MoonOutlined />}
+                onClick={toggleTheme}
+                style={{
+                  color: isDark ? '#fbbf24' : '#6366f1',
+                  fontSize: 18,
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 8,
+                  background: isDark ? 'rgba(251,191,36,0.1)' : 'rgba(99,102,241,0.1)',
+                  border: `1px solid ${isDark ? 'rgba(251,191,36,0.25)' : 'rgba(99,102,241,0.25)'}`,
+                  transition: 'all 0.25s ease',
+                }}
+              />
+            </Tooltip>
             <div className="wajan-container" title="Freemir Wajan Tech" style={{ width: 40, height: 40 }}>
               <svg viewBox="0 0 64 64" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ overflow: 'visible', width: '100%', height: '100%' }}>
                 {/* Outer glow blob */}
                 <circle cx="32" cy="32" r="20" fill="rgba(99,102,241,0.18)" stroke="none" />
 
                 {/* Wok rim (outer wall) */}
-                <circle cx="32" cy="32" r="18" stroke="rgba(255,255,255,0.88)" strokeWidth="2.2" />
+                <circle cx="32" cy="32" r="18" stroke={isDark ? 'rgba(255,255,255,0.88)' : 'rgba(30,41,59,0.75)'} strokeWidth="2.2" />
 
                 {/* Wok concave side walls */}
-                <circle cx="32" cy="32" r="12" stroke="rgba(255,255,255,0.38)" strokeWidth="1.4" fill="rgba(255,255,255,0.025)" />
+                <circle cx="32" cy="32" r="12" stroke={isDark ? 'rgba(255,255,255,0.38)' : 'rgba(30,41,59,0.25)'} strokeWidth="1.4" fill={isDark ? 'rgba(255,255,255,0.025)' : 'rgba(30,41,59,0.03)'} />
 
                 {/* Wok flat base */}
                 <circle cx="32" cy="32" r="6" stroke="rgba(99,102,241,0.95)" strokeWidth="1.5" fill="rgba(99,102,241,0.14)" />
@@ -179,14 +202,14 @@ const MainLayout = () => {
                 <line x1="20" y1="32" x2="44" y2="32" stroke="rgba(99,102,241,0.32)" strokeWidth="0.8" strokeDasharray="2 3" />
 
                 {/* Long handle (gagang) - top view, slightly tapered */}
-                <path d="M50 30.2 L62 29 L62 35 L50 33.8 Z" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.82)" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="M50 30.2 L62 29 L62 35 L50 33.8 Z" fill={isDark ? 'rgba(255,255,255,0.07)' : 'rgba(30,41,59,0.05)'} stroke={isDark ? 'rgba(255,255,255,0.82)' : 'rgba(30,41,59,0.7)'} strokeWidth="1.7" strokeLinejoin="round" />
                 {/* Handle grip ridges */}
-                <line x1="53.5" y1="30.6" x2="53.5" y2="33.4" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <line x1="56.5" y1="30.3" x2="56.5" y2="33.7" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                <line x1="59.5" y1="29.9" x2="59.5" y2="34.1" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1="53.5" y1="30.6" x2="53.5" y2="33.4" stroke={isDark ? 'rgba(255,255,255,0.45)' : 'rgba(30,41,59,0.35)'} strokeWidth="1" />
+                <line x1="56.5" y1="30.3" x2="56.5" y2="33.7" stroke={isDark ? 'rgba(255,255,255,0.45)' : 'rgba(30,41,59,0.35)'} strokeWidth="1" />
+                <line x1="59.5" y1="29.9" x2="59.5" y2="34.1" stroke={isDark ? 'rgba(255,255,255,0.45)' : 'rgba(30,41,59,0.35)'} strokeWidth="1" />
 
                 {/* Small ear handle (kuping) opposite side */}
-                <path d="M14 29.5 Q7.5 32 14 34.5" stroke="rgba(255,255,255,0.75)" strokeWidth="2.3" fill="none" />
+                <path d="M14 29.5 Q7.5 32 14 34.5" stroke={isDark ? 'rgba(255,255,255,0.75)' : 'rgba(30,41,59,0.65)'} strokeWidth="2.3" fill="none" />
 
                 {/* Scan nodes at top & bottom of rim */}
                 <circle cx="32" cy="14" r="1.8" fill="rgba(99,102,241,0.85)" stroke="rgba(99,102,241,0.4)" strokeWidth="1" />
@@ -201,7 +224,7 @@ const MainLayout = () => {
                 <Avatar size={32} style={{ background: 'linear-gradient(135deg, #6366f1, #3b82f6)', fontSize: 14, fontWeight: 700 }}>
                   {user.username[0].toUpperCase()}
                 </Avatar>
-                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 500 }}>{user.username}</Text>
+                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 500 }}>{user.username}</Text>
                 <Tooltip title="Logout">
                   <Button
                     type="text"
