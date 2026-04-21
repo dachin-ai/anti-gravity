@@ -5,7 +5,7 @@ const getBaseURL = () => {
   const isDev = import.meta.env.MODE === 'development';
   
   if (isDev) {
-    return 'https://render-anti-gravity.onrender.com/api';
+    return 'http://localhost:8000/api';
   }
   
   // Production: Check for environment variable first

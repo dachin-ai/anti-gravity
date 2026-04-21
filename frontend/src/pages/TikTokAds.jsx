@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Typography, Button, Row, Col, Upload, message, Divider, Table, Radio
+    Typography, Button, Row, Col, Upload, message, Divider, Table, Tabs
 } from 'antd';
 import {
     InboxOutlined, CloudUploadOutlined, FileExcelOutlined,
@@ -55,7 +55,7 @@ const TikTokAds = () => {
             }
 
             const res = await api.post('/tiktok-ads/analyze', {
-                files: filesPayload
+                files: filesPayload,
             });
 
             setResult(res.data);
@@ -78,7 +78,17 @@ const TikTokAds = () => {
     };
 
     const beforeUpload = (file, fileListNew) => {
-        setFileList(prev => [...prev, ...fileListNew]);
+        // Keep only the latest uploader snapshot to prevent duplicated entries.
+        const deduped = [];
+        const seen = new Set();
+        for (const f of fileListNew) {
+            const key = `${f.name}-${f.size}-${f.lastModified}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                deduped.push(f);
+            }
+        }
+        setFileList(deduped);
         return false;
     };
 
@@ -127,11 +137,12 @@ const TikTokAds = () => {
                             <Bi e="Upload your exported TikTok Ads performance reports. You can upload multiple files at once." c="上传您的 TikTok Ads 表现报告，支持同时上传多个文件。" />
                          </Text>
                         <div style={{ marginTop: 24, padding: '16px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Text strong style={{ color: 'var(--text-main)' }}>
-                                    <Bi e="Analysis Mode: Aggregate" c="分析模式: 汇总模式" />
-                                </Text>
-                            </div>
+                            <Text strong style={{ color: 'var(--text-main)', display: 'block', marginBottom: 10 }}>
+                                <Bi e="Analysis Mode" c="分析模式" />
+                            </Text>
+                            <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginTop: 10 }}>
+                                Aggregate mode combines all uploaded files into one summary.
+                            </Text>
                          </div>
                     </div>
                 </Col>
@@ -173,28 +184,65 @@ const TikTokAds = () => {
                     {result && !loading && (
                         <div style={{ marginTop: 24 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Preview: Top 10 Listings" c="预览：前 10 名列表" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Preview Results" c="结果预览" /></SectionHeading>
 
-                            <Row gutter={16}>
-                                <Col xs={24} xl={8}>
-                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 20, border: '1px solid var(--border)', marginBottom: 24 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 12 }}>Top 10 Product Card Revenue</div>
-                                        {renderPreviewTable(result.top_card)}
-                                    </div>
-                                </Col>
-                                <Col xs={24} xl={8}>
-                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 20, border: '1px solid var(--border)', marginBottom: 24 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 12 }}>Top 10 Video Revenue</div>
-                                        {renderPreviewTable(result.top_video)}
-                                    </div>
-                                </Col>
-                                <Col xs={24} xl={8}>
-                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 20, border: '1px solid var(--border)', marginBottom: 24 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 12 }}>Top 10 Overall Revenue</div>
-                                        {renderPreviewTable(result.top_overall)}
-                                    </div>
-                                </Col>
-                            </Row>
+                            <Tabs
+                                items={[
+                                    {
+                                        key: 'summary',
+                                        label: 'Summary',
+                                        children: (
+                                            <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+                                                {renderPreviewTable(result.summary)}
+                                            </div>
+                                        ),
+                                    },
+                                    {
+                                        key: 'top10',
+                                        label: 'Top 10 Revenue',
+                                        children: (
+                                            <Row gutter={16}>
+                                                <Col xs={24} xl={8}>
+                                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)', marginBottom: 12 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>Top 10 Product Card Revenue</div>
+                                                        {renderPreviewTable(result.top_card)}
+                                                    </div>
+                                                </Col>
+                                                <Col xs={24} xl={8}>
+                                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)', marginBottom: 12 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>Top 10 Video Revenue</div>
+                                                        {renderPreviewTable(result.top_video)}
+                                                    </div>
+                                                </Col>
+                                                <Col xs={24} xl={8}>
+                                                    <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)', marginBottom: 12 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>Top 10 Overall Revenue</div>
+                                                        {renderPreviewTable(result.top_overall)}
+                                                    </div>
+                                                </Col>
+                                            </Row>
+                                        ),
+                                    },
+                                    {
+                                        key: 'active-zero',
+                                        label: 'Active Zero Revenue',
+                                        children: (
+                                            <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+                                                {renderPreviewTable(result.active_zero)}
+                                            </div>
+                                        ),
+                                    },
+                                    {
+                                        key: 'excluded-zero',
+                                        label: 'Excluded Zero Revenue',
+                                        children: (
+                                            <div style={{ background: 'var(--bg-panel)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+                                                {renderPreviewTable(result.excluded_zero)}
+                                            </div>
+                                        ),
+                                    },
+                                ]}
+                            />
 
                             <Button
                                 size="large"

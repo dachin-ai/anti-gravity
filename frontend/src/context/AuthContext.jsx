@@ -22,10 +22,11 @@ export function AuthProvider({ children }) {
         setUser(null);
     }, []);
 
-    // On mount: check stored token
+    // On mount: restore cached user quickly and verify token in background.
     useEffect(() => {
         const token = localStorage.getItem(TOKEN_KEY);
         const loginDate = localStorage.getItem(LOGIN_DATE_KEY);
+        const cachedUserRaw = localStorage.getItem(USER_KEY);
         const today = getTodayStr();
 
         if (!token) {
@@ -40,15 +41,35 @@ export function AuthProvider({ children }) {
             return;
         }
 
-        // Verify token with backend
-        api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` } })
+        let cachedUser = null;
+        if (cachedUserRaw) {
+            try {
+                cachedUser = JSON.parse(cachedUserRaw);
+            } catch {
+                cachedUser = null;
+            }
+        }
+
+        if (cachedUser?.username) {
+            setUser(cachedUser);
+            setLoading(false);
+        }
+
+        // Verify token with backend (short timeout to avoid long spinner)
+        api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 })
             .then(res => {
-                setUser({ username: res.data.username, email: res.data.email, permissions: res.data.permissions || {} });
+                const verifiedUser = { username: res.data.username, email: res.data.email, permissions: res.data.permissions || {} };
+                localStorage.setItem(USER_KEY, JSON.stringify(verifiedUser));
+                setUser(verifiedUser);
             })
             .catch(() => {
                 logout();
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (!cachedUser?.username) {
+                    setLoading(false);
+                }
+            });
     }, [logout]);
 
     const login = useCallback(async (username, password) => {
@@ -57,9 +78,19 @@ export function AuthProvider({ children }) {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(LOGIN_DATE_KEY, getTodayStr());
 
-        // Verify & get user info
-        const verify = await api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` } });
-        const userData = { username: verify.data.username, email: verify.data.email, permissions: verify.data.permissions || {} };
+        // Preferred: login response includes user payload.
+        // Fallback: call verify for backward compatibility with older backend.
+        let userData;
+        if (res.data?.username) {
+            userData = {
+                username: res.data.username,
+                email: res.data.email || '',
+                permissions: res.data.permissions || {},
+            };
+        } else {
+            const verify = await api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 });
+            userData = { username: verify.data.username, email: verify.data.email, permissions: verify.data.permissions || {} };
+        }
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         setUser(userData);
         return userData;

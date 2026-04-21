@@ -8,6 +8,9 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 import numpy as np
 
+MODE_AGGREGATE = "Aggregate (Multi-Day)"
+MODE_DAILY = "Daily (Per File Date)"
+
 # ==========================================
 # HELPERS
 # ==========================================
@@ -26,6 +29,40 @@ def clean_numeric(val) -> float:
         return float(val_str)
     except Exception:
         return 0.0
+
+
+def extract_date_from_filename(filename: str) -> pd.Timestamp:
+    matches = re.findall(r"\d{4}-\d{2}-\d{2}", filename or "")
+    if matches:
+        return pd.to_datetime(matches[-1], errors="coerce")
+    return pd.NaT
+
+
+def build_export_filename(mode_label: str, filenames: List[str]) -> str:
+    today_label = datetime.now().strftime("%Y-%m-%d")
+    export_mode = "Aggregate" if mode_label == MODE_AGGREGATE else "Daily"
+
+    if mode_label != MODE_DAILY:
+        return f"TikTok_Ads_{export_mode}_{today_label}.xlsx"
+
+    detected_dates = []
+    for name in filenames:
+        dt = extract_date_from_filename(name)
+        if not pd.isna(dt):
+            detected_dates.append(dt.normalize())
+
+    if not detected_dates:
+        return f"TikTok_Ads_{export_mode}_{today_label}.xlsx"
+
+    min_date = min(detected_dates)
+    max_date = max(detected_dates)
+
+    if min_date == max_date:
+        date_label = min_date.strftime("%Y-%m-%d")
+    else:
+        date_label = f"{min_date.strftime('%Y-%m-%d')}_to_{max_date.strftime('%Y-%m-%d')}"
+
+    return f"TikTok_Ads_{export_mode}_{date_label}.xlsx"
 
 
 def calculate_metrics_vectorized(df: pd.DataFrame, group_cols: List[str]) -> pd.DataFrame:
@@ -68,30 +105,93 @@ def calculate_metrics_vectorized(df: pd.DataFrame, group_cols: List[str]) -> pd.
     return agg_df[desired_cols]
 
 
-def read_and_transform_single_file(file_bytes: bytes, filename: str) -> pd.DataFrame:
-    if filename.endswith(".csv"):
-        raw_df = pd.read_csv(io.BytesIO(file_bytes), dtype=str)
+# Column name aliases for TikTok Ads export detection (lowercase, order = priority)
+_TIKTOK_COL_ALIASES = [
+    ("Product ID",               ["product id", "productid", "product_id"]),
+    ("Creative type",            ["creative type", "creative_type", "ad type", "ad_type", "creativetype"]),
+    ("Video ID",                 ["video id", "videoid", "video_id"]),
+    ("TikTok account",           ["tiktok account", "tiktok_account", "account name", "account"]),
+    ("Time posted",              ["time posted", "time_posted", "post time", "post_time", "posting time", "date"]),
+    ("Status",                   ["status"]),
+    ("Cost",                     ["cost", "spend", "total spend", "total_spend"]),
+    ("SKU orders",               ["sku orders", "sku_orders", "orders", "product orders", "product_orders"]),
+    ("Gross revenue",            ["gross revenue", "gross_revenue", "revenue", "gmv", "product revenue"]),
+    ("Product ad impressions",   ["product ad impressions", "product_ad_impressions", "impressions"]),
+    ("Product ad clicks",        ["product ad clicks", "product_ad_clicks", "clicks"]),
+]
+
+_FALLBACK_INDICES = [2, 3, 5, 6, 7, 8, 10, 11, 13, 15, 16]
+
+
+def _detect_header_row(raw_df: pd.DataFrame) -> int:
+    """Scan first 5 rows to find which row contains the actual column headers."""
+    known = ["product id", "creative type", "cost", "status", "video id"]
+    for i in range(min(5, len(raw_df))):
+        row_vals = [str(v).lower().strip() for v in raw_df.iloc[i].values]
+        if sum(1 for k in known if any(k in rv for rv in row_vals)) >= 3:
+            return i
+    return -1  # already has headers in row 0 via pandas
+
+
+def _map_columns_by_name(raw_df: pd.DataFrame):
+    """Try to map columns by name. Returns (indices, names) or (None, None)."""
+    cols_lower = {str(c).lower().strip(): i for i, c in enumerate(raw_df.columns)}
+    indices, names = [], []
+    for target_name, aliases in _TIKTOK_COL_ALIASES:
+        found = None
+        for alias in aliases:
+            if alias in cols_lower:
+                found = cols_lower[alias]
+                break
+        if found is None:
+            return None, None
+        indices.append(found)
+        names.append(target_name)
+    return indices, names
+
+
+def read_and_transform_single_file(file_bytes: bytes, filename: str, mode_label: str) -> pd.DataFrame:
+    read_kwargs = dict(dtype=str)
+    if filename.lower().endswith(".csv"):
+        raw_df = pd.read_csv(io.BytesIO(file_bytes), **read_kwargs)
     else:
-        raw_df = pd.read_excel(io.BytesIO(file_bytes), dtype=str)
+        raw_df = pd.read_excel(io.BytesIO(file_bytes), **read_kwargs)
 
     # Drop completely empty rows
     raw_df = raw_df.dropna(how="all").reset_index(drop=True)
 
-    target_indices = [2, 3, 5, 6, 7, 8, 10, 11, 13, 15, 16]
-    expected_cols = [
-        "Product ID", "Creative type", "Video ID", "TikTok account",
-        "Time posted", "Status", "Cost", "SKU orders", "Gross revenue",
-        "Product ad impressions", "Product ad clicks"
-    ]
+    # If TikTok file has metadata rows before the real header, re-read with skiprows
+    header_row = _detect_header_row(raw_df)
+    if header_row > 0:
+        raw_df = pd.read_csv(io.BytesIO(file_bytes), skiprows=header_row, dtype=str) \
+            if filename.lower().endswith(".csv") \
+            else pd.read_excel(io.BytesIO(file_bytes), skiprows=header_row, dtype=str)
+        raw_df = raw_df.dropna(how="all").reset_index(drop=True)
 
-    if raw_df.shape[1] <= max(target_indices):
-        raise ValueError(
-            f"Column mapping failed for {filename}. "
-            "Expected at least 17 columns."
-        )
+    expected_cols = [name for name, _ in _TIKTOK_COL_ALIASES]
 
-    df = raw_df.iloc[:, target_indices].copy()
-    df.columns = expected_cols
+    # Try name-based detection first
+    col_indices, col_names = _map_columns_by_name(raw_df)
+
+    if col_indices is None:
+        # Fallback: positional mapping
+        if raw_df.shape[1] <= max(_FALLBACK_INDICES):
+            found_names = list(raw_df.columns[:20])
+            raise ValueError(
+                f"Column mapping failed for '{filename}'. "
+                f"Found {raw_df.shape[1]} columns: {found_names}. "
+                "Expected either named columns (Product ID, Creative type, Cost …) "
+                "or at least 17 positional columns."
+            )
+        col_indices = _FALLBACK_INDICES
+        col_names = expected_cols
+
+    df = raw_df.iloc[:, col_indices].copy()
+    df.columns = col_names
+
+    # Drop summary/total rows that TikTok appends at the bottom
+    _SKIP_IDS = {"", "-", "nan", "total", "grand total", "summary", "subtotal"}
+    df = df[~df["Product ID"].fillna("").astype(str).str.strip().str.lower().isin(_SKIP_IDS)].copy()
 
     df["Product ID"] = df["Product ID"].fillna("-").astype(str).str.replace(r"\.0$", "", regex=True)
     df["Video ID"] = df["Video ID"].fillna("-").astype(str).str.replace(r"\.0$", "", regex=True)
@@ -105,26 +205,68 @@ def read_and_transform_single_file(file_bytes: bytes, filename: str) -> pd.DataF
         df[col] = df[col].apply(clean_numeric)
 
     df["Source File"] = filename
+
+    if mode_label == MODE_DAILY:
+        file_date = extract_date_from_filename(filename)
+        if pd.isna(file_date):
+            raise ValueError(
+                f"Could not detect file date from filename: {filename}. "
+                "Daily mode requires YYYY-MM-DD in each filename."
+            )
+        df["Data Date"] = file_date
+
     return df
 
 
-def build_summary_sheet(df: pd.DataFrame) -> pd.DataFrame:
+def build_summary_sheet(df: pd.DataFrame, mode_label: str) -> pd.DataFrame:
     base_metrics = ["Gross Revenue", "Cost", "SKU Orders", "CPO", "ROAS", "ROI", "Impressions", "Clicks"]
 
-    grouped = calculate_metrics_vectorized(df, ["Product ID", "Creative type"])
-    
+    if mode_label == MODE_AGGREGATE:
+        grouped = calculate_metrics_vectorized(df, ["Product ID", "Creative type"])
+        if grouped.empty:
+            return pd.DataFrame()
+
+        pivot_df = grouped.pivot(index="Product ID", columns="Creative type").fillna(0)
+        pivot_cols = []
+        for col in pivot_df.columns:
+            metric, ctype = col[0], col[1]
+            pivot_cols.append(f"[{ctype}] {metric}" if ctype else metric)
+        pivot_df.columns = pivot_cols
+
+        overall = calculate_metrics_vectorized(df, ["Product ID"]).set_index("Product ID")
+        overall.columns = [f"[Overall] {c}" for c in overall.columns]
+
+        summary = pivot_df.join(overall).reset_index()
+
+        for ct in ["Product card", "Video"]:
+            for m in base_metrics:
+                col_name = f"[{ct}] {m}"
+                if col_name not in summary.columns:
+                    summary[col_name] = 0.0
+
+        ordered_cols = (
+            ["Product ID"] +
+            [f"[Product card] {m}" for m in base_metrics] +
+            [f"[Video] {m}" for m in base_metrics] +
+            [f"[Overall] {m}" for m in base_metrics]
+        )
+        summary = summary[[c for c in ordered_cols if c in summary.columns]]
+        metric_cols = [c for c in summary.columns if c != "Product ID"]
+        summary = summary.loc[(summary[metric_cols] != 0).any(axis=1)].copy()
+        return summary
+
+    grouped = calculate_metrics_vectorized(df, ["Data Date", "Product ID", "Creative type"])
     if grouped.empty:
         return pd.DataFrame()
 
-    pivot_df = grouped.pivot(index="Product ID", columns="Creative type").fillna(0)
-    # Simplify multi-index created by pivot manually
+    pivot_df = grouped.pivot(index=["Data Date", "Product ID"], columns="Creative type").fillna(0)
     pivot_cols = []
     for col in pivot_df.columns:
         metric, ctype = col[0], col[1]
         pivot_cols.append(f"[{ctype}] {metric}" if ctype else metric)
     pivot_df.columns = pivot_cols
 
-    overall = calculate_metrics_vectorized(df, ["Product ID"]).set_index("Product ID")
+    overall = calculate_metrics_vectorized(df, ["Data Date", "Product ID"]).set_index(["Data Date", "Product ID"])
     overall.columns = [f"[Overall] {c}" for c in overall.columns]
 
     summary = pivot_df.join(overall).reset_index()
@@ -136,15 +278,15 @@ def build_summary_sheet(df: pd.DataFrame) -> pd.DataFrame:
                 summary[col_name] = 0.0
 
     ordered_cols = (
-        ["Product ID"] +
+        ["Data Date", "Product ID"] +
         [f"[Product card] {m}" for m in base_metrics] +
         [f"[Video] {m}" for m in base_metrics] +
         [f"[Overall] {m}" for m in base_metrics]
     )
     summary = summary[[c for c in ordered_cols if c in summary.columns]]
-    metric_cols = [c for c in summary.columns if c != "Product ID"]
+    metric_cols = [c for c in summary.columns if c not in ["Data Date", "Product ID"]]
     summary = summary.loc[(summary[metric_cols] != 0).any(axis=1)].copy()
-    
+    summary["Data Date"] = pd.to_datetime(summary["Data Date"], errors="coerce").dt.strftime("%Y-%m-%d")
     return summary
 
 
@@ -170,7 +312,7 @@ def build_top10_sheet(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.
     return top_card, top_video, top_overall
 
 
-def build_zero_revenue_sheets(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def build_zero_revenue_sheets(df: pd.DataFrame, mode_label: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     df = df.copy()
     df["Creative type norm"] = df["Creative type"].astype(str).str.strip().str.lower()
 
@@ -180,10 +322,16 @@ def build_zero_revenue_sheets(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
         (df["Cost"] > 0)
     ].copy()
 
-    cols = [
-        "Product ID", "TikTok account", "Video ID",
-        "Gross revenue", "Cost", "Time posted", "Posted Days Ago", "Status", "Source File"
-    ]
+    if mode_label == MODE_AGGREGATE:
+        cols = [
+            "Product ID", "TikTok account", "Video ID",
+            "Gross revenue", "Cost", "Time posted", "Posted Days Ago", "Status", "Source File"
+        ]
+    else:
+        cols = [
+            "Data Date", "Product ID", "TikTok account", "Video ID",
+            "Gross revenue", "Cost", "Time posted", "Posted Days Ago", "Status", "Source File"
+        ]
 
     if zero_rev_all.empty:
         empty_df = pd.DataFrame(columns=cols)
@@ -194,6 +342,9 @@ def build_zero_revenue_sheets(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
     zero_rev_all["Time posted"] = zero_rev_all["Time posted"].dt.strftime("%Y-%m-%d %H:%M")
     zero_rev_all["Gross revenue"] = np.ceil(zero_rev_all["Gross revenue"]).astype(int)
     zero_rev_all["Cost"] = np.ceil(zero_rev_all["Cost"]).astype(int)
+
+    if mode_label != MODE_AGGREGATE and "Data Date" in zero_rev_all.columns:
+        zero_rev_all["Data Date"] = pd.to_datetime(zero_rev_all["Data Date"], errors="coerce").dt.strftime("%Y-%m-%d")
 
     active_zero = zero_rev_all[zero_rev_all["Status"].astype(str).str.strip().str.lower() != "excluded"][cols].sort_values(cols[:3])
     excluded_zero = zero_rev_all[zero_rev_all["Status"].astype(str).str.strip().str.lower() == "excluded"][cols].sort_values(cols[:3])
@@ -223,7 +374,18 @@ def auto_fit_columns(writer, dataframes_map):
             ws.set_column(i, i, final_width)
 
 
-def generate_excel_file(summary_df, top_card, top_video, top_overall, active_zero, excluded_zero) -> bytes:
+def convert_ratio_cols_to_text_for_daily(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    ratio_keywords = ["CPO", "ROAS", "ROI"]
+    target_cols = [c for c in out.columns if any(k in str(c) for k in ratio_keywords)]
+    for col in target_cols:
+        out[col] = out[col].apply(
+            lambda x: f"{float(x):.2f}" if pd.notna(x) and str(x).strip() != "" else "0.00"
+        )
+    return out
+
+
+def generate_excel_file(summary_df, top_card, top_video, top_overall, active_zero, excluded_zero, mode_label: str) -> bytes:
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -235,7 +397,7 @@ def generate_excel_file(summary_df, top_card, top_video, top_overall, active_zer
         fmt_header_base = workbook.add_format({"bold": True, "bg_color": "#F2F2F2", "border": 1, "align": "center"})
         fmt_section = workbook.add_format({"bold": True, "font_size": 12, "bg_color": "#D9E1F2", "border": 1})
 
-        summary_sheet_name = "Summary by Product"
+        summary_sheet_name = "Summary by Product" if mode_label == MODE_AGGREGATE else "Daily Summary by Product"
 
         summary_df.to_excel(writer, sheet_name=summary_sheet_name, index=False)
         ws1 = writer.sheets[summary_sheet_name]
@@ -283,21 +445,42 @@ def _b64(data: bytes) -> str:
     return base64.b64encode(data).decode("utf-8")
 
 
-def process_tiktok_ads(files: List[Dict]) -> Dict:
+def process_tiktok_ads(files: List[Dict], mode_label: str = MODE_AGGREGATE) -> Dict:
+    if mode_label not in [MODE_AGGREGATE, MODE_DAILY]:
+        mode_label = MODE_AGGREGATE
+
     frames = []
     for f in files:
         raw_bytes = base64.b64decode(f["content_b64"])
-        frames.append(read_and_transform_single_file(raw_bytes, f["filename"]))
+        frames.append(read_and_transform_single_file(raw_bytes, f["filename"], mode_label))
 
     df = pd.concat(frames, ignore_index=True)
 
-    summary_df = build_summary_sheet(df)
+    summary_df = build_summary_sheet(df, mode_label)
     top_card, top_video, top_overall = build_top10_sheet(df)
-    active_zero, excluded_zero = build_zero_revenue_sheets(df)
+    active_zero, excluded_zero = build_zero_revenue_sheets(df, mode_label)
 
-    excel_bytes = generate_excel_file(summary_df, top_card, top_video, top_overall, active_zero, excluded_zero)
-    today_label = datetime.now().strftime("%Y-%m-%d")
-    file_name = f"TikTok_Ads_Aggregate_{today_label}.xlsx"
+    if mode_label == MODE_DAILY:
+        summary_df_export = convert_ratio_cols_to_text_for_daily(summary_df)
+        top_card_export = convert_ratio_cols_to_text_for_daily(top_card)
+        top_video_export = convert_ratio_cols_to_text_for_daily(top_video)
+        top_overall_export = convert_ratio_cols_to_text_for_daily(top_overall)
+    else:
+        summary_df_export = summary_df
+        top_card_export = top_card
+        top_video_export = top_video
+        top_overall_export = top_overall
+
+    excel_bytes = generate_excel_file(
+        summary_df_export,
+        top_card_export,
+        top_video_export,
+        top_overall_export,
+        active_zero,
+        excluded_zero,
+        mode_label,
+    )
+    file_name = build_export_filename(mode_label, [f["filename"] for f in files])
 
     def to_preview(dfs: pd.DataFrame) -> dict:
         if dfs is None or dfs.empty:
@@ -314,6 +497,7 @@ def process_tiktok_ads(files: List[Dict]) -> Dict:
         "top_overall": to_preview(top_overall),
         "active_zero": to_preview(active_zero),
         "excluded_zero": to_preview(excluded_zero),
+        "mode": mode_label,
         "file_name": file_name,
         "file_base64": _b64(excel_bytes),
     }

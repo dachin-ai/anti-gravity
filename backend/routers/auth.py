@@ -42,16 +42,19 @@ def signup(body: SignupRequest):
 
 @router.post("/login")
 def login(body: LoginRequest, request: Request):
-    ip = request.client.host if request.client else ""
     success, msg, token = login_user_optimized(body.username.strip(), body.password)
     if not success:
         # If user not found, give hint about sync
         if "not found" in msg.lower():
             msg = f"{msg} Try refreshing users from the login page first."
         raise HTTPException(status_code=401, detail=msg)
+    payload = verify_token(token)
     return {
         "message": msg,
         "token": token,
+        "username": payload.get("username", body.username.strip()) if payload else body.username.strip(),
+        "email": payload.get("email", "") if payload else "",
+        "permissions": payload.get("permissions", {}) if payload else {},
     }
 
 

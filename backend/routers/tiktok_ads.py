@@ -16,6 +16,7 @@ class FileItem(BaseModel):
 
 class TikTokAdsRequest(BaseModel):
     files: List[FileItem]
+    mode: str = "Aggregate (Multi-Day)"
 
 
 @router.post("/analyze", dependencies=[Depends(require_tool_access("ads_analyzer"))])
@@ -26,6 +27,7 @@ def analyze_tiktok_ads(body: TikTokAdsRequest):
 
         result = process_tiktok_ads(
             files=[f.dict() for f in body.files],
+            mode_label=body.mode,
         )
         return result
 
