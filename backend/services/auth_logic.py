@@ -6,6 +6,11 @@ import datetime
 import traceback
 import time
 import threading
+import secrets
+import string
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Optional, Dict, Tuple, List
 from sqlalchemy.orm import Session
 from database import SessionLocal
@@ -23,6 +28,12 @@ else:
 JWT_SECRET = os.environ.get("JWT_SECRET", "freemir_tools_2026_secret_key_change_in_prod")
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
+
+# SMTP configuration for password reset emails
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+SMTP_APP_PASSWORD = os.environ.get("SMTP_APP_PASSWORD", "")
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 
 # Tool keys matching Google Sheets column names for per-user access control
 TOOL_KEYS = [
@@ -387,4 +398,113 @@ def log_activity(username: str, tool_name: str, ip_address: str = ""):
     except Exception as e:
         print(f"[Activity Log DB Error] {e}")
         traceback.print_exc()
+
+
+# ── PASSWORD RESET ────────────────────────────────────────────────────────────
+
+def _generate_temp_password(length: int = 10) -> str:
+    """Generate a random alphanumeric password."""
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        pwd = ''.join(secrets.choice(alphabet) for _ in range(length))
+        if any(c.isdigit() for c in pwd) and any(c.isalpha() for c in pwd):
+            return pwd
+
+
+def _send_reset_email(to_email: str, username: str, new_password: str) -> bool:
+    """Send password reset email via SMTP."""
+    if not SMTP_EMAIL or not SMTP_APP_PASSWORD:
+        print("[Email] SMTP credentials not configured (SMTP_EMAIL / SMTP_APP_PASSWORD env vars missing)")
+        return False
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Freemir — Password Reset"
+        msg["From"] = f"Freemir Ops <{SMTP_EMAIL}>"
+        msg["To"] = to_email
+
+        html_body = f"""
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
+          <h2 style="color:#1e293b;margin:0 0 8px;">Password Reset</h2>
+          <p style="color:#64748b;margin:0 0 24px;">
+            Hi <strong>{username}</strong>, your password for the Freemir Internal Operations Platform has been reset.
+          </p>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 24px;text-align:center;margin-bottom:24px;">
+            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">New Password</div>
+            <code style="font-size:24px;font-weight:700;letter-spacing:4px;color:#4f46e5;">{new_password}</code>
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin:0;">
+            Log in with this password. You may ask your admin to change it if needed.
+          </p>
+        </div>
+        """
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
+            smtp.starttls()
+            smtp.login(SMTP_EMAIL, SMTP_APP_PASSWORD)
+            smtp.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        print(f"[Email] ✓ Password reset email sent to {to_email}")
+        return True
+    except Exception as e:
+        print(f"[Email] ✗ Failed to send to {to_email}: {e}")
+        return False
+
+
+def reset_password(username: str, email: str) -> Tuple[bool, str]:
+    """
+    Reset password if username + email both match a record in the DB.
+    Generates a new random password, updates DB + Google Sheets, sends email.
+    """
+    try:
+        db = SessionLocal()
+        try:
+            user = db.query(AccountUser).filter(
+                AccountUser.username.ilike(username.strip())
+            ).first()
+
+            if not user:
+                return False, "Username not found."
+
+            if user.email.strip().lower() != email.strip().lower():
+                return False, "Email does not match our records."
+
+            # Generate + hash new password
+            new_pwd = _generate_temp_password()
+            hashed = hash_password(new_pwd)
+
+            # Update DB
+            user.password = hashed
+            db.commit()
+
+            # Update Google Sheets (best-effort, don't fail if timeout)
+            def _update_sheet():
+                sh = get_sheet_client()
+                ws = sh.worksheet("Account")
+                headers = ws.row_values(1)
+                if "Password" not in headers or "Username" not in headers:
+                    return
+                pwd_col = headers.index("Password") + 1
+                uname_col = headers.index("Username") + 1
+                all_usernames = ws.col_values(uname_col)
+                for i, uname in enumerate(all_usernames):
+                    if uname.strip().lower() == username.strip().lower():
+                        ws.update_cell(i + 1, pwd_col, hashed)
+                        break
+
+            call_with_timeout(_update_sheet, timeout_sec=SHEETS_API_TIMEOUT)
+
+            # Send email
+            email_sent = _send_reset_email(user.email, user.username, new_pwd)
+            if email_sent:
+                return True, "Password reset successful. Check your email for the new password."
+            else:
+                return False, "Password was reset but the email could not be sent. Please contact your admin."
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        print(f"[Reset Password] Error: {e}")
+        traceback.print_exc()
+        return False, f"Reset failed: {str(e)}"
 

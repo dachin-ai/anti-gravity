@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet
+from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -15,6 +15,11 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    username: str
+    email: str
 
 
 class LogActivityRequest(BaseModel):
@@ -43,6 +48,14 @@ def login(body: LoginRequest, request: Request):
         "message": msg,
         "token": token,
     }
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest):
+    success, msg = reset_password(body.username.strip(), body.email.strip())
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"message": msg}
 
 
 @router.post("/verify")

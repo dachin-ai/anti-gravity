@@ -49,6 +49,7 @@ api.interceptors.response.use(
 );
 
 export const syncUsers = () => api.post('/auth/sync-users');
+export const forgotPassword = (username, email) => api.post('/auth/forgot-password', { username, email });
 
 export const askAssistant = (messages) => api.post('/chat/ask', { messages });
 

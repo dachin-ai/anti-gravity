@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Typography, Button, Row, Col, InputNumber, Divider,
-    Table, message, Tabs, Tag, Tooltip
+    Table, message, Tabs, Tag, Tooltip, Input
 } from 'antd';
 import {
     ThunderboltOutlined, FileExcelOutlined,
@@ -46,26 +46,23 @@ const EditableGrid = ({ rows, setRows, columns, addLabel }) => {
 
     return (
         <div>
-            <div style={{ display: 'grid', gridTemplateColumns: `${columns.map(c => c.width || '1fr').join(' ')} 40px`, gap: 6, marginBottom: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `${columns.map(c => c.width || '1fr').join(' ')} 36px`, gap: 6, marginBottom: 6 }}>
                 {columns.map(c => (
-                    <div key={c.key} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{c.label}</div>
+                    <div key={c.key} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', lineHeight: 1.3 }}>{c.label}</div>
                 ))}
                 <div />
             </div>
             {rows.map((row, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: `${columns.map(c => c.width || '1fr').join(' ')} 40px`, gap: 6, marginBottom: 6 }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: `${columns.map(c => c.width || '1fr').join(' ')} 36px`, gap: 6, marginBottom: 6, alignItems: 'center' }}>
                     {columns.map(c => (
                         <div key={c.key}>
                             {c.type === 'text' ? (
-                                <input
+                                <Input
                                     value={row[c.key] || ''}
                                     onChange={e => updateRow(i, c.key, e.target.value)}
                                     placeholder={c.placeholder || ''}
-                                    style={{
-                                        width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 13,
-                                        background: 'var(--bg-panel)', border: '1px solid var(--border)',
-                                        color: 'var(--text-main)', outline: 'none', boxSizing: 'border-box'
-                                    }}
+                                    size="small"
+                                    style={{ background: 'var(--bg-panel)', borderColor: 'var(--border)', color: 'var(--text-main)', fontSize: 13 }}
                                 />
                             ) : (
                                 <EditableNumberInput
@@ -83,13 +80,13 @@ const EditableGrid = ({ rows, setRows, columns, addLabel }) => {
                         type="text" size="small" danger
                         icon={<DeleteOutlined />}
                         onClick={() => removeRow(i)}
-                        style={{ color: '#ef4444', padding: 0, width: 32, height: 32 }}
+                        style={{ color: '#ef4444', padding: 0, width: 32, height: 28 }}
                         disabled={rows.length <= 1}
                     />
                 </div>
             ))}
             <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addRow}
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', marginTop: 4, fontSize: 12 }}>
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', marginTop: 6, fontSize: 12 }}>
                 {addLabel}
             </Button>
         </div>
@@ -233,9 +230,9 @@ const WarehouseOrder = () => {
                     {/* General Params */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
                         <SectionHeading icon={<SettingOutlined />}><Bi e="General Parameters" c="通用参数" /></SectionHeading>
-                        <Row gutter={12}>
+                        <Row gutter={12} align="bottom">
                             <Col span={14}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}><Bi e="Average Order Value (AOV)" c="客单单价均值 (AOV)" /></div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi e="Average Order Value (AOV)" c="客单价均值" /></div>
                                 <InputNumber
                                     value={aov}
                                     onChange={setAov}
@@ -248,7 +245,7 @@ const WarehouseOrder = () => {
                                 />
                             </Col>
                             <Col span={10}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}><Bi e="Days in Month" c="当月总天数" /></div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi e="Days in Month" c="当月天数" /></div>
                                 <InputNumber
                                     value={totalDays}
                                     onChange={v => setTotalDays(v || 31)}
@@ -317,7 +314,7 @@ const WarehouseOrder = () => {
                             padding: '60px 40px', textAlign: 'center', height: '100%', display: 'flex',
                             flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12
                         }}>
-                            <div style={{ fontSize: 52 }}>🏭</div>
+                            <BarChartOutlined style={{ fontSize: 44, color: 'var(--text-muted)', opacity: 0.35 }} />
                             <Text style={{ fontSize: 16, color: 'var(--text-muted)' }}>
                                 <Bi e="Configure parameters on the left and click" c="在左侧设置好参数后点击" /> <strong><Bi e="Generate" c="生成" /></strong>
                             </Text>

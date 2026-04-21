@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
+import { useTheme } from '../context/ThemeContext';
 import { Modal } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -26,43 +27,45 @@ import api from '../api';
 
 const API = '/shopee-affiliate';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const S = {
-  page:    { padding: 24, minHeight: '100vh', background: 'var(--bg-app, #0f172a)' },
-  card:    { background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 },
-  infoBox: { padding: '10px 14px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8 },
-  warnBox: { padding: '10px 14px', background: 'rgba(250,173,20,0.08)', border: '1px solid rgba(250,173,20,0.25)', borderRadius: 8 },
-  label:   { color: '#94a3b8', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' },
-};
+// ── Design tokens — built at runtime based on theme ─────────────────────────
+const getTokens = (isDark) => ({
+  page:    { padding: 24, minHeight: '100vh', background: 'var(--bg-app)' },
+  card:    { background: isDark ? 'rgba(30,41,59,0.6)' : '#ffffff', border: '1px solid var(--border)', borderRadius: 12 },
+  infoBox: { padding: '10px 14px', background: isDark ? 'rgba(99,102,241,0.1)' : '#eef2ff', border: `1px solid ${isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.4)'}`, borderRadius: 8 },
+  warnBox: { padding: '10px 14px', background: isDark ? 'rgba(250,173,20,0.08)' : '#fffbeb', border: `1px solid ${isDark ? 'rgba(250,173,20,0.25)' : 'rgba(250,173,20,0.5)'}`, borderRadius: 8 },
+  label:   { color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' },
+});
+
+// Table style helpers — theme-aware
+const getHeaderCellFn = (isDark) => () => ({
+  style: {
+    background: isDark ? '#1a3a5c' : '#e8f4fd',
+    color:      isDark ? '#ffffff' : '#1e40af',
+    fontWeight: 700,
+    fontSize:   12,
+  }
+});
+
+const getBodyRowStyleFn = (isDark) => (_, idx) => ({
+  style: { background: isDark
+    ? (idx % 2 === 0 ? 'rgba(30,41,59,0.8)' : 'rgba(15,23,42,0.8)')
+    : (idx % 2 === 0 ? '#ffffff' : '#f8fafc')
+  }
+});
 
 const fmtRp = n => n != null
   ? new Intl.NumberFormat('id-ID').format(Math.round(n))
   : '—';
 
-// Professional table header override
 const tblScroll = { x: 'max-content', y: 480 };
-const tblHeaderStyle = {
-  background: '#1a3a5c !important',
-  color: '#fff !important',
-  fontWeight: '700 !important',
-  borderRight: '1px solid #2d5a8e !important',
-};
-const getHeaderCell = () => ({
-  style: {
-    background: '#1a3a5c',
-    color: '#ffffff',
-    fontWeight: 700,
-    borderRight: '1px solid #2d5a8e',
-    borderBottom: '1px solid #2d5a8e',
-    fontSize: 12,
-  }
-});
-const getBodyRowStyle = (_, idx) => ({
-  style: { background: idx % 2 === 0 ? 'rgba(30,41,59,0.8)' : 'rgba(15,23,42,0.8)' }
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 const ShopeeAffiliate = () => {
+  const { isDark } = useTheme();
+  const S = getTokens(isDark);
+  const getHeaderCell = getHeaderCellFn(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [stores, setStores]               = useState([]);
   const [storesLoading, setStoresLoading] = useState(true);
 
@@ -85,13 +88,15 @@ const ShopeeAffiliate = () => {
         accent="#f97316"
       />
 
-      <Card style={S.card} bodyStyle={{ padding: 0 }}>
+      <Card style={S.card} bodyStyle={{ padding: 0 }}
+        styles={{ body: { padding: 0 } }}
+      >
         <Tabs size="large" style={{ padding: '0 8px' }} items={[
-          { key: 'upload',      label: <span><CloudUploadOutlined /> <Bi e="Upload Data" c="上传数据" /></span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} /> },
-          { key: 'checker',     label: <span><AppstoreOutlined /> <Bi e="Checker Matrix" c="检查矩阵" /></span>,       children: <CheckerTab   stores={stores} /> },
-          { key: 'analytics',   label: <span><LineChartOutlined /> <Bi e="Analytics" c="分析" /></span>,            children: <AnalyticsTab stores={stores} /> },
-          { key: 'report',      label: <span><FileTextOutlined /> <Bi e="Full Report" c="完整报告" /></span>,           children: <ReportTab    stores={stores} /> },
-          { key: 'comparison',  label: <span><SwapOutlined /> <Bi e="Period Comparison" c="期间对比" /></span>,         children: <ComparisonTab stores={stores} /> },
+          { key: 'upload',      label: <span><CloudUploadOutlined /> <Bi e="Upload Data" c="上传数据" /></span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} isDark={isDark} /> },
+          { key: 'checker',     label: <span><AppstoreOutlined /> <Bi e="Checker Matrix" c="检查矩阵" /></span>,       children: <CheckerTab   stores={stores} isDark={isDark} /> },
+          { key: 'analytics',   label: <span><LineChartOutlined /> <Bi e="Analytics" c="分析" /></span>,            children: <AnalyticsTab stores={stores} isDark={isDark} /> },
+          { key: 'report',      label: <span><FileTextOutlined /> <Bi e="Full Report" c="完整报告" /></span>,           children: <ReportTab    stores={stores} isDark={isDark} /> },
+          { key: 'comparison',  label: <span><SwapOutlined /> <Bi e="Period Comparison" c="期间对比" /></span>,         children: <ComparisonTab stores={stores} isDark={isDark} /> },
         ]} />
       </Card>
     </div>
@@ -101,7 +106,10 @@ const ShopeeAffiliate = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ① Upload Tab
 // ─────────────────────────────────────────────────────────────────────────────
-const UploadTab = ({ stores, storesLoading }) => {
+const UploadTab = ({ stores, storesLoading, isDark }) => {
+  const S = getTokens(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [uploadType,    setUploadType]    = useState('conversion');
   const [selectedStore, setSelectedStore] = useState(null);
   const [manualDate,    setManualDate]    = useState(null);         // for product/creator (optional)
@@ -188,9 +196,9 @@ const UploadTab = ({ stores, storesLoading }) => {
 
         <Dragger multiple={!isConversion} fileList={fileList}
           onChange={info => setFileList(info.fileList)} beforeUpload={() => false}
-          style={{ background: 'rgba(15,23,42,0.6)', borderColor: 'rgba(255,255,255,0.12)' }}>
+          style={{ background: isDark ? 'rgba(15,23,42,0.6)' : '#f8fafc', borderColor: isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1' }}>
           <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#ff4d4f', fontSize: 36 }} /></p>
-          <p style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 500 }}>Click or Drag CSV files here</p>
+          <p style={{ color: textPrimary, fontSize: 15, fontWeight: 500 }}>Click or Drag CSV files here</p>
           <p style={{ color: '#64748b', fontSize: 13 }}>Upload raw files directly from Shopee Affiliate portal</p>
         </Dragger>
 
@@ -207,7 +215,11 @@ const UploadTab = ({ stores, storesLoading }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ② Checker Matrix
 // ─────────────────────────────────────────────────────────────────────────────
-const CheckerTab = ({ stores }) => {
+const CheckerTab = ({ stores, isDark }) => {
+  const S = getTokens(isDark);
+  const getHeaderCell = getHeaderCellFn(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [matrixData,    setMatrixData]    = useState([]);
   const [loading,       setLoading]       = useState(false);
@@ -339,7 +351,11 @@ const CheckerTab = ({ stores }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ③ Analytics (quick top list with bars)
 // ─────────────────────────────────────────────────────────────────────────────
-const AnalyticsTab = ({ stores }) => {
+const AnalyticsTab = ({ stores, isDark }) => {
+  const S = getTokens(isDark);
+  const getHeaderCell = getHeaderCellFn(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [dateRange,     setDateRange]     = useState([dayjs().startOf('month'), dayjs()]);
   const [selectedStore, setSelectedStore] = useState('ALL');
   const [data,          setData]          = useState({ topProducts: [], topCreators: [] });
@@ -363,15 +379,15 @@ const AnalyticsTab = ({ stores }) => {
   const maxCrtr = Math.max(...data.topCreators.map(c => c.gmv || 0), 1);
 
   const BarRow = ({ label, sub, gmv, max }) => (
-    <div style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+    <div style={{ padding: '7px 0', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-        <span style={{ color: '#e2e8f0', fontSize: 13, maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ color: textPrimary, fontSize: 13, maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {label}
         </span>
         <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 13 }}>Rp {fmtRp(gmv)}</span>
       </div>
-      {sub && <div style={{ color: '#64748b', fontSize: 11, marginBottom: 3 }}>{sub}</div>}
-      <div style={{ height: 3, background: '#1e293b', borderRadius: 4 }}>
+      {sub && <div style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: 11, marginBottom: 3 }}>{sub}</div>}
+      <div style={{ height: 3, background: isDark ? '#1e293b' : '#e2e8f0', borderRadius: 4 }}>
         <div style={{ height: '100%', width: `${(gmv / max) * 100}%`, background: 'linear-gradient(90deg,#6366f1,#22c55e)', borderRadius: 4 }} />
       </div>
     </div>
@@ -392,14 +408,14 @@ const AnalyticsTab = ({ stores }) => {
       </Row>
       <Row gutter={20}>
         <Col span={12}>
-          <Card title={<span style={{ color: '#e2e8f0' }}>🏆 Top 15 Products (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
+          <Card title={<span style={{ color: textPrimary }}>🏆 Top 15 Products (GMV)</span>} style={{ ...S.card }} styles={{ body: { padding: '8px 16px' } }}>
             {loading ? <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
               : data.topProducts.length ? data.topProducts.map((p, i) => <BarRow key={i} label={p.name} sub={`PID: ${p.product_id}`} gmv={p.gmv} max={maxProd} />)
               : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>No product data</div>}
           </Card>
         </Col>
         <Col span={12}>
-          <Card title={<span style={{ color: '#e2e8f0' }}>🎬 Top 15 Creators (GMV)</span>} style={{ ...S.card }} bodyStyle={{ padding: '8px 16px' }}>
+          <Card title={<span style={{ color: textPrimary }}>🎬 Top 15 Creators (GMV)</span>} style={{ ...S.card }} styles={{ body: { padding: '8px 16px' } }}>
             {loading ? <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
               : data.topCreators.length ? data.topCreators.map((c, i) => <BarRow key={i} label={c.name || c.username} sub={`@${c.username}`} gmv={c.gmv} max={maxCrtr} />)
               : <div style={{ textAlign: 'center', padding: 32, color: '#475569' }}>No creator data</div>}
@@ -419,7 +435,11 @@ const REPORT_DIMS = [
   { value: 'by_product', label: 'By Product' },
 ];
 
-const ReportTab = ({ stores }) => {
+const ReportTab = ({ stores, isDark }) => {
+  const S = getTokens(isDark);
+  const getHeaderCell = getHeaderCellFn(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [dateRange,     setDateRange]     = useState([dayjs().startOf('month'), dayjs()]);
   const [selectedStore, setSelectedStore] = useState('ALL');
   const [dimension,     setDimension]     = useState('by_creator');
@@ -476,7 +496,7 @@ const ReportTab = ({ stores }) => {
   const numCol = (title, key, prefix = '') => ({
     title, dataIndex: key, align: 'right', width: 140, onHeaderCell: getHeaderCell,
     sorter: (a, b) => (a[key] || 0) - (b[key] || 0),
-    render: v => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{prefix}{fmtRp(v)}</span>
+    render: v => <span style={{ color: textPrimary, fontFamily: 'monospace' }}>{prefix}{fmtRp(v)}</span>
   });
   const roiCol = () => ({
     title: 'ROI', dataIndex: 'roi', align: 'right', width: 90, onHeaderCell: getHeaderCell,
@@ -500,15 +520,15 @@ const ReportTab = ({ stores }) => {
       roiCol(),
       numCol('Units Sold', 'units'),
       numCol('Clicks', 'clicks'),
-      { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 90, onHeaderCell: getHeaderCell, render: v => <span style={{ color: '#a5b4fc' }}>{v}</span> }
+      { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 90, onHeaderCell: getHeaderCell, render: v => <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600 }}>{v}</span> }
     ];
   } else if (dimension === 'by_creator') {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
       { title: 'Username', dataIndex: 'username', width: 180, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>@{v}</span> },
+        render: v => <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontFamily: 'monospace' }}>@{v}</span> },
       { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#e2e8f0' }}>{v}</span> },
+        render: v => <span style={{ color: textPrimary }}>{v}</span> },
       numCol('GMV Completed', 'gmv_completed', 'Rp '),
       numCol('GMV Pending', 'gmv_pending', 'Rp '),
       numCol('GMV Potential', 'gmv_potential', 'Rp '),
@@ -518,15 +538,15 @@ const ReportTab = ({ stores }) => {
       numCol('Units Sold', 'units'),
       numCol('Clicks', 'clicks'),
       { title: 'Stores', dataIndex: 'store_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#fbbf24' }}>{v}</span> },
+        render: v => <span style={{ color: isDark ? '#fbbf24' : '#d97706', fontWeight: 600 }}>{v}</span> },
     ];
   } else if (dimension === 'by_product') {
     columns = [
       { title: 'No', render: (_, __, i) => i+1, width: 50, align: 'center', onHeaderCell: getHeaderCell },
       { title: 'PID', dataIndex: 'product_id', width: 120, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+        render: v => <span style={{ color: isDark ? '#94a3b8' : '#475569', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
       { title: 'Product Name', dataIndex: 'product_name', width: 280, ellipsis: true, onHeaderCell: getHeaderCell,
-        render: v => <Tooltip title={v}><span style={{ color: '#e2e8f0' }}>{v}</span></Tooltip> },
+        render: v => <Tooltip title={v}><span style={{ color: textPrimary }}>{v}</span></Tooltip> },
       numCol('GMV Completed', 'gmv_completed', 'Rp '),
       numCol('GMV Pending', 'gmv_pending', 'Rp '),
       numCol('GMV Potential', 'gmv_potential', 'Rp '),
@@ -535,7 +555,7 @@ const ReportTab = ({ stores }) => {
       roiCol(),
       numCol('Units Sold', 'units'),
       { title: 'Creators', dataIndex: 'creator_count', align: 'right', width: 80, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#fbbf24' }}>{v}</span> },
+        render: v => <span style={{ color: isDark ? '#fbbf24' : '#d97706', fontWeight: 600 }}>{v}</span> },
     ];
   }
 
@@ -543,15 +563,15 @@ const ReportTab = ({ stores }) => {
   const expandedRow = record => {
     const subCols = [
       { title: 'Username', dataIndex: 'username', width: 180, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ color: '#a5b4fc' }}>@{v}</span> },
+        render: v => <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5' }}>@{v}</span> },
       { title: 'Creator Name', dataIndex: 'name', width: 200, onHeaderCell: getHeaderCell },
       { title: 'GMV Potential (Rp)', dataIndex: 'gmv_potential', align: 'right', width: 150, onHeaderCell: getHeaderCell,
         render: v => <span style={{ color: '#22c55e', fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
       { title: 'Commission (Rp)', dataIndex: 'commission', align: 'right', width: 150, onHeaderCell: getHeaderCell,
-        render: v => <span style={{ fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
+        render: v => <span style={{ color: textPrimary, fontFamily: 'monospace' }}>Rp {fmtRp(v)}</span> },
     ];
     return (
-      <div style={{ padding: '8px 32px', background: 'rgba(10,20,35,0.8)' }}>
+      <div style={{ padding: '8px 32px', background: isDark ? 'rgba(10,20,35,0.8)' : '#f1f5f9' }}>
         <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8, display: 'block' }}>Creators who drove this product:</Text>
         <Table columns={subCols} dataSource={record.creators} rowKey="username"
           bordered size="small" pagination={false} scroll={{ x: 'max-content' }}
@@ -588,7 +608,7 @@ const ReportTab = ({ stores }) => {
           value={dimension}
           onChange={setDimension}
           options={REPORT_DIMS}
-          style={{ background: 'rgba(15,23,42,0.8)' }}
+          style={{ background: isDark ? 'rgba(15,23,42,0.8)' : '#e2e8f0' }}
         />
         <Text style={{ color: '#475569', fontSize: 12, marginLeft: 12 }}>
           {data.length} rows · {dateRange?.[0]?.format('DD MMM')} – {dateRange?.[1]?.format('DD MMM YYYY')}
@@ -620,7 +640,11 @@ const ReportTab = ({ stores }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ⑤ Komparasi Periode
 // ─────────────────────────────────────────────────────────────────────────────
-const ComparisonTab = ({ stores }) => {
+const ComparisonTab = ({ stores, isDark }) => {
+  const S = getTokens(isDark);
+  const getHeaderCell = getHeaderCellFn(isDark);
+  const getBodyRowStyle = getBodyRowStyleFn(isDark);
+  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const [periodA,       setPeriodA]       = useState([dayjs().subtract(1, 'month').startOf('month'), dayjs().subtract(1, 'month').endOf('month')]);
   const [periodB,       setPeriodB]       = useState([dayjs().startOf('month'), dayjs()]);
   const [selectedStore, setSelectedStore] = useState('ALL');
@@ -664,14 +688,14 @@ const ComparisonTab = ({ stores }) => {
 
   const metricCols = (metricKey, label, prefix = 'Rp ') => [
     {
-      title: <span style={{ color: '#93c5fd' }}>{label} A</span>,
+      title: <span style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>{label} A</span>,
       align: 'right', width: 140, onHeaderCell: getHeaderCell,
-      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`a_${metricKey}`])}</span>
+      render: r => <span style={{ color: textPrimary, fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`a_${metricKey}`])}</span>
     },
     {
-      title: <span style={{ color: '#fbbf24' }}>{label} B</span>,
+      title: <span style={{ color: isDark ? '#fbbf24' : '#b45309' }}>{label} B</span>,
       align: 'right', width: 140, onHeaderCell: getHeaderCell,
-      render: r => <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`b_${metricKey}`])}</span>
+      render: r => <span style={{ color: textPrimary, fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`b_${metricKey}`])}</span>
     },
     {
       title: <span style={{ color: '#a5b4fc' }}>Δ {label}</span>,
@@ -711,10 +735,10 @@ const ComparisonTab = ({ stores }) => {
   const labelCol = dimension === 'by_store'
     ? [{ title: 'Store ID',  dataIndex: 'label', render: v => <Tag color="blue">{v}</Tag>, width: 140, onHeaderCell: getHeaderCell }]
     : dimension === 'by_creator'
-    ? [{ title: 'Creator',   dataIndex: 'label', render: v => <span style={{ color: '#e2e8f0' }}>{v}</span>, width: 240, onHeaderCell: getHeaderCell }]
+    ? [{ title: 'Creator',   dataIndex: 'label', render: v => <span style={{ color: textPrimary }}>{v}</span>, width: 240, onHeaderCell: getHeaderCell }]
     : [
-        { title: 'PID', dataIndex: 'key', width: 120, onHeaderCell: getHeaderCell, render: v => <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
-        { title: 'Product Name', dataIndex: 'label', render: v => <Tooltip title={v}><span style={{ color: '#e2e8f0' }}>{v.split(' (PID:')[0]}</span></Tooltip>, width: 280, ellipsis: true, onHeaderCell: getHeaderCell }
+        { title: 'PID', dataIndex: 'key', width: 120, onHeaderCell: getHeaderCell, render: v => <span style={{ color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+        { title: 'Product Name', dataIndex: 'label', render: v => <Tooltip title={v}><span style={{ color: textPrimary }}>{v.split(' (PID:')[0]}</span></Tooltip>, width: 280, ellipsis: true, onHeaderCell: getHeaderCell }
       ];
 
   const columns = [
@@ -759,21 +783,21 @@ const ComparisonTab = ({ stores }) => {
       {/* Dimension picker */}
       <div style={{ marginBottom: 16 }}>
         <Segmented value={dimension} onChange={setDimension}
-          options={REPORT_DIMS} style={{ background: 'rgba(15,23,42,0.8)' }} />
+          options={REPORT_DIMS} style={{ background: isDark ? 'rgba(15,23,42,0.8)' : '#e2e8f0' }} />
       </div>
 
       {/* Legend */}
       {data && (
         <div style={{ marginBottom: 12, display: 'flex', gap: 24 }}>
-          <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: '8px 16px' }}>
-            <Text style={{ color: '#93c5fd', fontWeight: 600, fontSize: 12 }}>Period A</Text>
-            <div style={{ color: '#e2e8f0', fontSize: 12 }}>{data.period_a}</div>
+          <div style={{ background: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', border: `1px solid ${isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe'}`, borderRadius: 8, padding: '8px 16px' }}>
+            <Text style={{ color: '#3b82f6', fontWeight: 600, fontSize: 12 }}>Period A</Text>
+            <div style={{ color: textPrimary, fontSize: 12 }}>{data.period_a}</div>
           </div>
-          <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 8, padding: '8px 16px' }}>
-            <Text style={{ color: '#fbbf24', fontWeight: 600, fontSize: 12 }}>Period B</Text>
-            <div style={{ color: '#e2e8f0', fontSize: 12 }}>{data.period_b}</div>
+          <div style={{ background: isDark ? 'rgba(234,179,8,0.1)' : '#fffbeb', border: `1px solid ${isDark ? 'rgba(234,179,8,0.3)' : '#fde68a'}`, borderRadius: 8, padding: '8px 16px' }}>
+            <Text style={{ color: '#f59e0b', fontWeight: 600, fontSize: 12 }}>Period B</Text>
+            <div style={{ color: textPrimary, fontSize: 12 }}>{data.period_b}</div>
           </div>
-          <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: '8px 16px' }}>
+          <div style={{ background: isDark ? 'rgba(34,197,94,0.08)' : '#f0fdf4', border: `1px solid ${isDark ? 'rgba(34,197,94,0.2)' : '#bbf7d0'}`, borderRadius: 8, padding: '8px 16px' }}>
             <Text style={{ color: '#22c55e', fontSize: 12 }}><RiseOutlined /> Positive Δ = Period B is better than A</Text>
           </div>
         </div>
@@ -787,7 +811,7 @@ const ComparisonTab = ({ stores }) => {
         bordered
         size="small"
         pagination={{ pageSize: 50 }}
-        scroll={tblScroll}
+        scroll={{ x: 2400 }}
         style={{ background: 'transparent' }}
         onRow={getBodyRowStyle}
       />
