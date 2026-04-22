@@ -1,96 +1,76 @@
 steps:
-  # Check what changed in this commit
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'check-changes'
-    entrypoint: bash
+  # ── BACKEND ──────────────────────────────────────────────
+  # 1. Build backend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-backend'
     args:
-      - '-c'
-      - |
-        echo "=== Checking what changed ==="
-        if git show --name-only | grep -q "^backend/"; then
-          echo "BACKEND_CHANGED=true" > /workspace/changed.txt
-          echo "✓ Backend code changed - will redeploy to Cloud Run"
-        else
-          echo "BACKEND_CHANGED=false" > /workspace/changed.txt
-          echo "- Backend unchanged"
-        fi
-        
-        if git show --name-only | grep -q "^frontend/"; then
-          echo "FRONTEND_CHANGED=true" >> /workspace/changed.txt
-          echo "✓ Frontend code changed - will redeploy to Cloud Run"
-        else
-          echo "FRONTEND_CHANGED=false" >> /workspace/changed.txt
-          echo "- Frontend unchanged - skipping rebuild"
-        fi
-        cat /workspace/changed.txt
+      - build
+      - '-t'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+      - './backend'
 
-  # Deploy Backend to Cloud Run
+  # 2. Push backend image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-backend'
+    args:
+      - push
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+
+  # 3. Deploy backend to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-backend'
-    entrypoint: bash
+    entrypoint: gcloud
     args:
-      - '-c'
-      - |
-        source /workspace/changed.txt
-        if [ "$BACKEND_CHANGED" = "true" ]; then
-          echo "🚀 Deploying Backend to Cloud Run..."
-          cd backend && \
-          gcloud run deploy anti-gravity \
-            --source . \
-            --region asia-southeast1 \
-            --allow-unauthenticated \
-            --set-env-vars "DATABASE_URL=${_DATABASE_URL},JWT_SECRET=${_JWT_SECRET}" \
-            --set-secrets "/etc/secrets/credentials.json=credentials-json:latest" \
-            --min-instances 0 \
-            --max-instances 3 \
-            --quiet
-          echo "✅ Backend deployed successfully to Cloud Run"
-        else
-          echo "⏭️  Backend unchanged - skipping deployment"
-        fi
+      - run
+      - deploy
+      - anti-gravity
+      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+      - '--region=asia-southeast1'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=DATABASE_URL=${_DATABASE_URL},JWT_SECRET=${_JWT_SECRET}'
+      - '--set-secrets=/etc/secrets/credentials.json=credentials-json:latest'
+      - '--min-instances=0'
+      - '--max-instances=3'
+      - '--quiet'
 
-  # Deploy Frontend ONLY to Cloud Run
+  # ── FRONTEND ─────────────────────────────────────────────
+  # 4. Build frontend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-frontend'
+    args:
+      - build
+      - '-t'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+      - './frontend'
+
+  # 5. Push frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-frontend'
+    args:
+      - push
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+
+  # 6. Deploy frontend to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-frontend'
-    entrypoint: bash
+    entrypoint: gcloud
     args:
-      - '-c'
-      - |
-        source /workspace/changed.txt
-        if [ "$FRONTEND_CHANGED" = "true" ]; then
-          echo "🚀 Deploying Frontend to Cloud Run..."
-          cd frontend && \
-          gcloud run deploy frontend-anti-gravity \
-            --source . \
-            --region asia-southeast1 \
-            --allow-unauthenticated \
-            --quiet
-          echo "✅ Frontend deployed successfully to Cloud Run"
-        else
-          echo "⏭️  Frontend unchanged - skipping deployment"
-        fi
-  
-  # Deployment summary
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'info'
-    entrypoint: bash
-    args:
-      - '-c'
-      - |
-        echo ""
-        echo "=== DEPLOYMENT SUMMARY ==="
-        echo "✅ Frontend: Cloud Run (asia-southeast1)"
-        echo "✅ Backend:  Cloud Run (asia-southeast1)"
-        echo "✅ Database: Neon PostgreSQL"
-        echo ""
-        echo "Frontend URL: https://frontend-anti-gravity-123563250077.asia-southeast1.run.app"
-        echo "Backend URL:  https://anti-gravity-123563250077.asia-southeast1.run.app"
-        echo ""
+      - run
+      - deploy
+      - frontend-anti-gravity
+      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+      - '--region=asia-southeast1'
+      - '--allow-unauthenticated'
+      - '--quiet'
+
+images:
+  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
 
 timeout: '1800s'
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: 'N1_HIGHCPU_8'  # Faster builds
+  machineType: 'N1_HIGHCPU_8'
 
 substitutions:
   _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
