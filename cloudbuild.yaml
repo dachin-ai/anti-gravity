@@ -9,7 +9,7 @@ steps:
         echo "=== Checking what changed ==="
         if git show --name-only | grep -q "^backend/"; then
           echo "BACKEND_CHANGED=true" > /workspace/changed.txt
-          echo "✓ Backend code changed (note: backend is on Render, skipping)"
+          echo "✓ Backend code changed - will redeploy to Cloud Run"
         else
           echo "BACKEND_CHANGED=false" > /workspace/changed.txt
           echo "- Backend unchanged"
@@ -24,8 +24,31 @@ steps:
         fi
         cat /workspace/changed.txt
 
+  # Deploy Backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-backend'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        source /workspace/changed.txt
+        if [ "$BACKEND_CHANGED" = "true" ]; then
+          echo "🚀 Deploying Backend to Cloud Run..."
+          cd backend && \
+          gcloud run deploy anti-gravity \
+            --source . \
+            --region asia-southeast1 \
+            --allow-unauthenticated \
+            --set-env-vars "DATABASE_URL=${_DATABASE_URL},JWT_SECRET=${_JWT_SECRET}" \
+            --min-instances 0 \
+            --max-instances 3 \
+            --quiet
+          echo "✅ Backend deployed successfully to Cloud Run"
+        else
+          echo "⏭️  Backend unchanged - skipping deployment"
+        fi
+
   # Deploy Frontend ONLY to Cloud Run
-  # Backend is deployed separately on Render
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-frontend'
     entrypoint: bash
@@ -46,7 +69,7 @@ steps:
           echo "⏭️  Frontend unchanged - skipping deployment"
         fi
   
-  # Note: Backend deployment info
+  # Deployment summary
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'info'
     entrypoint: bash
@@ -56,11 +79,11 @@ steps:
         echo ""
         echo "=== DEPLOYMENT SUMMARY ==="
         echo "✅ Frontend: Cloud Run (asia-southeast1)"
-        echo "✅ Backend: Render (render-anti-gravity.onrender.com)"
+        echo "✅ Backend:  Cloud Run (asia-southeast1)"
         echo "✅ Database: Neon PostgreSQL"
         echo ""
-        echo "Frontend URL: https://frontend-anti-gravity-XXXXX.asia-southeast1.run.app"
-        echo "Backend URL: https://render-anti-gravity.onrender.com"
+        echo "Frontend URL: https://frontend-anti-gravity-123563250077.asia-southeast1.run.app"
+        echo "Backend URL:  https://anti-gravity-123563250077.asia-southeast1.run.app"
         echo ""
 
 timeout: '1800s'
@@ -70,3 +93,4 @@ options:
 
 substitutions:
   _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
+  _DATABASE_URL: 'postgresql://dena_admin:AntiGrav2026Secure@35.198.222.19:5432/antigravity_db'

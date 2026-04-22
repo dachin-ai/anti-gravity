@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, message, Typography } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, SyncOutlined, ArrowLeftOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, SyncOutlined, ArrowLeftOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
-import { syncUsers, forgotPassword } from '../api';
+import api, { syncUsers, forgotPassword } from '../api';
 
 const { Title, Text } = Typography;
 
@@ -16,6 +16,13 @@ const LoginPage = () => {
     const [activeTab, setActiveTab] = useState('login');
     const [signupDone, setSignupDone] = useState(false);
     const [resetDone, setResetDone] = useState(false);
+    const [warmingUp, setWarmingUp] = useState(false);
+    const warmingTimerRef = useRef(null);
+
+    // Ping backend on mount so Render cold-start happens while user types credentials
+    useEffect(() => {
+        api.get('/health', { timeout: 60000 }).catch(() => {});
+    }, []);
 
     const onSyncUsers = async () => {
         setLoadingSync(true);
@@ -31,13 +38,17 @@ const LoginPage = () => {
 
     const onLogin = async (values) => {
         setLoadingLogin(true);
+        // Show 'warming up' hint if request takes longer than 5 seconds
+        warmingTimerRef.current = setTimeout(() => setWarmingUp(true), 5000);
         try {
             await login(values.username, values.password);
             message.success('Welcome back! 欢迎回来！');
         } catch (err) {
             message.error(err.response?.data?.detail || 'Login failed.');
         } finally {
+            clearTimeout(warmingTimerRef.current);
             setLoadingLogin(false);
+            setWarmingUp(false);
         }
     };
 
@@ -180,6 +191,18 @@ const LoginPage = () => {
                                     {loadingLogin ? 'Signing in...' : 'Sign In'}
                                 </Button>
                             </Form.Item>
+                            {warmingUp && (
+                                <div style={{
+                                    marginTop: 12, padding: '10px 14px', borderRadius: 10,
+                                    background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)',
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                }}>
+                                    <ThunderboltOutlined style={{ color: '#fbbf24', fontSize: 14 }} />
+                                    <span style={{ color: '#fbbf24', fontSize: 12 }}>
+                                        Server is waking up — this may take up to 60 seconds on first load. Please wait...
+                                    </span>
+                                </div>
+                            )}
                         </Form>
                     )}
 

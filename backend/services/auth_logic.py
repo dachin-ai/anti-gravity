@@ -42,7 +42,7 @@ TOOL_KEYS = [
 ]
 
 # TIMEOUT PROTECTION for Google Sheets API
-SHEETS_API_TIMEOUT = 10  # 10 seconds timeout for Google Sheets calls
+SHEETS_API_TIMEOUT = 20  # 20 seconds timeout for Google Sheets calls
 
 def call_with_timeout(func, timeout_sec=SHEETS_API_TIMEOUT):
     """
@@ -197,7 +197,7 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
             db.close()
     
     # Execute with timeout
-    success, result = call_with_timeout(do_sync, timeout_sec=15)
+    success, result = call_with_timeout(do_sync, timeout_sec=45)
     
     if success:
         return True, result

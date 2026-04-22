@@ -14,8 +14,8 @@ const getBaseURL = () => {
     return envBackend;
   }
   
-  // Fallback: Use Render backend (production deployment)
-  return 'https://render-anti-gravity.onrender.com/api';
+  // Fallback: Use Cloud Run backend (production deployment)
+  return 'https://anti-gravity-123563250077.asia-southeast1.run.app/api';
 };
 
 const baseURL = getBaseURL();

@@ -92,3 +92,8 @@ app.include_router(shopee_affiliate.router, prefix="/api/shopee-affiliate", tags
 @app.get("/")
 def read_root():
     return {"message": "Welcome to FastAPI Backend!"}
+
+@app.get("/api/health")
+def health_check():
+    """Lightweight wake-up endpoint — keeps Render from returning a cold start during login."""
+    return {"status": "ok"}
