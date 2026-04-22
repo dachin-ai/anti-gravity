@@ -16,16 +16,17 @@ if not SQLALCHEMY_DATABASE_URL:
     sys.exit(1)
 
 # Buat engine SQLAlchemy dengan optimized connection pooling
-# Pool_pre_ping: test koneksi sebelum dipakai (handles dead connections)
-# pool_recycle=300: recycle setiap 5 menit agar tidak melebihi Neon idle timeout
-# pool_size=5: cukup untuk Neon pgBouncer pooler mode
+# pool_pre_ping: test koneksi sebelum dipakai (handles dead connections)
+# pool_recycle=300: recycle setiap 5 menit agar tidak melebihi idle timeout
+# pool_size=5: cukup untuk production
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=5,            # Neon pgBouncer: pakai pool kecil
-    max_overflow=5,         # Buffer koneksi tambahan
-    pool_recycle=300,       # Recycle setiap 5 menit (Neon idle timeout)
-    echo=False              # Set to True untuk debug SQL queries
+    pool_size=5,
+    max_overflow=5,
+    pool_recycle=300,
+    connect_args={"connect_timeout": 10},  # 10s connect timeout, bukan default infinite
+    echo=False
 )
 
 # Buat session local untuk setiap request FastAPI
