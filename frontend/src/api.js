@@ -54,5 +54,14 @@ export const changePassword = (current_password, new_password) => api.post('/aut
 
 export const askAssistant = (messages) => api.post('/chat/ask', { messages });
 
+// Access management
+export const submitAccessRequest = (tool_key) => api.post('/access/request', { tool_key });
+export const getMyAccessRequests = () => api.get('/access/my-requests');
+export const getAccessRequests = () => api.get('/access/requests');
+export const approveAccessRequest = (id) => api.put(`/access/requests/${id}/approve`);
+export const rejectAccessRequest = (id) => api.put(`/access/requests/${id}/reject`);
+export const getAllUsersWithPermissions = () => api.get('/access/users');
+export const updateUserPermissions = (username, permissions) => api.put(`/access/users/${username}/permissions`, { permissions });
+
 export default api;
 

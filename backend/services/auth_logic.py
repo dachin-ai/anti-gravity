@@ -38,7 +38,8 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 # Tool keys matching Google Sheets column names for per-user access control
 TOOL_KEYS = [
     "price_checker", "order_planner", "order_review",
-    "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer"
+    "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer",
+    "admin"
 ]
 
 # TIMEOUT PROTECTION for Google Sheets API

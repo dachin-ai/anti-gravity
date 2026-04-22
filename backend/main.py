@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
-from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
+from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads, access
 from database import engine, Base
 import models  # noqa: F401 - ensure all models are registered before create_all
 import os
@@ -21,6 +21,24 @@ else:
 
 def _run_migrations():
     migrations = [
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name = 'access_requests'
+            ) THEN
+                CREATE TABLE access_requests (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR,
+                    tool_key VARCHAR,
+                    status VARCHAR DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            END IF;
+        END
+        $$;
+        """,
         """
         DO $$
         BEGIN
@@ -82,6 +100,7 @@ app.include_router(warehouse_order.router)
 app.include_router(socmed.router)
 app.include_router(affiliate.router)
 app.include_router(tiktok_ads.router)
+app.include_router(access.router)
 
 # Include AI Chat router only if GEMINI_API_KEY is set
 if ai_chat_available:

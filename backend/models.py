@@ -2,6 +2,16 @@ from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.sql import func
 from database import Base
 
+
+class AccessRequest(Base):
+    __tablename__ = "access_requests"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    username = Column(String, index=True)
+    tool_key = Column(String)
+    status = Column(String, default="pending")  # pending / approved / rejected
+    created_at = Column(DateTime, server_default=func.now())
+
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
 

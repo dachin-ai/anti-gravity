@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip, message, Modal, Form, Input } from 'antd';
-import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined, KeyOutlined } from '@ant-design/icons';
+import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined, KeyOutlined, UnlockOutlined, TeamOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -62,7 +62,9 @@ const MainLayout = () => {
         { key: '/affiliate-analyzer', label: lockedLabel(<Bi e="Affiliate Analyzer" c="联盟数据分析" />, 'affiliate_analyzer'), style: !hasAccess('affiliate_analyzer') ? { opacity: 0.6 } : {} },
         { key: '/tiktok-ads', label: lockedLabel(<Bi e="Ads Analyzer" c="广告分析" />, 'ads_analyzer'), style: !hasAccess('ads_analyzer') ? { opacity: 0.6 } : {} },
       ]
-    }
+    },
+    { key: '/request-access', icon: <UnlockOutlined />, label: <Bi e="Request Access" c="申请权限" /> },
+    ...(hasAccess('admin') ? [{ key: '/access-management', icon: <TeamOutlined />, label: <Bi e="Access Management" c="权限管理" /> }] : []),
   ];
 
   // Map route → toolKey to determine if restricted
@@ -74,6 +76,7 @@ const MainLayout = () => {
     '/pre-sales': 'pre_sales',
     '/affiliate-analyzer': 'affiliate_analyzer',
     '/tiktok-ads': 'ads_analyzer',
+    '/access-management': 'admin',
   };
 
   const handleMenuClick = ({ key }) => {

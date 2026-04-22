@@ -18,6 +18,8 @@ import SocmedScraping from './pages/SocmedScraping';
 import AffiliateAnalyzer from './pages/AffiliateAnalyzer';
 import ShopeeAffiliate from './pages/ShopeeAffiliate';
 import TikTokAds from './pages/TikTokAds';
+import RequestAccess from './pages/RequestAccess';
+import AccessManagement from './pages/AccessManagement';
 import PermissionGate from './components/PermissionGate';
 
 // Protected route wrapper
@@ -61,6 +63,8 @@ function ProtectedApp() {
         <Route path="affiliate-analyzer" element={<PermissionGate toolKey="affiliate_analyzer"><AffiliateAnalyzer /></PermissionGate>} />
         <Route path="shopee-affiliate" element={<PermissionGate toolKey="affiliate_performance"><ShopeeAffiliate /></PermissionGate>} />
         <Route path="tiktok-ads" element={<PermissionGate toolKey="ads_analyzer"><TikTokAds /></PermissionGate>} />
+        <Route path="request-access" element={<RequestAccess />} />
+        <Route path="access-management" element={<PermissionGate toolKey="admin"><AccessManagement /></PermissionGate>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
