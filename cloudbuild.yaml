@@ -70,7 +70,7 @@ images:
 timeout: '1800s'
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: 'N1_HIGHCPU_8'
+  machineType: 'E2_HIGHCPU_8'
 
 substitutions:
   _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
