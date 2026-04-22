@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from sqlalchemy import text
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads
 from database import engine, Base
@@ -17,21 +18,9 @@ if os.getenv("GEMINI_API_KEY"):
 else:
     print("[Startup] ℹ GEMINI_API_KEY not configured. AI Chat endpoint will not be available.")
 
-app = FastAPI()
 
-# Auto-create any missing tables on startup (safe: does not drop existing tables)
-# Wrapped in try-except to allow server to start even if DB is temporarily unavailable
-try:
-    Base.metadata.create_all(bind=engine)
-    print("[Startup] ✓ Database tables created/verified.")
-except Exception as e:
-    print(f"[Startup] ⚠ Database not yet available: {e}")
-
-# --- Inline migration: add missing columns to existing tables ---
-# create_all() does NOT alter existing tables, so we must add new columns manually.
 def _run_migrations():
     migrations = [
-        # Add 'permissions' JSON column to account_users (added for permission-based access control)
         """
         DO $$
         BEGIN
@@ -51,10 +40,23 @@ def _run_migrations():
         conn.commit()
     print("[Startup] ✓ Database migrations checked / applied.")
 
-try:
-    _run_migrations()
-except Exception as e:
-    print(f"[Startup] ⚠ Migration warning: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Server sudah listen di port 8080 saat ini — DB init di background
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("[Startup] ✓ Database tables created/verified.")
+    except Exception as e:
+        print(f"[Startup] ⚠ Database not yet available: {e}")
+    try:
+        _run_migrations()
+    except Exception as e:
+        print(f"[Startup] ⚠ Migration warning: {e}")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Frontend uses Bearer token in Authorization header (not cookies),
 # so allow_credentials=False is correct and safer.
