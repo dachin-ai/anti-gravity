@@ -23,6 +23,17 @@
 }
 
 /* ============================================
+   COPYABLE TABLE - cells selectable like Excel
+   ============================================ */
+.copyable-table .ant-table-cell {
+  user-select: text !important;
+  cursor: text;
+}
+.copyable-table .ant-table-cell:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* ============================================
    LIGHT MODE OVERRIDES
    ============================================ */
 :root[data-theme="light"] {

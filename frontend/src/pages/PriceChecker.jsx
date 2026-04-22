@@ -131,39 +131,56 @@ const PriceChecker = () => {
     };
 
     /* ─── Table Column Definitions ─── */
+    const copyableCellProps = (value) => ({
+        style: { userSelect: 'text', cursor: 'copy' },
+        onClick: () => {
+            const v = value === null || value === undefined ? '' : String(value);
+            navigator.clipboard.writeText(v).then(() => message.success(`Copied: ${v}`, 1));
+        },
+    });
+
+    const copyTable = (data, columns) => {
+        const headers = columns.map(c => c.title).join('\t');
+        const rows = data.map(row =>
+            columns.map(c => {
+                const v = row[c.dataIndex];
+                return (v === null || v === undefined) ? '' : v;
+            }).join('\t')
+        ).join('\n');
+        navigator.clipboard.writeText(headers + '\n' + rows)
+            .then(() => message.success('Table copied! Paste into Excel.'))
+            .catch(() => message.error('Copy failed.'));
+    };
+
     const evalColumns = [
-        { title: 'Price Tier',    dataIndex: 'Tier',        key: 'Tier',        width: 160, fixed: 'left' },
-        { title: 'System Price',  dataIndex: 'SystemPrice', key: 'sys',         width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
-        { title: 'Target Price',  dataIndex: 'TargetPrice', key: 'tgt',         width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
-        {
-            title: 'Gap (Margin)', dataIndex: 'Gap', key: 'gap', width: 130,
+        { title: 'Price Tier',    dataIndex: 'Tier',        key: 'Tier',  width: 160, fixed: 'left', onCell: r => copyableCellProps(r.Tier) },
+        { title: 'System Price', dataIndex: 'SystemPrice', key: 'sys',   width: 130, onCell: r => copyableCellProps(r.SystemPrice), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'Target Price', dataIndex: 'TargetPrice', key: 'tgt',   width: 130, onCell: r => copyableCellProps(r.TargetPrice), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'Gap (Margin)', dataIndex: 'Gap',         key: 'gap',   width: 130, onCell: r => copyableCellProps(r.Gap),
             render: v => {
-                if (v === 'Invalid') return <Text style={{ color: 'var(--text-muted)' }}>–</Text>;
+                if (v === 'Invalid') return <span style={{ color: 'var(--text-muted)' }}>–</span>;
                 const n = Number(v);
-                return <Text style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</Text>;
+                return <span style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n >= 0 ? '+' : ''}{n.toLocaleString()}</span>;
             }
         },
-        {
-            title: 'Status', dataIndex: 'Status', key: 'status', width: 110,
+        { title: 'Status', dataIndex: 'Status', key: 'status', width: 110, onCell: r => copyableCellProps(r.Status),
             render: v => (
                 <span style={{
                     display: 'inline-block', padding: '2px 10px', borderRadius: 20,
                     fontSize: 12, fontWeight: 600,
                     background: v.includes('Safe') ? 'rgba(16,185,129,0.15)' : v.includes('Under') ? 'rgba(239,68,68,0.15)' : 'var(--bg-panel)',
-                    color:      v.includes('Safe') ? '#10b981' : v.includes('Under') ? '#ef4444' : 'var(--text-muted)',
-                }}>
-                    {v}
-                </span>
+                    color: v.includes('Safe') ? '#10b981' : v.includes('Under') ? '#ef4444' : 'var(--text-muted)',
+                }}>{v}</span>
             ),
         },
     ];
 
     const breakdownColumns = [
-        { title: 'SKU',              dataIndex: 'SKU',                        key: 'SKU',   width: 150, fixed: 'left' },
-        { title: 'Product Name',     dataIndex: 'Product Name',               key: 'pn',    width: 240, ellipsis: true },
-        { title: 'Base Price',       dataIndex: 'Base Price (Warning)',        key: 'bp',    width: 130, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
-        { title: 'Logic Applied',    dataIndex: 'Logic Applied',              key: 'la',    width: 180 },
-        { title: 'Contribution (IDR)', dataIndex: 'Total Contribution (IDR)', key: 'con',   width: 160, render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'SKU',               dataIndex: 'SKU',                     key: 'SKU',  width: 150, fixed: 'left', onCell: r => copyableCellProps(r['SKU']) },
+        { title: 'Product Name',      dataIndex: 'Product Name',            key: 'pn',   width: 240, onCell: r => copyableCellProps(r['Product Name']) },
+        { title: 'Base Price',        dataIndex: 'Base Price (Warning)',     key: 'bp',   width: 130, onCell: r => copyableCellProps(r['Base Price (Warning)']), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'Logic Applied',     dataIndex: 'Logic Applied',           key: 'la',   width: 180, onCell: r => copyableCellProps(r['Logic Applied']) },
+        { title: 'Contribution (IDR)',dataIndex: 'Total Contribution (IDR)', key: 'con',  width: 160, onCell: r => copyableCellProps(r['Total Contribution (IDR)']), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
     ];
 
     const previewColumns = batchOverview?.preview?.length
@@ -456,7 +473,10 @@ const PriceChecker = () => {
                             </Row>
 
                             {/* Breakdown Table */}
-                            <SectionHeading icon={<AppstoreOutlined />}><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <SectionHeading icon={<AppstoreOutlined />}><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
+                                <Button size="small" icon={<FileTextOutlined />} onClick={() => copyTable(directResult.breakdown, breakdownColumns)} style={{ fontSize: 12 }}>Copy Table</Button>
+                            </div>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
                                 <Table
                                     dataSource={directResult.breakdown}
@@ -465,11 +485,15 @@ const PriceChecker = () => {
                                     size="middle"
                                     rowKey="SKU"
                                     scroll={{ x: 'max-content' }}
+                                    className="copyable-table"
                                 />
                             </div>
 
                             {/* Evaluation Table */}
-                            <SectionHeading icon={<RiseOutlined />}><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <SectionHeading icon={<RiseOutlined />}><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
+                                <Button size="small" icon={<FileTextOutlined />} onClick={() => copyTable(directResult.evaluation, evalColumns)} style={{ fontSize: 12 }}>Copy Table</Button>
+                            </div>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                                 <Table
                                     dataSource={directResult.evaluation}
@@ -478,6 +502,7 @@ const PriceChecker = () => {
                                     size="middle"
                                     rowKey="Tier"
                                     scroll={{ x: 'max-content' }}
+                                    className="copyable-table"
                                 />
                             </div>
                         </div>
