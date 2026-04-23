@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import sys
 
-# Setup database connection (uses environment variable if available)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_e1Jl3rWoTcAR@ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+# Setup database connection (uses same DATABASE_URL as the backend)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://dena_admin:AntiGrav2026Secure@35.198.222.19:5432/antigravity_db")
 
 # Google Sheets config
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc"
@@ -48,12 +48,21 @@ try:
     
     # Get product names sheet
     try:
-        name_sheet = sh.worksheet("Name")
+        name_sheet = sh.worksheet("All_Name")
         name_data = name_sheet.get_all_values()
         print(f"✓ Found product names: {len(name_data)} rows")
     except:
         name_data = []
         print("⚠ Product names sheet not found (optional)")
+
+    # Get AT2 sheet (Mark: New/Old/Clearance/etc.)
+    try:
+        at2_sheet = sh.worksheet("AT2")
+        at2_data = at2_sheet.get_all_values()
+        print(f"✓ Found AT2 mark data: {len(at2_data)} rows")
+    except:
+        at2_data = []
+        print("⚠ AT2 sheet not found (mark will be empty)")
         
 except Exception as e:
     print(f"✗ Failed to read sheets: {e}")
@@ -80,6 +89,9 @@ try:
     # Clear existing data
     db.execute(text("DELETE FROM freemir_price"))
     db.execute(text("DELETE FROM freemir_name"))
+    db.commit()
+    # Ensure mark column exists (safe migration)
+    db.execute(text("ALTER TABLE freemir_name ADD COLUMN IF NOT EXISTS mark VARCHAR"))
     db.commit()
     print("✓ Cleared existing data")
     
@@ -121,34 +133,58 @@ try:
         db.commit()
         print(f"✓ Synced {price_count} price records")
     
-    # Sync product name data
+    # Sync product name data (vectorized + filtered)
     if name_data:
         cols = name_data[0]
         df = pd.DataFrame(name_data[1:], columns=cols)
-        df = df[df.iloc[:, 0].astype(str).str.strip() != ""]  # Remove empty rows
-        
+
         sku_col = cols[0]
-        name_col = "Product Name" if "Product Name" in cols else (cols[1] if len(cols) > 1 else None)
-        link_col = "Link" if "Link" in cols else (cols[2] if len(cols) > 2 else None)
-        
+        # All_Name sheet: col A=SKU, col B=English name, col C=Image URL
+        name_col = next((c for c in ["English name", "Product Name", "Name"] if c in cols), (cols[1] if len(cols) > 1 else None))
+        link_col = next((c for c in ["Image", "Link"] if c in cols), (cols[2] if len(cols) > 2 else None))
+
+        # Build SKU → Mark map from AT2 sheet (col B=Mark, col C=SKU)
+        mark_map = {}
+        if at2_data and len(at2_data) > 1:
+            at2_cols = at2_data[0]  # ['SPU', 'Mark', 'SKU', 'Name']
+            try:
+                mark_idx = at2_cols.index('Mark')
+                sku_idx  = at2_cols.index('SKU')
+                for row in at2_data[1:]:
+                    if len(row) > max(mark_idx, sku_idx):
+                        s = str(row[sku_idx]).strip()
+                        m = str(row[mark_idx]).strip()
+                        if s:
+                            mark_map[s] = m
+            except ValueError:
+                pass
+        print(f"✓ Built mark map: {len(mark_map)} SKUs")
+
+        skus  = df[sku_col].astype(str).str.strip()
+        names = df[name_col].fillna('').astype(str).str.strip() if name_col and name_col in df.columns else pd.Series([''] * len(df))
+        links = df[link_col].fillna('').astype(str).str.strip() if link_col and link_col in df.columns else pd.Series([''] * len(df))
+
+        # Only sync SKUs that exist in freemir_price to keep the table small
+        result = db.execute(text("SELECT sku FROM freemir_price"))
+        valid_skus = {r[0] for r in result.fetchall()}
+
+        mask = skus.isin(valid_skus)
+        marks_series = skus.map(mark_map).fillna('')
+        records = list(zip(skus[mask], names[mask], links[mask], marks_series[mask]))
+
         name_count = 0
-        for _, row in df.iterrows():
-            sku = str(row[sku_col]).strip()
-            name = str(row[name_col]) if name_col and name_col in row else ""
-            link = str(row[link_col]) if link_col and link_col in row else ""
-            
-            # Insert into database
+        if records:
             sql = text("""
-            INSERT INTO freemir_name (sku, product_name, link)
-            VALUES (:sku, :product_name, :link)
-            ON CONFLICT (sku) DO UPDATE
-            SET product_name = EXCLUDED.product_name, link = EXCLUDED.link
+                INSERT INTO freemir_name (sku, product_name, link, mark)
+                VALUES (:sku, :product_name, :link, :mark)
+                ON CONFLICT (sku) DO UPDATE
+                SET product_name = EXCLUDED.product_name, link = EXCLUDED.link, mark = EXCLUDED.mark
             """)
-            db.execute(sql, {"sku": sku, "product_name": name, "link": link})
-            name_count += 1
-        
-        db.commit()
-        print(f"✓ Synced {name_count} product name records")
+            for sku, name, link, mark in records:
+                db.execute(sql, {"sku": sku, "product_name": name, "link": link, "mark": mark or None})
+            db.commit()
+            name_count = len(records)
+            print(f"✓ Synced {name_count} product name records (filtered from {len(df)} total)")
     
 except Exception as e:
     db.rollback()

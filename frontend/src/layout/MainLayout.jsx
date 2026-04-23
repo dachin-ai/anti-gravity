@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Button, Tooltip, message, Modal, Form, Input } from 'antd';
-import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined, KeyOutlined, UnlockOutlined, TeamOutlined } from '@ant-design/icons';
+import { LogoutOutlined, HomeOutlined, LockOutlined, AppstoreOutlined, ShoppingOutlined, PlaySquareOutlined, SunOutlined, MoonOutlined, KeyOutlined, UnlockOutlined, TeamOutlined, BarChartOutlined } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -42,6 +42,7 @@ const MainLayout = () => {
       children: [
         { key: '/price-checker', label: lockedLabel(<Bi e="Price Checker" c="查价仪" />, 'price_checker'), style: !hasAccess('price_checker') ? { opacity: 0.6 } : {} },
         { key: '/warehouse-order', label: lockedLabel(<Bi e="Order Planner" c="备货预估" />, 'order_planner'), style: !hasAccess('order_planner') ? { opacity: 0.6 } : {} },
+        { key: '/product-performance', label: <Bi e="Product Performance" c="商品表现" /> },
       ]
     },
     {

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, PrimaryKeyConstraint
 from sqlalchemy.sql import func
 from database import Base
 
@@ -10,6 +10,62 @@ class AccessRequest(Base):
     username = Column(String, index=True)
     tool_key = Column(String)
     status = Column(String, default="pending")  # pending / approved / rejected
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class PidStoreMap(Base):
+    __tablename__ = "pid_store_map"
+
+    mid = Column(String, index=True)                      # MID can repeat across stores
+    pid = Column(String, index=True)                      # PID can repeat (multiple variations)
+    store = Column(String)
+    sku = Column(String)
+    updated_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        PrimaryKeyConstraint("store", "mid", name="pid_store_map_pk"),
+    )
+
+
+class ProductPerformance(Base):
+    __tablename__ = "product_performance"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    week = Column(String, index=True)          # "Week 1"
+    week_start = Column(String)                # "2025-12-29"
+    week_end = Column(String)                  # "2026-01-04"
+    platform = Column(String, index=True)      # "Shopee" / "TikTok"
+    store = Column(String, index=True)
+    pid = Column(String, index=True)
+    product_picture = Column(String)
+    product_name = Column(String)
+    impression = Column(Float)
+    visitor = Column(Float)
+    click = Column(Float)
+    unit = Column(Float)
+    gmv = Column(Float)
+    ctr = Column(Float)
+    co = Column(Float)
+    created_at = Column(DateTime, server_default=func.now())
+
+class SkuPerformance(Base):
+    __tablename__ = "sku_performance"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    week = Column(String, index=True)
+    week_start = Column(String)
+    week_end = Column(String)
+    platform = Column(String, index=True)
+    store = Column(String, index=True)
+    sku = Column(String, index=True)
+    impression = Column(Float)
+    visitor = Column(Float)
+    click = Column(Float)
+    unit = Column(Float)
+    gmv = Column(Float)
+    ctr = Column(Float)
+    co = Column(Float)
+    pid_count = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
 
 class ActivityLog(Base):
@@ -50,6 +106,7 @@ class FreemirName(Base):
     sku = Column(String, primary_key=True, index=True)
     product_name = Column(String)
     link = Column(String)
+    mark = Column(String)
 
 # --- Shopee Affiliate Analytics Models ---
 

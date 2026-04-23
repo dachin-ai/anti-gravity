@@ -20,6 +20,7 @@ import ShopeeAffiliate from './pages/ShopeeAffiliate';
 import TikTokAds from './pages/TikTokAds';
 import RequestAccess from './pages/RequestAccess';
 import AccessManagement from './pages/AccessManagement';
+import ProductPerformanceCleaner from './pages/ProductPerformanceCleaner';
 import PermissionGate from './components/PermissionGate';
 
 // Protected route wrapper
@@ -65,6 +66,7 @@ function ProtectedApp() {
         <Route path="tiktok-ads" element={<PermissionGate toolKey="ads_analyzer"><TikTokAds /></PermissionGate>} />
         <Route path="request-access" element={<RequestAccess />} />
         <Route path="access-management" element={<PermissionGate toolKey="admin"><AccessManagement /></PermissionGate>} />
+        <Route path="product-performance" element={<ProductPerformanceCleaner />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
