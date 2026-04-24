@@ -175,12 +175,12 @@ def get_sku_photo_map(db: Session, skus: set) -> dict:
         return {}
     from sqlalchemy import tuple_ as sql_tuple
 
-    # Build token → (store, mid) from PidStoreMap for relevant tokens only
+    # Build token → (store, pid) from PidStoreMap for relevant tokens only
     token_to_key: dict[str, tuple] = {}
     for pm in db.query(PidStoreMap).filter(PidStoreMap.sku.isnot(None)).all():
         for token in parse_sku_tokens(pm.sku or ""):
             if token in skus and token not in token_to_key:
-                token_to_key[token] = (pm.store, pm.mid)
+                token_to_key[token] = (pm.store, pm.pid)
 
     if not token_to_key:
         return {}

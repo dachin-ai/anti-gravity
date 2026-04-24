@@ -143,26 +143,62 @@ try:
         name_col = next((c for c in ["English name", "Product Name", "Name"] if c in cols), (cols[1] if len(cols) > 1 else None))
         link_col = next((c for c in ["Image", "Link"] if c in cols), (cols[2] if len(cols) > 2 else None))
 
-        # Build SKU → Mark map from AT2 sheet (col B=Mark, col C=SKU)
+        # Build SKU → Mark/Name/Link maps from AT2 sheet
         mark_map = {}
+        at2_name_map = {}
+        at2_link_map = {}
         if at2_data and len(at2_data) > 1:
-            at2_cols = at2_data[0]  # ['SPU', 'Mark', 'SKU', 'Name']
+            at2_cols = [str(c).strip() for c in at2_data[0]]
             try:
-                mark_idx = at2_cols.index('Mark')
-                sku_idx  = at2_cols.index('SKU')
-                for row in at2_data[1:]:
-                    if len(row) > max(mark_idx, sku_idx):
-                        s = str(row[sku_idx]).strip()
-                        m = str(row[mark_idx]).strip()
-                        if s:
-                            mark_map[s] = m
-            except ValueError:
-                pass
+                sku_idx  = next(i for i,v in enumerate(at2_cols) if v.lower() == 'sku')
+            except StopIteration:
+                sku_idx = 2 if len(at2_cols) > 2 else None
+            try:
+                mark_idx = next(i for i,v in enumerate(at2_cols) if v.lower() == 'mark')
+            except StopIteration:
+                mark_idx = 1 if len(at2_cols) > 1 else None
+            try:
+                name_idx = next(i for i,v in enumerate(at2_cols) if v.lower() in ('name', 'product name', 'item name', 'display name'))
+            except StopIteration:
+                name_idx = 3 if len(at2_cols) > 3 else None
+            try:
+                link_idx = next(i for i,v in enumerate(at2_cols) if v.lower() in ('link', 'url', 'product url', 'product_link', 'product link', 'detail url'))
+            except StopIteration:
+                link_idx = 4 if len(at2_cols) > 4 else None
+
+            for row in at2_data[1:]:
+                if sku_idx is None:
+                    continue
+                sku_value = str(row[sku_idx]).strip() if len(row) > sku_idx else ''
+                if not sku_value:
+                    continue
+                if mark_idx is not None and len(row) > mark_idx:
+                    mark_map[sku_value] = str(row[mark_idx]).strip()
+                if name_idx is not None and len(row) > name_idx:
+                    at2_name_map[sku_value] = str(row[name_idx]).strip()
+                if link_idx is not None and len(row) > link_idx:
+                    at2_link_map[sku_value] = str(row[link_idx]).strip()
+
         print(f"✓ Built mark map: {len(mark_map)} SKUs")
+        print(f"✓ Built AT2 name map: {len(at2_name_map)} SKUs")
+        print(f"✓ Built AT2 link map: {len(at2_link_map)} SKUs")
 
         skus  = df[sku_col].astype(str).str.strip()
-        names = df[name_col].fillna('').astype(str).str.strip() if name_col and name_col in df.columns else pd.Series([''] * len(df))
-        links = df[link_col].fillna('').astype(str).str.strip() if link_col and link_col in df.columns else pd.Series([''] * len(df))
+        raw_names = df[name_col].fillna('').astype(str).str.strip() if name_col and name_col in df.columns else pd.Series([''] * len(df))
+        raw_links = df[link_col].fillna('').astype(str).str.strip() if link_col and link_col in df.columns else pd.Series([''] * len(df))
+        names = []
+        links = []
+        for i, sku in skus.items():
+            if sku and sku in at2_name_map:
+                names.append(at2_name_map[sku])
+            else:
+                names.append(raw_names.iloc[i] if i in raw_names.index else '')
+            if sku and sku in at2_link_map:
+                links.append(at2_link_map[sku])
+            else:
+                links.append(raw_links.iloc[i] if i in raw_links.index else '')
+        names = pd.Series(names)
+        links = pd.Series(links)
 
         # Only sync SKUs that exist in freemir_price to keep the table small
         result = db.execute(text("SELECT sku FROM freemir_price"))

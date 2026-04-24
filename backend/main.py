@@ -228,7 +228,7 @@ app.include_router(product_performance.router)
 # Include AI Chat router only if GEMINI_API_KEY is set
 if ai_chat_available:
     app.include_router(ai_chat.router)
-    print("[Startup] ✓ AI Chat endpoint registered.")
+    print("[Startup] AI Chat endpoint registered.")
 
 from routers import shopee_affiliate
 app.include_router(shopee_affiliate.router, prefix="/api/shopee-affiliate", tags=["shopee-affiliate"])
