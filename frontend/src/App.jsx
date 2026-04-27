@@ -21,6 +21,7 @@ import TikTokAds from './pages/TikTokAds';
 import RequestAccess from './pages/RequestAccess';
 import AccessManagement from './pages/AccessManagement';
 import ProductPerformanceCleaner from './pages/ProductPerformanceCleaner';
+import LivestreamDisplay from './pages/LivestreamDisplay';
 import PermissionGate from './components/PermissionGate';
 
 // Protected route wrapper
@@ -67,6 +68,7 @@ function ProtectedApp() {
         <Route path="request-access" element={<RequestAccess />} />
         <Route path="access-management" element={<PermissionGate toolKey="admin"><AccessManagement /></PermissionGate>} />
         <Route path="product-performance" element={<ProductPerformanceCleaner />} />
+        <Route path="livestream-display" element={<LivestreamDisplay />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

@@ -205,6 +205,30 @@ def get_sku_photo_map(db: Session, skus: set) -> dict:
     }
 
 
+def get_pid_photo_map(db: Session, pids: set, store: str | None = None) -> dict:
+    """
+    Return pid → product_picture URL from ProductPerformance table.
+    Optionally filtered by store. Returns the first non-null picture per pid.
+    """
+    if not pids:
+        return {}
+    q = db.query(
+        ProductPerformance.pid,
+        ProductPerformance.product_picture,
+    ).filter(
+        ProductPerformance.pid.in_(pids),
+        ProductPerformance.product_picture.isnot(None),
+        ProductPerformance.product_picture != "",
+    )
+    if store:
+        q = q.filter(ProductPerformance.store == store)
+    result: dict[str, str] = {}
+    for row in q.all():
+        if row.pid not in result:
+            result[row.pid] = row.product_picture
+    return result
+
+
 # ─────────────────────────────────────────────────────────────────
 # SHOPEE PROCESSING
 # ─────────────────────────────────────────────────────────────────

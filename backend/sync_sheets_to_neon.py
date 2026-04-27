@@ -11,6 +11,7 @@ import json
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import sys
+from services.product_performance_logic import parse_sku_tokens
 
 # Setup database connection (uses same DATABASE_URL as the backend)
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://dena_admin:AntiGrav2026Secure@35.198.222.19:5432/antigravity_db")
@@ -139,9 +140,9 @@ try:
         df = pd.DataFrame(name_data[1:], columns=cols)
 
         sku_col = cols[0]
-        # All_Name sheet: col A=SKU, col B=English name, col C=Image URL
-        name_col = next((c for c in ["English name", "Product Name", "Name"] if c in cols), (cols[1] if len(cols) > 1 else None))
-        link_col = next((c for c in ["Image", "Link"] if c in cols), (cols[2] if len(cols) > 2 else None))
+        # All_Name sheet: col A=SKU, col B=English name / Rodcyt name, col C=Image URL
+        name_col = next((c for c in ["English name", "Product Name", "Name", "Rodcyt Name", "rodcyt name", "rodcyt"] if c in cols), (cols[1] if len(cols) > 1 else None))
+        link_col = next((c for c in ["Image", "Image URL", "Image Link", "Link", "URL", "Product Link"] if c in cols), (cols[2] if len(cols) > 2 else None))
 
         # Build SKU → Mark/Name/Link maps from AT2 sheet
         mark_map = {}
@@ -183,20 +184,32 @@ try:
         print(f"✓ Built AT2 name map: {len(at2_name_map)} SKUs")
         print(f"✓ Built AT2 link map: {len(at2_link_map)} SKUs")
 
-        skus  = df[sku_col].astype(str).str.strip()
+        skus = df[sku_col].astype(str).str.strip()
         raw_names = df[name_col].fillna('').astype(str).str.strip() if name_col and name_col in df.columns else pd.Series([''] * len(df))
         raw_links = df[link_col].fillna('').astype(str).str.strip() if link_col and link_col in df.columns else pd.Series([''] * len(df))
+
         names = []
         links = []
         for i, sku in skus.items():
+            raw_name = raw_names.iloc[i] if i in raw_names.index else ''
+            raw_link = raw_links.iloc[i] if i in raw_links.index else ''
+            if sku:
+                tokens = parse_sku_tokens(sku)
+                if len(tokens) > 1:
+                    # Skip bundle/combo rows for individual SKU product name and image assignment.
+                    raw_name = ''
+                    raw_link = ''
+
             if sku and sku in at2_name_map:
                 names.append(at2_name_map[sku])
             else:
-                names.append(raw_names.iloc[i] if i in raw_names.index else '')
+                names.append(raw_name)
+
             if sku and sku in at2_link_map:
                 links.append(at2_link_map[sku])
             else:
-                links.append(raw_links.iloc[i] if i in raw_links.index else '')
+                links.append(raw_link)
+
         names = pd.Series(names)
         links = pd.Series(links)
 

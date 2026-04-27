@@ -121,6 +121,7 @@ def calc_direct(body: DirectInput):
             "clearance": price_info.get("Mark Clearance"),
             "gift": price_info.get("Mark Gift")
         },
+        "items": price_info.get("sku_items", []),
         "breakdown": breakdown,
         "evaluation": eval_data
     }

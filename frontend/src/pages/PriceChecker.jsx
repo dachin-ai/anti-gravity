@@ -139,6 +139,11 @@ const PriceChecker = () => {
         },
     });
 
+    const isImageUrl = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        return /\.(jpe?g|png|gif|webp|svg)(\?|$)/i.test(url) || url.includes('cdn') || url.includes('imgur.com');
+    };
+
     const copyTable = (data, columns) => {
         const headers = columns.map(c => c.title).join('\t');
         const rows = data.map(row =>
@@ -454,6 +459,41 @@ const PriceChecker = () => {
                     {directResult && !calcLoading && (
                         <div style={{ marginTop: 28 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
+
+                            {/* SKU Preview */}
+                            {directResult.items?.length > 0 && (
+                                <div style={{ marginBottom: 28 }}>
+                                    <SectionHeading icon={<AppstoreOutlined />}><Bi e="Item Preview" c="商品预览" /></SectionHeading>
+                                    <div style={{ display: 'grid', gridTemplateColumns: directResult.items.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
+                                        {directResult.items.map((item, idx) => (
+                                            <div key={`${item.sku}-${idx}`} style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', minHeight: 220, display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'center', padding: 16, background: '#0f172a' }}>
+                                                    <div style={{ width: 120, minWidth: 120, aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden', borderRadius: 18, background: '#111827' }}>
+                                                        {item.image ? (
+                                                            <img src={item.image} alt={item.name || item.sku} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+                                                                <Text style={{ fontSize: 12 }}>No image available</Text>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 8 }}>
+                                                    <div>
+                                                        <Text strong style={{ display: 'block', marginBottom: 6, fontSize: 15 }}>{item.name || item.sku}</Text>
+                                                        <Text type="secondary" style={{ display: 'block', fontSize: 12, wordBreak: 'break-all' }}>{item.sku}</Text>
+                                                    </div>
+                                                    {item.link ? (
+                                                        <a href={item.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--indigo)' }}>
+                                                            Open product link
+                                                        </a>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Summary */}
                             <SectionHeading icon={<BarChartOutlined />}><Bi e="Bundle Summary" c="捆绑摘要" /></SectionHeading>

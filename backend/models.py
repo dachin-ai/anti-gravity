@@ -108,6 +108,37 @@ class FreemirName(Base):
     link = Column(String)
     mark = Column(String)
 
+class LivestreamDisplayItem(Base):
+    __tablename__ = "livestream_display_items"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    store = Column(String, index=True)
+    etalase = Column(String, index=True)
+    pid = Column(String, index=True)
+    sequence_no = Column(Integer, index=True)
+    sku = Column(String, index=True)
+    product_name = Column(String)
+    product_link = Column(String)
+    image_url = Column(String)
+    price = Column(Float)
+    sort_order = Column(Integer)
+    notes = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+class LivestreamBaseProduct(Base):
+    __tablename__ = "livestream_base_products"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    store = Column(String, index=True)
+    pid = Column(String, index=True)
+    product_code = Column(String)
+    product_name = Column(String)
+    variation_code = Column(String)
+    variation_name = Column(String)
+    parent_sku = Column(String)
+    sku = Column(String, index=True)
+    created_at = Column(DateTime, server_default=func.now())
+
 # --- Shopee Affiliate Analytics Models ---
 
 from sqlalchemy import Float, Date

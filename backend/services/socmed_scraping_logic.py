@@ -7,7 +7,10 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
-from apify_client import ApifyClient
+try:
+    from apify_client import ApifyClient
+except Exception:
+    ApifyClient = None
 
 # ── Actors ──────────────────────────────────────────────
 ACTOR_IG_SCRAPER   = "apify/instagram-scraper"
