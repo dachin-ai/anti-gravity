@@ -4,6 +4,10 @@ Migration Script: VPS PostgreSQL → Neon New Database
 Priority: Affiliate Data (shopee_aff_* tables) + Critical Tables
 """
 
+import sys
+# Fix Unicode encoding for Windows
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 import sqlalchemy as sa
 from sqlalchemy import create_engine, text
