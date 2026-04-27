@@ -10,21 +10,19 @@ const { Title, Text } = Typography;
 const TOOLS_CATALOG = [
     { name: "Price Checker", desc: "Competitor price monitoring across multiple platforms.", main_user: "Account Responsible", platform: "Multiplatform", icon: <TagOutlined />, path: "/price-checker", active: true, category: "freemir", toolKey: "price_checker" },
     { name: "Order Planner", desc: "Estimate daily order volume per warehouse based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: <InboxOutlined />, path: "/warehouse-order", active: true, category: "freemir", toolKey: "order_planner" },
-    { name: "Product Performance", desc: "Upload, clean, and store product performance data by week.", main_user: "Account Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/product-performance", active: true, category: "freemir" },
+    { name: "Product Performance", desc: "Upload, clean, and store product performance data by week.", main_user: "Account Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/product-performance", active: true, category: "freemir", toolKey: "product_performance" },
     { name: "Order Review", desc: "Analysis of lost orders and cancellation reasons.", main_user: "Platform Responsible", platform: "Qianyi ERP", icon: <FileSearchOutlined />, path: "/order-loss", active: true, category: "shopee", toolKey: "order_review" },
     { name: "Affiliate Performance", desc: "Shopee Affiliate performance data tracking.", main_user: "Affiliate Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/shopee-affiliate", active: true, category: "shopee", toolKey: "affiliate_performance" },
-    { name: "LS Display", desc: "Real-time livestream display and monitoring dashboard.", main_user: "Livestream Team", platform: "Shopee", icon: <VideoCameraOutlined />, path: "/livestream-display", active: true, category: "shopee" },
+    { name: "LS Display", desc: "Real-time livestream display and monitoring dashboard.", main_user: "Livestream Team", platform: "Shopee", icon: <VideoCameraOutlined />, path: "/livestream-display", active: true, category: "shopee", toolKey: "livestream_display" },
     { name: "Pre-Sales Checker", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: <FundProjectionScreenOutlined />, path: "/pre-sales", active: true, category: "tiktok", toolKey: "pre_sales" },
     { name: "Affiliate Analyzer", desc: "Comprehensive TikTok affiliate data analytics.", main_user: "Affiliate Responsible", platform: "TikTok", icon: <RiseOutlined />, path: "/affiliate-analyzer", active: true, category: "tiktok", toolKey: "affiliate_analyzer" },
     { name: "Ads Analyzer", desc: "Analyze and consolidate TikTok Ads performance data.", main_user: "Ads Specialist", platform: "TikTok", icon: <PieChartOutlined />, path: "/tiktok-ads", active: true, category: "tiktok", toolKey: "ads_analyzer" },
-    { name: "Request Access", desc: "Request access to restricted tools and permissions.", main_user: "All Users", platform: "System", icon: <UnlockOutlined />, path: "/request-access", active: true, category: "system" },
 ];
 
 const CATEGORY_META = {
     "freemir": { title: "Freemir Suite", accent: "#6366f1" },
-    "shopee": { title: "Shopee Suite", accent: "#f97316" },
-    "tiktok": { title: "TikTok Suite", accent: "#ec4899" },
-    "system": { title: "System Tools", accent: "#10b981" },
+    "shopee":  { title: "Shopee Suite",  accent: "#f97316" },
+    "tiktok":  { title: "TikTok Suite",  accent: "#ec4899" },
 };
 
 const Dashboard = () => {
@@ -79,58 +77,43 @@ const Dashboard = () => {
                 }} />
                 
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                    <Title level={1} style={{
-                        fontSize: 42, margin: '0 0 16px 0', fontWeight: 900,
-                        background: isDark
-                            ? 'linear-gradient(135deg, #f1f5f9 0%, #c7d2fe 50%, #a5b4fc 100%)'
-                            : 'linear-gradient(135deg, #1e293b 0%, #6366f1 50%, #8b5cf6 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: '-1px',
-                        lineHeight: 1.2,
-                    }}>
-                        Business Intelligence Hub
-                    </Title>
-                    <Text style={{ 
-                        fontSize: 16, color: isDark ? '#cbd5e1' : '#64748b', 
-                        fontWeight: 400, lineHeight: 1.6,
-                        display: 'block', maxWidth: 600
-                    }}>
-                        Unified analytics &amp; operations platform — select a module to launch your workflow.
-                    </Text>
-                    
-                    {/* Quick stats */}
-                    <div style={{ display: 'flex', gap: 32, marginTop: 32 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{
-                                width: 12, height: 12, borderRadius: '50%', 
-                                background: 'linear-gradient(135deg, #10b981, #059669)',
-                                boxShadow: '0 0 12px rgba(16,185,129,0.4)'
-                            }} />
-                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
-                                <span style={{ fontWeight: 700, color: isDark ? '#10b981' : '#059669' }}>12+</span> Tools Available
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+                        <div style={{ flex: 1 }}>
+                            <Title level={1} style={{
+                                fontSize: 42, margin: '0 0 16px 0', fontWeight: 900,
+                                color: isDark ? '#f1f5f9' : '#1e293b',
+                                letterSpacing: '-1px',
+                                lineHeight: 1.2,
+                            }}>
+                                Business Intelligence Hub
+                            </Title>
+                            <Text style={{ 
+                                fontSize: 16, color: isDark ? '#cbd5e1' : '#475569', 
+                                fontWeight: 400, lineHeight: 1.6,
+                                display: 'block', maxWidth: 600
+                            }}>
+                                Unified analytics &amp; operations platform — select a module to launch your workflow.
                             </Text>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{
-                                width: 12, height: 12, borderRadius: '50%', 
-                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                                boxShadow: '0 0 12px rgba(99,102,241,0.4)'
-                            }} />
-                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
-                                <span style={{ fontWeight: 700, color: isDark ? '#6366f1' : '#4f46e5' }}>4</span> Platform Integrations
-                            </Text>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{
-                                width: 12, height: 12, borderRadius: '50%', 
-                                background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                                boxShadow: '0 0 12px rgba(249,115,22,0.4)'
-                            }} />
-                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
-                                <span style={{ fontWeight: 700, color: isDark ? '#f97316' : '#ea580c' }}>Real-time</span> Analytics
-                            </Text>
-                        </div>
+                        <Button
+                            icon={<UnlockOutlined />}
+                            size="small"
+                            onClick={() => navigate('/request-access')}
+                            style={{
+                                flexShrink: 0,
+                                marginTop: 6,
+                                borderRadius: 8,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                height: 30,
+                                padding: '0 12px',
+                                background: isDark ? 'rgba(99,102,241,0.15)' : '#6366f1',
+                                border: isDark ? '1px solid rgba(99,102,241,0.4)' : 'none',
+                                color: isDark ? '#a5b4fc' : '#ffffff',
+                            }}
+                        >
+                            Request Access
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -170,7 +153,7 @@ const Dashboard = () => {
                                                     borderRadius: 16,
                                                     height: '100%',
                                                     cursor: isClickable ? 'pointer' : 'default',
-                                                    opacity: accessible ? 1 : 0.6,
+                                                    opacity: accessible ? 1 : 0.82,
                                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                     boxShadow: isDark 
                                                         ? '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
@@ -210,14 +193,6 @@ const Dashboard = () => {
                                                         position: 'relative',
                                                     }}>
                                                         {tool.icon}
-                                                        {accessible && (
-                                                            <div style={{
-                                                                position: 'absolute', top: -2, right: -2,
-                                                                width: 12, height: 12, borderRadius: '50%',
-                                                                background: '#10b981', border: '2px solid #fff',
-                                                                boxShadow: '0 2px 8px rgba(16,185,129,0.4)'
-                                                            }} />
-                                                        )}
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <Text style={{ 
@@ -286,14 +261,22 @@ const Dashboard = () => {
                                                         Launch <ArrowRightOutlined style={{ fontSize: 12, marginLeft: 6 }} />
                                                     </Button>
                                                 ) : (
-                                                    <div style={{ 
-                                                        color: '#f87171', fontSize: 13, fontWeight: 600,
-                                                        display: 'flex', alignItems: 'center', gap: 8,
-                                                        padding: '8px 12px', background: 'rgba(239,68,68,0.1)',
-                                                        borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)'
-                                                    }}>
-                                                        <LockOutlined /> Access Restricted
-                                                    </div>
+                                                    <Button
+                                                        size="middle"
+                                                        icon={<LockOutlined />}
+                                                        onClick={(e) => { e.stopPropagation(); navigate('/request-access'); }}
+                                                        style={{
+                                                            borderRadius: 8,
+                                                            fontSize: 13,
+                                                            fontWeight: 600,
+                                                            height: 36,
+                                                            background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)',
+                                                            border: '1px solid rgba(239,68,68,0.3)',
+                                                            color: isDark ? '#fca5a5' : '#dc2626',
+                                                        }}
+                                                    >
+                                                        Request Access
+                                                    </Button>
                                                 )}
                                             </Card>
                                         </Tooltip>

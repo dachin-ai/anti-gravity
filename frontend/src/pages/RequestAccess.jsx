@@ -8,13 +8,15 @@ import PageHeader from '../components/PageHeader';
 const { Text } = Typography;
 
 const ALL_TOOLS = [
-    { key: 'price_checker',        label: 'Price Checker' },
-    { key: 'order_review',         label: 'Order Review' },
-    { key: 'pre_sales',            label: 'Pre-Sales Checker' },
-    { key: 'order_planner',        label: 'Order Planner' },
-    { key: 'affiliate_analyzer',   label: 'Affiliate Analyzer' },
-    { key: 'affiliate_performance',label: 'Shopee Affiliate Performance' },
-    { key: 'ads_analyzer',         label: 'TikTok Ads Analyzer' },
+    { key: 'price_checker',         label: 'Price Checker' },
+    { key: 'order_planner',         label: 'Order Planner' },
+    { key: 'product_performance',   label: 'Product Performance' },
+    { key: 'order_review',          label: 'Order Review' },
+    { key: 'affiliate_performance', label: 'Shopee Affiliate Performance' },
+    { key: 'livestream_display',    label: 'Livestream Display' },
+    { key: 'pre_sales',             label: 'Pre-Sales Checker' },
+    { key: 'affiliate_analyzer',    label: 'Affiliate Analyzer' },
+    { key: 'ads_analyzer',          label: 'TikTok Ads Analyzer' },
 ];
 
 const statusTag = (status) => {

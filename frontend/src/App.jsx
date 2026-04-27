@@ -67,8 +67,8 @@ function ProtectedApp() {
         <Route path="tiktok-ads" element={<PermissionGate toolKey="ads_analyzer"><TikTokAds /></PermissionGate>} />
         <Route path="request-access" element={<RequestAccess />} />
         <Route path="access-management" element={<PermissionGate toolKey="admin"><AccessManagement /></PermissionGate>} />
-        <Route path="product-performance" element={<ProductPerformanceCleaner />} />
-        <Route path="livestream-display" element={<LivestreamDisplay />} />
+        <Route path="product-performance" element={<PermissionGate toolKey="product_performance"><ProductPerformanceCleaner /></PermissionGate>} />
+        <Route path="livestream-display" element={<PermissionGate toolKey="livestream_display"><LivestreamDisplay /></PermissionGate>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

@@ -37,12 +37,12 @@ const MainLayout = () => {
     { key: '/', icon: <HomeOutlined />, label: <Bi e="Lobby" c="智能中心" /> },
     {
       key: 'group-freemir',
-      label: <Bi e="Freemir Suite" c="Freemir 套件" />,
+      label: <Bi e="Freemir Suite" c="Freemir 套件" />, 
       icon: <AppstoreOutlined />,
       children: [
         { key: '/price-checker', label: lockedLabel(<Bi e="Price Checker" c="查价仪" />, 'price_checker'), style: !hasAccess('price_checker') ? { opacity: 0.6 } : {} },
         { key: '/warehouse-order', label: lockedLabel(<Bi e="Order Planner" c="备货预估" />, 'order_planner'), style: !hasAccess('order_planner') ? { opacity: 0.6 } : {} },
-        { key: '/product-performance', label: <Bi e="Product Performance" c="商品表现" /> },
+        { key: '/product-performance', label: lockedLabel(<Bi e="Product Performance" c="商品表现" />, 'product_performance'), style: !hasAccess('product_performance') ? { opacity: 0.6 } : {} },
       ]
     },
     {
@@ -52,7 +52,7 @@ const MainLayout = () => {
       children: [
         { key: '/order-loss', label: lockedLabel(<Bi e="Order Review" c="订单亏损审查" />, 'order_review'), style: !hasAccess('order_review') ? { opacity: 0.6 } : {} },
         { key: '/shopee-affiliate', label: lockedLabel(<Bi e="Affiliate Performance" c="联盟中心" />, 'affiliate_performance'), style: !hasAccess('affiliate_performance') ? { opacity: 0.6 } : {} },
-        { key: '/livestream-display', label: <Bi e="Livestream Display" c="直播展示" /> },
+        { key: '/livestream-display', label: lockedLabel(<Bi e="Livestream Display" c="直播展示" />, 'livestream_display'), style: !hasAccess('livestream_display') ? { opacity: 0.6 } : {} },
       ]
     },
     {
@@ -79,6 +79,8 @@ const MainLayout = () => {
     '/affiliate-analyzer': 'affiliate_analyzer',
     '/tiktok-ads': 'ads_analyzer',
     '/access-management': 'admin',
+    '/product-performance': 'product_performance',
+    '/livestream-display': 'livestream_display',
   };
 
   const handleMenuClick = ({ key }) => {

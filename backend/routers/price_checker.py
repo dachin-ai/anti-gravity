@@ -224,12 +224,19 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         # Now process with cached photo_map with error handling
         calc_results = []
         failed_rows = []
-        
+
+        def _invalid_result():
+            r = {p_type: "Invalid" for p_type in PRICE_TYPES}
+            r["sku_items"] = []
+            return r
+
         for index, row in df_final.iterrows():
             try:
                 sku_val = row["SKU"]
-                if pd.isna(sku_val) or not str(sku_val).strip():
+                sku_str = str(sku_val).strip() if not pd.isna(sku_val) else ""
+                if not sku_str or len(sku_str) < 12:
                     failed_rows.append(index)
+                    calc_results.append(_invalid_result())
                     continue
                     
                 price_info = calculate_prices(sku_val, price_db, name_map, link_map, photo_map)
@@ -237,11 +244,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                 
             except Exception as e:
                 print(f"[ERROR] Failed to process row {index}: {e}")
-                # Add error result for this row
-                error_result = {}
-                for p_type in PRICE_TYPES:
-                    error_result[p_type] = "Invalid"
-                calc_results.append(error_result)
+                calc_results.append(_invalid_result())
                 failed_rows.append(index)
         
         price_df = pd.DataFrame(calc_results)

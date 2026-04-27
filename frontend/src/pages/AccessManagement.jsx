@@ -12,16 +12,26 @@ import PageHeader from '../components/PageHeader';
 
 const { Text } = Typography;
 
+// group: 'admin' | 'freemir' | 'shopee' | 'tiktok'
 const ALL_TOOLS = [
-    { key: 'price_checker',         label: 'Price Checker' },
-    { key: 'order_review',          label: 'Order Review' },
-    { key: 'pre_sales',             label: 'Pre-Sales' },
-    { key: 'order_planner',         label: 'Order Planner' },
-    { key: 'affiliate_analyzer',    label: 'Affiliate Analyzer' },
-    { key: 'affiliate_performance', label: 'Shopee Affiliate' },
-    { key: 'ads_analyzer',          label: 'TikTok Ads' },
-    { key: 'admin',                 label: 'Admin' },
+    { key: 'admin',                 label: 'Admin',              group: 'admin'   },
+    { key: 'price_checker',         label: 'Price Checker',      group: 'freemir' },
+    { key: 'order_planner',         label: 'Order Planner',      group: 'freemir' },
+    { key: 'product_performance',   label: 'Product Perf.',      group: 'freemir' },
+    { key: 'order_review',          label: 'Order Review',       group: 'shopee'  },
+    { key: 'affiliate_performance', label: 'Shopee Affiliate',   group: 'shopee'  },
+    { key: 'livestream_display',    label: 'LS Display',         group: 'shopee'  },
+    { key: 'pre_sales',             label: 'Pre-Sales',          group: 'tiktok'  },
+    { key: 'affiliate_analyzer',    label: 'Affiliate Analyzer', group: 'tiktok'  },
+    { key: 'ads_analyzer',          label: 'TikTok Ads',         group: 'tiktok'  },
 ];
+
+const GROUP_STYLE = {
+    admin:   { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)'  },
+    freemir: { color: '#6366f1', bg: 'rgba(99,102,241,0.10)',  border: 'rgba(99,102,241,0.25)' },
+    shopee:  { color: '#f97316', bg: 'rgba(249,115,22,0.10)',  border: 'rgba(249,115,22,0.25)' },
+    tiktok:  { color: '#ec4899', bg: 'rgba(236,72,153,0.10)',  border: 'rgba(236,72,153,0.25)' },
+};
 
 const statusTag = (status) => {
     if (status === 'pending')  return <Tag icon={<ClockCircleOutlined />}  color="gold">Pending</Tag>;
@@ -194,19 +204,36 @@ function UserPermissionsTab() {
         }
     };
 
-    const toolColumns = ALL_TOOLS.map(tool => ({
-        title: <span style={{ fontSize: 12 }}>{tool.label}</span>,
-        key: tool.key,
-        width: 110,
-        align: 'center',
-        render: (_, row) => (
-            <Checkbox
-                checked={row.permissions?.[tool.key] === 1}
-                disabled={saving === row.username}
-                onChange={() => togglePermission(row.username, tool.key, row.permissions?.[tool.key] ?? 0)}
-            />
-        ),
-    }));
+    const toolColumns = ALL_TOOLS.map(tool => {
+        const gs = GROUP_STYLE[tool.group] || GROUP_STYLE.freemir;
+        return {
+            title: (
+                <div style={{
+                    background: gs.bg,
+                    border: `1px solid ${gs.border}`,
+                    borderRadius: 6,
+                    padding: '2px 6px',
+                    color: gs.color,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                }}>
+                    {tool.label}
+                </div>
+            ),
+            key: tool.key,
+            width: 110,
+            align: 'center',
+            render: (_, row) => (
+                <Checkbox
+                    checked={row.permissions?.[tool.key] === 1}
+                    disabled={saving === row.username}
+                    onChange={() => togglePermission(row.username, tool.key, row.permissions?.[tool.key] ?? 0)}
+                />
+            ),
+        };
+    });
 
     const columns = [
         {
