@@ -73,4 +73,4 @@ options:
 
 substitutions:
   _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
-  _DATABASE_URL: 'postgresql://dena_admin:AntiGrav2026Secure@35.198.222.19:5432/antigravity_db'
+  _DATABASE_URL: 'postgresql://neondb_owner:npg_e1Jl3rWoTcAR@ep-withered-butterfly-ao66aczs-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
