@@ -92,8 +92,8 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
     finally:
         db.close()
 
-def sync_google_sheets_to_neon() -> int:
-    """Sync Google Sheets price data to Neon PostgreSQL database (optimized with timeout & bulk operations)"""
+def sync_google_sheets_to_vps_postgres() -> int:
+    """Sync Google Sheets price data to PostgreSQL database (optimized with timeout & bulk operations)"""
     db = None
     try:
         print("[Sync] Initializing Google Sheets connection...")
@@ -255,7 +255,7 @@ def sync_google_sheets_to_neon() -> int:
         print(f"[Sync] ✓ Sync complete: {count} price records updated")
         return count
     except Exception as e:
-        print(f"[Sync] ✗ Error syncing Google Sheets to Neon: {e}")
+        print(f"[Sync] ✗ Error syncing Google Sheets to PostgreSQL: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -264,9 +264,9 @@ def sync_google_sheets_to_neon() -> int:
             db.close()
 
 # Keep old function name for backward compatibility
-def sync_google_sheets_to_vps_postgres() -> int:
-    """Deprecated: Use sync_google_sheets_to_neon() instead"""
-    return sync_google_sheets_to_neon()
+def sync_google_sheets_to_postgres() -> int:
+    """Legacy function name - use sync_google_sheets_to_vps_postgres() instead"""
+    return sync_google_sheets_to_vps_postgres()
 
 def clean_sku_list(sku_string: str) -> List[str]:
     if pd.isna(sku_string) or not sku_string: return []
@@ -275,7 +275,7 @@ def clean_sku_list(sku_string: str) -> List[str]:
 
 def parse_idr_price(val: Any) -> float:
     if val is None: return 0.0
-    # Already numeric (from Neon DB JSON) — return directly, avoid stripping decimal point
+    # Already numeric (from PostgreSQL DB JSON) — return directly, avoid stripping decimal point
     if isinstance(val, (int, float)):
         return 0.0 if val != val else float(val)  # guard NaN
     val_str = str(val).strip()

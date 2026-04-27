@@ -26,43 +26,38 @@
 │  URL: https://anti-gravity-123563250077.asia-southeast1.run.app     │
 │  Tech: FastAPI + Uvicorn (Dockerfile)                               │
 │       │                                                             │
-│       ├──▶ 🐘 Neon PostgreSQL (PRIMARY DATABASE) ← UPDATE 20 Apr    │
-│       │    Host: ep-withered-butterfly-ao66aczs-pooler                │
-│       │          .c-2.ap-southeast-1.aws.neon.tech                    │
-│       │    DB: neondb                                                 │
-│       │    User: neondb_owner                                         │
-│       │    Pass: npg_e1Jl3rWoTcAR                                     │
-│       │    (VPS 34.126.76.58 sudah TIDAK dipakai)                     │
+│       ├──▶ 🐘 PostgreSQL Database (PRIMARY)                           │
+│       │    Host: 35.198.222.19 (VPS Production)                       │
+│       │    DB: antigravity_db                                         │
+│       │    User: dena_admin                                           │
+│       │    Pass: AntiGrav2026Secure                                   │
+│       │    Status: ACTIVE - Production Ready                          │
 │       │                                                             │
 │       ├──▶ 📊 Google Sheets (Price + Name Reference)               │
 │       │    Spreadsheet ID: 1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc │
 │       │    URL: https://docs.google.com/spreadsheets/d/             │
 │       │         1aS1wpEJ5jIYFYYsZT1U4-gabyb5XwGn4u1-OpRhiucc      │
 │       │    Auth: credentials.json (GCP Service Account)             │
-│       │    Tabs: Price, All_Name (price reference, sync ke Neon)    │
+│       │    Tabs: Price, All_Name (price reference, sync ke PostgreSQL) │
 │       │                                                             │
 │       └──▶ 🔔 DingTalk Webhook (Activity Notifications)            │
 │            Env: DINGTALK_WEBHOOK_URL, DINGTALK_SECRET               │
 │                                                                     │
-│  🖥️ VPS (antigravity-vps)                                          │
-│  IP: 34.126.76.58                                                   │
+│  🖥️ VPS Production Database                                        │
+│  IP: 35.198.222.19                                                 │
 │  Zone: asia-southeast1-b                                            │
-│  Spec: e2-micro (0.25 vCPU, 1GB RAM)                               │
+│  Spec: Production-ready                                             │
 │  OS: Ubuntu 24.04                                                   │
 │  User: dachinetech_ai                                               │
-│  Fungsi: Hanya PostgreSQL database server                           │
+│  Database: antigravity_db                                           │
+│  Status: ACTIVE - Primary Database                                  │
 │                                                                     │
-│  ☁️ Neon DB (PRIMARY — AKTIF sejak April 2026)                     │
-│  URL: postgresql://neondb_owner:npg_e1Jl3rWoTcAR                   │
-│       @ep-withered-butterfly-ao66aczs-pooler                        │
-│       .c-2.ap-southeast-1.aws.neon.tech                             │
-│       /neondb?sslmode=require&channel_binding=require               │
-│  Region: AWS ap-southeast-1 (Singapore)                             │
-│                                                                     │
-│  🖥️ VPS (antigravity-vps) — TIDAK AKTIF LAGI                      │
-│  IP: 34.126.76.58 (GCP asia-southeast1-b)                          │
-│  DB lama: antigravity_db / dena_admin / AntiGrav2026Secure          │
-│  Status: Standby, data lama masih ada                               │
+│  📊 Database Statistics                                            │
+│  - Tables: 13 active                                               │
+│  - Affiliate Data: 140K+ conversions, 17K+ products, 36K+ creators │
+│  - Price Data: 214 prices, 13K+ names                             │
+│  - Users: 23 active accounts                                        │
+│  - Performance: 16K+ records, 735 logs                            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
