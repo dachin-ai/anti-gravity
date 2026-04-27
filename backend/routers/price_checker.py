@@ -123,15 +123,41 @@ def calc_direct(body: DirectInput):
 async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
     if method not in ["Listing", "SKU"]:
         raise HTTPException(status_code=400, detail="Method must be Listing or SKU")
-        
-    price_db, name_map, link_map = get_db()
     
+    # File size validation for production
+    max_file_size = 10 * 1024 * 1024  # 10MB limit for Cloud Run
+    file_content = await file.read()
+    
+    if len(file_content) > max_file_size:
+        raise HTTPException(
+            status_code=413, 
+            detail=f"File too large. Maximum size is {max_file_size // (1024*1024)}MB"
+        )
+    
+    # Reset file pointer for processing
+    await file.seek(0)
     contents = await file.read()
+    
+    price_db, name_map, link_map = get_db()
     
     try:
         if method == "Listing":
-            df_check = pd.read_excel(io.BytesIO(contents), sheet_name="Check Price")
-            df_mass = pd.read_excel(io.BytesIO(contents), sheet_name="Mass Update")
+            try:
+                df_check = pd.read_excel(io.BytesIO(contents), sheet_name="Check Price")
+                df_mass = pd.read_excel(io.BytesIO(contents), sheet_name="Mass Update")
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Failed to read Excel file. Please ensure it has 'Check Price' and 'Mass Update' sheets. Error: {str(e)}"
+                )
+            
+            # Row limit validation for production
+            max_rows = 1000  # Limit for Cloud Run memory
+            if len(df_check) > max_rows:
+                raise HTTPException(
+                    status_code=413, 
+                    detail=f"Too many rows. Maximum {max_rows} rows allowed. Found {len(df_check)} rows."
+                )
             
             col_pid, col_var_id, col_camp_price = df_check.columns[:3]
             col_target_price = col_camp_price
@@ -155,7 +181,22 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
             
             df_final = df_check
         else:
-            df_sku = pd.read_excel(io.BytesIO(contents), sheet_name=0) 
+            try:
+                df_sku = pd.read_excel(io.BytesIO(contents), sheet_name=0) 
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Failed to read Excel file. Error: {str(e)}"
+                )
+            
+            # Row limit validation for production
+            max_rows = 1000  # Limit for Cloud Run memory
+            if len(df_sku) > max_rows:
+                raise HTTPException(
+                    status_code=413, 
+                    detail=f"Too many rows. Maximum {max_rows} rows allowed. Found {len(df_sku)} rows."
+                )
+            
             df_sku.columns = ["SKU", "Input Price"]
             df_sku["SKU"] = df_sku["SKU"].astype(str).str.strip()
             col_target_price = "Input Price"
@@ -171,17 +212,36 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         # Single DB call for all photo maps
         db = SessionLocal()
         try:
-            from services.price_checker_logic import get_sku_photo_map
+            from services.product_performance_logic import get_sku_photo_map
             photo_map = get_sku_photo_map(db, all_skus)
+        except Exception as e:
+            print(f"[ERROR] Failed to get photo map: {e}")
+            photo_map = {}
         finally:
             db.close()
 
-        # Now process with cached photo_map
+        # Now process with cached photo_map with error handling
         calc_results = []
+        failed_rows = []
+        
         for index, row in df_final.iterrows():
-            sku_val = row["SKU"]
-            price_info = calculate_prices(sku_val, price_db, name_map, link_map, photo_map)
-            calc_results.append(price_info)
+            try:
+                sku_val = row["SKU"]
+                if pd.isna(sku_val) or not str(sku_val).strip():
+                    failed_rows.append(index)
+                    continue
+                    
+                price_info = calculate_prices(sku_val, price_db, name_map, link_map, photo_map)
+                calc_results.append(price_info)
+                
+            except Exception as e:
+                print(f"[ERROR] Failed to process row {index}: {e}")
+                # Add error result for this row
+                error_result = {}
+                for p_type in PRICE_TYPES:
+                    error_result[p_type] = "Invalid"
+                calc_results.append(error_result)
+                failed_rows.append(index)
         
         price_df = pd.DataFrame(calc_results)
         final_df = pd.concat([df_final, price_df], axis=1)
@@ -199,13 +259,20 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                 except: return "Invalid"
             final_df[f"Gap {p_type}"] = final_df.apply(get_gap_value, axis=1)
 
-        excel_bytes = convert_df_to_excel_multisheet(final_df, method)
+        try:
+            excel_bytes = convert_df_to_excel_multisheet(final_df, method)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to generate Excel file. Error: {str(e)}"
+            )
         
         import base64
         import math
         b64_str = base64.b64encode(excel_bytes).decode('utf-8')
         
         total_rows = len(final_df)
+        processed_rows = total_rows - len(failed_rows)
         invalid_rows = 0
         
         preview_fields = ["SKU"]
@@ -236,13 +303,23 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         return JSONResponse(content={
             "summary": {
                 "total": int(total_rows),
+                "processed": int(total_rows - len(failed_rows)),
                 "valid": int(valid_rows),
-                "invalid": int(invalid_rows)
+                "invalid": int(invalid_rows),
+                "failed": len(failed_rows)
             },
             "preview": cleaned_preview,
-            "file_base64": b64_str
+            "file_base64": b64_str,
+            "processing_info": {
+                "file_size_mb": round(len(contents) / (1024*1024), 2),
+                "method": method,
+                "has_photo_data": len(photo_map) > 0,
+                "failed_row_indices": failed_rows[:10] if failed_rows else []
+            }
         })
 
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         print("ERROR IN CALC BATCH:")
