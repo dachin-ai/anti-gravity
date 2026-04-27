@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Typography, Row, Col, Card, Tag, Tooltip, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRightOutlined, LockOutlined, TagOutlined, InboxOutlined, FileSearchOutlined, BarChartOutlined, FundProjectionScreenOutlined, RiseOutlined, PieChartOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, LockOutlined, TagOutlined, InboxOutlined, FileSearchOutlined, BarChartOutlined, FundProjectionScreenOutlined, RiseOutlined, PieChartOutlined, VideoCameraOutlined, UnlockOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -13,15 +13,18 @@ const TOOLS_CATALOG = [
     { name: "Product Performance", desc: "Upload, clean, and store product performance data by week.", main_user: "Account Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/product-performance", active: true, category: "freemir" },
     { name: "Order Review", desc: "Analysis of lost orders and cancellation reasons.", main_user: "Platform Responsible", platform: "Qianyi ERP", icon: <FileSearchOutlined />, path: "/order-loss", active: true, category: "shopee", toolKey: "order_review" },
     { name: "Affiliate Performance", desc: "Shopee Affiliate performance data tracking.", main_user: "Affiliate Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/shopee-affiliate", active: true, category: "shopee", toolKey: "affiliate_performance" },
+    { name: "LS Display", desc: "Real-time livestream display and monitoring dashboard.", main_user: "Livestream Team", platform: "Shopee", icon: <VideoCameraOutlined />, path: "/livestream-display", active: true, category: "shopee" },
     { name: "Pre-Sales Checker", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: <FundProjectionScreenOutlined />, path: "/pre-sales", active: true, category: "tiktok", toolKey: "pre_sales" },
     { name: "Affiliate Analyzer", desc: "Comprehensive TikTok affiliate data analytics.", main_user: "Affiliate Responsible", platform: "TikTok", icon: <RiseOutlined />, path: "/affiliate-analyzer", active: true, category: "tiktok", toolKey: "affiliate_analyzer" },
     { name: "Ads Analyzer", desc: "Analyze and consolidate TikTok Ads performance data.", main_user: "Ads Specialist", platform: "TikTok", icon: <PieChartOutlined />, path: "/tiktok-ads", active: true, category: "tiktok", toolKey: "ads_analyzer" },
+    { name: "Request Access", desc: "Request access to restricted tools and permissions.", main_user: "All Users", platform: "System", icon: <UnlockOutlined />, path: "/request-access", active: true, category: "system" },
 ];
 
 const CATEGORY_META = {
     "freemir": { title: "Freemir Suite", accent: "#6366f1" },
     "shopee": { title: "Shopee Suite", accent: "#f97316" },
     "tiktok": { title: "TikTok Suite", accent: "#ec4899" },
+    "system": { title: "System Tools", accent: "#10b981" },
 };
 
 const Dashboard = () => {
@@ -29,34 +32,107 @@ const Dashboard = () => {
     const { hasAccess } = useAuth();
     const { isDark } = useTheme();
 
+    // Add CSS animation for floating orbs
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes float {
+                0%, 100% { transform: translateY(0px) rotate(0deg); }
+                50% { transform: translateY(-20px) rotate(5deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
+
     return (
         <div>
             {/* HERO */}
             <div style={{
                 position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(99,102,241,0.03) 50%, transparent 100%)',
-                border: '1px solid rgba(99,102,241,0.18)',
-                borderRadius: 16, padding: '36px 40px', marginBottom: 52,
+                background: isDark 
+                    ? 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 50%, rgba(236,72,153,0.03) 100%)'
+                    : 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.02) 50%, transparent 100%)',
+                border: `1px solid ${isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)'}`,
+                borderRadius: 20, padding: '48px 56px', marginBottom: 64,
+                boxShadow: isDark 
+                    ? '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+                    : '0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
             }}>
-                {/* floating orbs */}
-                <div style={{ position: 'absolute', top: -60, right: -60, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: -30, right: 180, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(236,72,153,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', top: 20, right: 300, width: 80, height: 80, borderRadius: '50%', background: 'radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                <Title level={1} style={{
-                    fontSize: 34, margin: '0 0 10px 0', fontWeight: 800,
-                    background: isDark
-                        ? 'linear-gradient(90deg, #f1f5f9 0%, #c7d2fe 60%, #a5b4fc 100%)'
-                        : 'none',
-                    WebkitBackgroundClip: isDark ? 'text' : 'unset',
-                    WebkitTextFillColor: isDark ? 'transparent' : '#0f172a',
-                    color: isDark ? undefined : '#0f172a',
-                    letterSpacing: '-0.5px',
-                }}>
-                    Business Intelligence Tools
-                </Title>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#64748b' }}>
-                    Unified analytics &amp; operations platform — select a module to launch.
-                </Text>
+                {/* Enhanced floating orbs with animation */}
+                <div style={{ 
+                    position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', 
+                    background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)', 
+                    pointerEvents: 'none', animation: 'float 6s ease-in-out infinite' 
+                }} />
+                <div style={{ 
+                    position: 'absolute', bottom: -40, right: 200, width: 180, height: 180, borderRadius: '50%', 
+                    background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)', 
+                    pointerEvents: 'none', animation: 'float 8s ease-in-out infinite reverse' 
+                }} />
+                <div style={{ 
+                    position: 'absolute', top: 30, right: 320, width: 100, height: 100, borderRadius: '50%', 
+                    background: 'radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%)', 
+                    pointerEvents: 'none', animation: 'float 4s ease-in-out infinite' 
+                }} />
+                
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <Title level={1} style={{
+                        fontSize: 42, margin: '0 0 16px 0', fontWeight: 900,
+                        background: isDark
+                            ? 'linear-gradient(135deg, #f1f5f9 0%, #c7d2fe 50%, #a5b4fc 100%)'
+                            : 'linear-gradient(135deg, #1e293b 0%, #6366f1 50%, #8b5cf6 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        letterSpacing: '-1px',
+                        lineHeight: 1.2,
+                    }}>
+                        Business Intelligence Hub
+                    </Title>
+                    <Text style={{ 
+                        fontSize: 16, color: isDark ? '#cbd5e1' : '#64748b', 
+                        fontWeight: 400, lineHeight: 1.6,
+                        display: 'block', maxWidth: 600
+                    }}>
+                        Unified analytics &amp; operations platform — select a module to launch your workflow.
+                    </Text>
+                    
+                    {/* Quick stats */}
+                    <div style={{ display: 'flex', gap: 32, marginTop: 32 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                                width: 12, height: 12, borderRadius: '50%', 
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                boxShadow: '0 0 12px rgba(16,185,129,0.4)'
+                            }} />
+                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                                <span style={{ fontWeight: 700, color: isDark ? '#10b981' : '#059669' }}>12+</span> Tools Available
+                            </Text>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                                width: 12, height: 12, borderRadius: '50%', 
+                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                                boxShadow: '0 0 12px rgba(99,102,241,0.4)'
+                            }} />
+                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                                <span style={{ fontWeight: 700, color: isDark ? '#6366f1' : '#4f46e5' }}>4</span> Platform Integrations
+                            </Text>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                                width: 12, height: 12, borderRadius: '50%', 
+                                background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                boxShadow: '0 0 12px rgba(249,115,22,0.4)'
+                            }} />
+                            <Text style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                                <span style={{ fontWeight: 700, color: isDark ? '#f97316' : '#ea580c' }}>Real-time</span> Analytics
+                            </Text>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* CATEGORIES */}
@@ -88,69 +164,135 @@ const Dashboard = () => {
                                                 onClick={() => isClickable && navigate(tool.path)}
                                                 className={`lobby-card card-${catKey}`}
                                                 style={{
-                                                    background: isDark ? '#0d1526' : '#ffffff',
-                                                    border: `1px solid ${accessible ? `${meta.accent}28` : 'rgba(239,68,68,0.15)'}`,
-                                                    borderTop: accessible ? `3px solid ${meta.accent}` : '3px solid rgba(239,68,68,0.4)',
-                                                    borderRadius: 12,
+                                                    background: isDark ? '#0f172a' : '#ffffff',
+                                                    border: `1px solid ${accessible ? `${meta.accent}20` : 'rgba(239,68,68,0.2)'}`,
+                                                    borderTop: accessible ? `4px solid ${meta.accent}` : '4px solid rgba(239,68,68,0.5)',
+                                                    borderRadius: 16,
                                                     height: '100%',
                                                     cursor: isClickable ? 'pointer' : 'default',
-                                                    opacity: accessible ? 1 : 0.55,
-                                                    transition: 'border-color 0.25s, box-shadow 0.25s, transform 0.25s',
+                                                    opacity: accessible ? 1 : 0.6,
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    boxShadow: isDark 
+                                                        ? '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                                                        : '0 4px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden',
                                                 }}
-                                                styles={{ body: { padding: '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' } }}
+                                                styles={{ body: { padding: '20px 24px', display: 'flex', flexDirection: 'column', height: '100%' } }}
+                                                onMouseEnter={(e) => {
+                                                    if (isClickable) {
+                                                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                                                        e.currentTarget.style.boxShadow = isDark 
+                                                            ? `0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px ${meta.accent}30`
+                                                            : `0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px ${meta.accent}20`;
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                                                    e.currentTarget.style.boxShadow = isDark 
+                                                        ? '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                                                        : '0 4px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)';
+                                                }}
                                             >
                                                 {/* Icon + title row */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
                                                     <div style={{
-                                                        width: 38, height: 38, borderRadius: 9, flexShrink: 0,
-                                                        background: accessible ? `${meta.accent}22` : 'rgba(239,68,68,0.1)',
-                                                        border: accessible ? `1px solid ${meta.accent}35` : '1px solid rgba(239,68,68,0.2)',
+                                                        width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                                                        background: accessible 
+                                                            ? `linear-gradient(135deg, ${meta.accent}25, ${meta.accent}15)`
+                                                            : 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.08))',
+                                                        border: accessible ? `2px solid ${meta.accent}40` : '2px solid rgba(239,68,68,0.3)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 18, color: accessible ? meta.accent : '#f87171',
-                                                        boxShadow: accessible ? `0 0 10px ${meta.accent}25` : 'none',
+                                                        fontSize: 20, color: accessible ? meta.accent : '#f87171',
+                                                        boxShadow: accessible 
+                                                            ? `0 4px 16px ${meta.accent}30, inset 0 1px 0 rgba(255,255,255,0.2)`
+                                                            : '0 4px 16px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+                                                        position: 'relative',
                                                     }}>
                                                         {tool.icon}
+                                                        {accessible && (
+                                                            <div style={{
+                                                                position: 'absolute', top: -2, right: -2,
+                                                                width: 12, height: 12, borderRadius: '50%',
+                                                                background: '#10b981', border: '2px solid #fff',
+                                                                boxShadow: '0 2px 8px rgba(16,185,129,0.4)'
+                                                            }} />
+                                                        )}
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <Text style={{ fontSize: 14, fontWeight: 700, color: accessible ? (isDark ? '#f1f5f9' : '#1e293b') : '#64748b', display: 'block', lineHeight: 1.3 }}>
+                                                        <Text style={{ 
+                                                            fontSize: 16, fontWeight: 800, 
+                                                            color: accessible ? (isDark ? '#f1f5f9' : '#1e293b') : '#64748b', 
+                                                            display: 'block', lineHeight: 1.3, marginBottom: 8
+                                                        }}>
                                                             {tool.name}
                                                         </Text>
-                                                        <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
-                                                            <Tag style={{ background: `${meta.accent}12`, border: `1px solid ${meta.accent}30`, color: meta.accent, fontSize: 10, borderRadius: 4, lineHeight: '16px', padding: '0 6px', margin: 0 }}>
+                                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                            <Tag style={{ 
+                                                                background: `${meta.accent}15`, 
+                                                                border: `1px solid ${meta.accent}35`, 
+                                                                color: meta.accent, fontSize: 11, borderRadius: 6, 
+                                                                lineHeight: '18px', padding: '0 8px', margin: 0,
+                                                                fontWeight: 600
+                                                            }}>
                                                                 {tool.platform}
                                                             </Tag>
-                                                            <Tag style={{ background: 'transparent', border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`, color: '#64748b', fontSize: 10, borderRadius: 4, lineHeight: '16px', padding: '0 6px', margin: 0 }}>
+                                                            <Tag style={{ 
+                                                                background: isDark ? 'rgba(51,65,85,0.3)' : 'rgba(241,245,249,0.8)', 
+                                                                border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, 
+                                                                color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, 
+                                                                borderRadius: 6, lineHeight: '18px', padding: '0 8px', margin: 0,
+                                                                fontWeight: 500
+                                                            }}>
                                                                 {tool.main_user}
                                                             </Tag>
                                                         </div>
                                                     </div>
-                                                    {!accessible && <LockOutlined style={{ color: '#f87171', fontSize: 13, flexShrink: 0 }} />}
+                                                    {!accessible && <LockOutlined style={{ color: '#f87171', fontSize: 16, flexShrink: 0, marginTop: 4 }} />}
                                                 </div>
 
-                                                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.6, flexGrow: 1, marginBottom: 12, display: 'block' }}>
+                                                <Text style={{ 
+                                                    color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, 
+                                                    lineHeight: 1.7, flexGrow: 1, marginBottom: 16, display: 'block',
+                                                    fontWeight: 400
+                                                }}>
                                                     {tool.desc}
                                                 </Text>
 
                                                 {/* CTA */}
                                                 {accessible ? (
                                                     <Button
-                                                        ghost
-                                                        size="small"
+                                                        type="primary"
+                                                        size="middle"
                                                         style={{
-                                                            borderColor: meta.accent,
-                                                            color: meta.accent,
-                                                            borderRadius: 6,
-                                                            fontSize: 12,
-                                                            fontWeight: 600,
-                                                            height: 28,
-                                                            background: `${meta.accent}10`,
+                                                            background: `linear-gradient(135deg, ${meta.accent}, ${meta.accent}dd)`,
+                                                            border: 'none',
+                                                            borderRadius: 8,
+                                                            fontSize: 13,
+                                                            fontWeight: 700,
+                                                            height: 36,
+                                                            boxShadow: `0 4px 12px ${meta.accent}40`,
+                                                            transition: 'all 0.3s ease',
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                                            e.currentTarget.style.boxShadow = `0 6px 20px ${meta.accent}60`;
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                            e.currentTarget.style.boxShadow = `0 4px 12px ${meta.accent}40`;
                                                         }}
                                                     >
-                                                        Launch <ArrowRightOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+                                                        Launch <ArrowRightOutlined style={{ fontSize: 12, marginLeft: 6 }} />
                                                     </Button>
                                                 ) : (
-                                                    <div style={{ color: '#f87171', fontSize: 12, fontWeight: 500 }}>
-                                                        <LockOutlined style={{ marginRight: 6 }} />Access Restricted
+                                                    <div style={{ 
+                                                        color: '#f87171', fontSize: 13, fontWeight: 600,
+                                                        display: 'flex', alignItems: 'center', gap: 8,
+                                                        padding: '8px 12px', background: 'rgba(239,68,68,0.1)',
+                                                        borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)'
+                                                    }}>
+                                                        <LockOutlined /> Access Restricted
                                                     </div>
                                                 )}
                                             </Card>

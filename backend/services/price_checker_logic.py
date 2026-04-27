@@ -370,17 +370,19 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
 
     return breakdown_data
 
-def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: Dict) -> Dict:
+def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: Dict, photo_map: Dict = None) -> Dict:
     skus = clean_sku_list(sku_string)
     sku_count = len(skus)
     result = {}
     sku_items = []
     
-    db = SessionLocal()
-    try:
-        photo_map = get_sku_photo_map(db, set(skus))
-    finally:
-        db.close()
+    # Only open DB connection if photo_map not provided
+    if photo_map is None:
+        db = SessionLocal()
+        try:
+            photo_map = get_sku_photo_map(db, set(skus))
+        finally:
+            db.close()
 
     for i, sku in enumerate(skus):
         idx = i + 1

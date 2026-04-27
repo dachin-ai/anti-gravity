@@ -8,6 +8,7 @@ from services.price_checker_logic import (
     load_product_database,
     calculate_prices,
     generate_breakdown_table,
+    clean_sku_list,
     PRICE_TYPES,
     generate_template_file,
     convert_df_to_excel_multisheet,
@@ -21,11 +22,14 @@ router = APIRouter(prefix="/api/price-checker", tags=["price-checker"])
 db_cache = {
     "price_db": None,
     "name_map": None,
-    "link_map": None
+    "link_map": None,
+    "last_refresh": None
 }
 
 def get_db():
-    if not db_cache["price_db"]:
+    import time
+    # Auto-refresh cache if it's older than 30 minutes
+    if not db_cache["price_db"] or (db_cache["last_refresh"] and (time.time() - db_cache["last_refresh"]) > 1800):
         refresh_db()
     return db_cache["price_db"], db_cache["name_map"], db_cache["link_map"]
 
@@ -61,10 +65,12 @@ def sync_to_neon():
 
 @router.get("/refresh", dependencies=[Depends(require_tool_access("price_checker"))])
 def refresh_db():
+    import time
     global db_cache
     db_cache["price_db"] = None
     db_cache["name_map"] = None
     db_cache["link_map"] = None
+    db_cache["last_refresh"] = None
     
     p, n, l = load_product_database()
     if not p:
@@ -72,6 +78,7 @@ def refresh_db():
     db_cache["price_db"] = p
     db_cache["name_map"] = n
     db_cache["link_map"] = l
+    db_cache["last_refresh"] = time.time()
     return {"message": "Success", "records": len(p)}
 
 @router.get("/template/{method}", dependencies=[Depends(require_tool_access("price_checker"))])
@@ -168,10 +175,26 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
             col_target_price = "Input Price"
             df_final = df_sku
 
+        # PERFORMANCE OPTIMIZATION: Collect all unique SKUs first, then batch fetch photo_map
+        all_skus = set()
+        for _, row in df_final.iterrows():
+            sku_val = row["SKU"]
+            skus_list = clean_sku_list(sku_val)
+            all_skus.update(skus_list)
+        
+        # Single DB call for all photo maps
+        db = SessionLocal()
+        try:
+            from services.price_checker_logic import get_sku_photo_map
+            photo_map = get_sku_photo_map(db, all_skus)
+        finally:
+            db.close()
+
+        # Now process with cached photo_map
         calc_results = []
         for index, row in df_final.iterrows():
             sku_val = row["SKU"]
-            price_info = calculate_prices(sku_val, price_db, name_map, link_map)
+            price_info = calculate_prices(sku_val, price_db, name_map, link_map, photo_map)
             calc_results.append(price_info)
         
         price_df = pd.DataFrame(calc_results)
