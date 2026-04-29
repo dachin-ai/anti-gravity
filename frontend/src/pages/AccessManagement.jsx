@@ -9,6 +9,7 @@ import {
     getAllUsersWithPermissions, updateUserPermissions,
 } from '../api';
 import PageHeader from '../components/PageHeader';
+import UserActivity from './UserActivity';
 
 const { Text } = Typography;
 
@@ -274,6 +275,27 @@ function UserPermissionsTab() {
 
 /* ─────────────── Main Page ─────────────── */
 export default function AccessManagement() {
+    // TODO: Ganti dengan pengecekan permission admin dari context/auth jika sudah ada
+    const isAdmin = true;
+    const tabItems = [
+        {
+            key: 'requests',
+            label: 'Access Requests',
+            children: <AccessRequestsTab />,
+        },
+        {
+            key: 'permissions',
+            label: 'User Permissions',
+            children: <UserPermissionsTab />,
+        },
+    ];
+    if (isAdmin) {
+        tabItems.push({
+            key: 'user-activity',
+            label: 'User Activity',
+            children: <UserActivity />,
+        });
+    }
     return (
         <div style={{ padding: '24px 32px' }}>
             <PageHeader
@@ -289,18 +311,7 @@ export default function AccessManagement() {
             }}>
                 <Tabs
                     defaultActiveKey="requests"
-                    items={[
-                        {
-                            key: 'requests',
-                            label: 'Access Requests',
-                            children: <AccessRequestsTab />,
-                        },
-                        {
-                            key: 'permissions',
-                            label: 'User Permissions',
-                            children: <UserPermissionsTab />,
-                        },
-                    ]}
+                    items={tabItems}
                 />
             </div>
         </div>

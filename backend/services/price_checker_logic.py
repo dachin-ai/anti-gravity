@@ -4,6 +4,7 @@ import io
 import re
 import os
 import gspread
+from gspread.utils import rowcol_to_a1
 from typing import Tuple, Dict, Any, List
 from database import SessionLocal
 from models import FreemirPrice, FreemirName
@@ -21,6 +22,11 @@ PRICE_TYPES = [
     "Daily-Top-Creator", "Daily-FS", "Daily-Shopee-FS", "DD-FS",
     "DD-Shoptab", "DD-Livestream", "DD-Mid-Creator", "DD-Top-Creator",
     "PD-Shoptab", "PD-Livestream", "PD-Mid-Creator", "PD-Top-Creator"
+]
+STOCK_TYPES = [
+    "IDR-Ready", "SBY-Ready",
+    "IDR-Lock", "SBY-Lock",
+    "IDR-OTW", "SBY-OTW",
 ]
 
 SHEET_CONFIG = [
@@ -103,103 +109,34 @@ def sync_google_sheets_to_vps_postgres() -> int:
         db = SessionLocal()
         count = 0
 
-        # ===== SYNC PRICE DATA =====
-        print("[Sync] Fetching Price worksheet...")
-        price_worksheet = sh.worksheet("Price")
-        price_data = price_worksheet.get_all_values()
-
-        if price_data:
-            cols = price_data[0]
-            df_price = pd.DataFrame(price_data[1:], columns=cols)
-            df_price = df_price[df_price.iloc[:, 0].astype(str).str.strip() != ""]
-
-            sku_col = cols[0]
-            cat_col = "Category" if "Category" in cols else None
-            clear_col = "Clearance" if "Clearance" in cols else None
-
-            print(f"[Sync] Processing {len(df_price)} price records...")
-
-            skus_to_update = {}
-            for _, row in df_price.iterrows():
-                sku_val = str(row[sku_col]).strip()
-                if not sku_val:
-                    continue
-
-                cat_val = str(row[cat_col]) if cat_col and cat_col in row else ""
-                clear_val = str(row[clear_col]) if clear_col and clear_col in row else ""
-
-                prices_dict = {}
-                for pt in PRICE_TYPES:
-                    if pt in row and str(row[pt]).strip():
-                        try:
-                            prices_dict[pt] = float(str(row[pt]).replace(",", ""))
-                        except:
-                            pass
-
-                skus_to_update[sku_val] = {
-                    'sku': sku_val,
-                    'category': cat_val,
-                    'clearance': clear_val,
-                    'prices': prices_dict
-                }
-
-            db.query(FreemirPrice).delete()
-            db.commit()
-
-            if skus_to_update:
-                db.bulk_insert_mappings(FreemirPrice, list(skus_to_update.values()))
-                db.commit()
-                count = len(skus_to_update)
-                print(f"[Sync] Synced {count} price records")
-
-        # ===== SYNC NAME DATA =====
-        print("[Sync] Fetching All_Name worksheet...")
+        # ===== SYNC PRICE + NAME DATA (SKU_Info as single source) =====
+        print("[Sync] Fetching SKU_Info worksheet...")
         try:
-            name_worksheet = sh.worksheet("All_Name")
-            name_data = name_worksheet.get_all_values()
+            sku_info_ws = sh.worksheet("SKU_Info")
+            sku_info_data = sku_info_ws.get_all_values()
 
-            at2_data = []
-            try:
-                at2_sheet = sh.worksheet("AT2")
-                at2_data = at2_sheet.get_all_values()
-            except Exception as e:
-                print(f"[Sync] AT2 sheet unavailable: {e}")
+            if sku_info_data:
+                sku_info_cols = [str(c).strip() for c in sku_info_data[0]]
+                df_sku_info = pd.DataFrame(sku_info_data[1:], columns=sku_info_cols)
+                normalized = {str(c).strip().lower(): c for c in df_sku_info.columns}
 
-            if name_data:
-                df_names = pd.DataFrame(name_data[1:], columns=name_data[0])
-                df_names = df_names[df_names.iloc[:, 0].astype(str).str.strip() != ""]
+                def col(*aliases):
+                    for alias in aliases:
+                        key = alias.strip().lower()
+                        if key in normalized:
+                            return normalized[key]
+                    return None
 
-                sku_c = df_names.columns[0]
-                name_c = next((c for c in ["English name", "Product Name", "Name", "Rodcyt Name", "rodcyt name", "rodcyt"] if c in df_names.columns), (df_names.columns[1] if len(df_names.columns) > 1 else None))
-                link_c = next((c for c in ["Image", "Image URL", "Image Link", "Link", "URL", "Product Link"] if c in df_names.columns), (df_names.columns[2] if len(df_names.columns) > 2 else None))
+                sku_col = col("SKU") or (df_sku_info.columns[1] if len(df_sku_info.columns) > 1 else df_sku_info.columns[0])
+                df_sku_info = df_sku_info[df_sku_info[sku_col].astype(str).str.strip() != ""]
 
-                at2_name_map = {}
-                at2_link_map = {}
-                if at2_data and len(at2_data) > 1:
-                    at2_cols = [str(c).strip() for c in at2_data[0]]
-                    try:
-                        sku_idx = next(i for i, v in enumerate(at2_cols) if v.lower() == 'sku')
-                    except StopIteration:
-                        sku_idx = 2 if len(at2_cols) > 2 else None
-                    try:
-                        name_idx = next(i for i, v in enumerate(at2_cols) if v.lower() in ('name', 'product name', 'item name', 'display name'))
-                    except StopIteration:
-                        name_idx = 3 if len(at2_cols) > 3 else None
-                    try:
-                        link_idx = next(i for i, v in enumerate(at2_cols) if v.lower() in ('link', 'url', 'product url', 'product_link', 'product link', 'detail url'))
-                    except StopIteration:
-                        link_idx = 4 if len(at2_cols) > 4 else None
+                cat_col = col("Category")
+                clear_col = col("Clearance")
+                name_col = col("Product-Name", "Product Name", "Name", "English Name")
+                link_col = col("Link", "Product Link", "URL", "Image", "Image URL", "Pic")
+                mark_col = col("Mark")
 
-                    for row in at2_data[1:]:
-                        if sku_idx is None:
-                            continue
-                        sku_value = str(row[sku_idx]).strip() if len(row) > sku_idx else ''
-                        if not sku_value:
-                            continue
-                        if name_idx is not None and len(row) > name_idx:
-                            at2_name_map[sku_value] = str(row[name_idx]).strip()
-                        if link_idx is not None and len(row) > link_idx:
-                            at2_link_map[sku_value] = str(row[link_idx]).strip()
+                print(f"[Sync] Processing {len(df_sku_info)} SKU_Info rows...")
 
                 def expand_skus(raw_value: str):
                     if pd.isna(raw_value) or not str(raw_value).strip():
@@ -207,55 +144,82 @@ def sync_google_sheets_to_vps_postgres() -> int:
                     parts = re.split(r'[+\-,|]+', str(raw_value))
                     return [p.strip() for p in parts if p.strip()]
 
-                print(f"[Sync] Processing {len(df_names)} product names...")
+                skus_to_update = {}
+                names_by_sku = {}
+                links_by_sku = {}
+                marks_by_sku = {}
 
-                names_to_insert = []
-                for _, row in df_names.iterrows():
-                    raw_sku = str(row[sku_c]).strip()
+                for _, row in df_sku_info.iterrows():
+                    raw_sku = str(row[sku_col]).strip()
                     if not raw_sku:
                         continue
 
-                    raw_name = str(row[name_c]).strip() if name_c and name_c in row else ""
-                    raw_link = str(row[link_c]).strip() if link_c and link_c in row else ""
-                    skus = expand_skus(raw_sku)
-                    if len(skus) > 1:
-                        # Skip bundle/combo rows for individual SKU product name and image assignment.
-                        raw_name = ""
-                        raw_link = ""
-                    for sku in skus:
-                        name_value = at2_name_map.get(sku, raw_name)
-                        link_value = at2_link_map.get(sku, raw_link)
-                        names_to_insert.append({
+                    cat_val = str(row[cat_col]).strip() if cat_col and cat_col in row else ""
+                    clear_val = str(row[clear_col]).strip() if clear_col and clear_col in row else ""
+                    raw_name = str(row[name_col]).strip() if name_col and name_col in row else ""
+                    raw_link = str(row[link_col]).strip() if link_col and link_col in row else ""
+                    raw_mark = str(row[mark_col]).strip() if mark_col and mark_col in row else ""
+
+                    prices_dict = {}
+                    for pt in PRICE_TYPES:
+                        if pt in row and str(row[pt]).strip():
+                            try:
+                                prices_dict[pt] = float(str(row[pt]).replace(",", ""))
+                            except:
+                                pass
+                    for st in STOCK_TYPES:
+                        if st in row:
+                            prices_dict[st] = parse_stock_value(row[st])
+
+                    for sku in expand_skus(raw_sku):
+                        skus_to_update[sku] = {
                             'sku': sku,
-                            'product_name': name_value,
-                            'link': link_value
-                        })
+                            'category': cat_val,
+                            'clearance': clear_val,
+                            'prices': prices_dict
+                        }
+                        if raw_name:
+                            names_by_sku[sku] = raw_name
+                        if raw_link:
+                            links_by_sku[sku] = raw_link
+                        if raw_mark:
+                            marks_by_sku[sku] = raw_mark
+
+                db.query(FreemirPrice).delete()
+                db.commit()
+                if skus_to_update:
+                    db.bulk_insert_mappings(FreemirPrice, list(skus_to_update.values()))
+                    db.commit()
+                    count = len(skus_to_update)
+                    print(f"[Sync] Synced {count} price records from SKU_Info")
 
                 db.query(FreemirName).delete()
                 db.commit()
+                names_to_insert = []
+                for sku, _ in skus_to_update.items():
+                    names_to_insert.append({
+                        'sku': sku,
+                        'product_name': names_by_sku.get(sku, ""),
+                        'link': links_by_sku.get(sku, ""),
+                        'mark': marks_by_sku.get(sku, "")
+                    })
 
                 if names_to_insert:
-                    seen = set()
-                    unique_names = []
-                    for item in names_to_insert:
-                        if item['sku'] not in seen:
-                            seen.add(item['sku'])
-                            unique_names.append(item)
-                    db.bulk_insert_mappings(FreemirName, unique_names)
+                    db.bulk_insert_mappings(FreemirName, names_to_insert)
                     db.commit()
-                    print(f"[Sync] Synced {len(unique_names)} product names (from {len(names_to_insert)} total entries)")
+                    print(f"[Sync] Synced {len(names_to_insert)} product names/links from SKU_Info")
         except Exception as e:
-            print(f"[Sync] Warning: Could not sync product names: {e}")
+            print(f"[Sync] Warning: Could not sync SKU_Info data: {e}")
 
         global _cached_price_db, _cached_name_map, _cached_link_map
         _cached_price_db = None
         _cached_name_map = None
         _cached_link_map = None
 
-        print(f"[Sync] ✓ Sync complete: {count} price records updated")
+        print(f"[Sync] Sync complete: {count} price records updated")
         return count
     except Exception as e:
-        print(f"[Sync] ✗ Error syncing Google Sheets to PostgreSQL: {e}")
+        print(f"[Sync] Error syncing Google Sheets to PostgreSQL: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -267,6 +231,41 @@ def sync_google_sheets_to_vps_postgres() -> int:
 def sync_google_sheets_to_postgres() -> int:
     """Legacy function name - use sync_google_sheets_to_vps_postgres() instead"""
     return sync_google_sheets_to_vps_postgres()
+
+
+def upload_stock_data_to_google_sheet(file_bytes: bytes) -> Dict[str, Any]:
+    """
+    Replace Google Sheet tab 'In-Stock' with uploaded Excel data.
+    Writes data from column A up to CA (79 columns), replacing old rows.
+    """
+    df = pd.read_excel(io.BytesIO(file_bytes), sheet_name=0, dtype=str)
+    df = df.fillna("")
+    max_cols = 79  # A..CA
+    if df.shape[1] > max_cols:
+        df = df.iloc[:, :max_cols]
+
+    headers = [str(col).strip() for col in df.columns.tolist()]
+    data_rows = df.values.tolist()
+    values = [headers] + data_rows
+
+    client = gspread.service_account(filename=CREDENTIALS_FILE)
+    sh = client.open_by_url(SPREADSHEET_URL)
+    ws = sh.worksheet("In-Stock")
+
+    # Clear existing data in A:CA, then write new dataset from A1.
+    ws.batch_clear(["A:CA"])
+    if values:
+        end_row = len(values)
+        end_col = max(len(r) for r in values) if values else 1
+        end_col = max(1, min(end_col, max_cols))
+        range_a1 = f"A1:{rowcol_to_a1(end_row, end_col)}"
+        ws.update(range_a1, values, value_input_option="RAW")
+
+    return {
+        "rows_uploaded": len(data_rows),
+        "columns_uploaded": len(headers),
+        "sheet": "In-Stock",
+    }
 
 def clean_sku_list(sku_string: str) -> List[str]:
     if pd.isna(sku_string) or not sku_string: return []
@@ -288,6 +287,31 @@ def parse_idr_price(val: Any) -> float:
     # Last resort: strip everything except digits (e.g. "Rp 15,000" from raw sheets)
     digits = re.sub(r'[^\d]', '', val_str)
     return float(digits) if digits else 0.0
+
+
+def parse_stock_value(val: Any) -> int:
+    if val is None:
+        return 0
+    if isinstance(val, (int, float)):
+        if val != val:  # NaN
+            return 0
+        return max(0, int(round(float(val))))
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() in ('', 'nan', 'none', 'null', '-'):
+        return 0
+    try:
+        return max(0, int(round(float(val_str.replace(',', '')))))
+    except ValueError:
+        digits = re.sub(r'[^\d]', '', val_str)
+        return int(digits) if digits else 0
+
+
+def summarize_bundle_stock(stock_map: Dict[str, int]) -> str:
+    positive = [(stock_key, int(stock_val)) for stock_key, stock_val in stock_map.items() if int(stock_val) > 0]
+    if not positive:
+        return "No Stock"
+    min_key, min_val = min(positive, key=lambda x: x[1])
+    return f"{min_val} ({min_key})"
 
 def get_bundle_discount_rate(count: int) -> float:
     if count == 1: return 0.0
@@ -365,7 +389,8 @@ def generate_breakdown_table(sku_string: str, price_db: Dict, name_map: Dict) ->
             "Product Name": name,
             "Base Price (Warning)": int(base_price_float),
             "Logic Applied": logic_applied,
-            "Total Contribution (IDR)": int(round(final_price))
+            "Total Contribution (IDR)": int(round(final_price)),
+            **{st: parse_stock_value(item_data.get(st, 0)) for st in STOCK_TYPES}
         })
 
     return breakdown_data
@@ -401,13 +426,16 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
             "sku": sku,
             "name": sku_name,
             "link": sku_link,
-            "image": image_url
+            "image": image_url,
+            "stock": {st: parse_stock_value(price_db.get(sku, {}).get(st, 0)) for st in STOCK_TYPES}
         })
 
     if sku_count == 0:
         result.update({
             "Bundle Discount": 0, "Mark Clearance": "-", "Mark Gift": "-",
             **{k: "Invalid" for k in PRICE_TYPES},
+            **{k: 0 for k in STOCK_TYPES},
+            "Available Stock": "No Stock",
             "sku_items": []
         })
         return result
@@ -428,7 +456,9 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
     if not all_skus_found:
         result.update({
             "Bundle Discount": "", "Mark Clearance": "", "Mark Gift": "",
-            **{k: "Invalid" for k in PRICE_TYPES}
+            **{k: "Invalid" for k in PRICE_TYPES},
+            **{k: 0 for k in STOCK_TYPES},
+            "Available Stock": "No Stock"
         })
         return result
 
@@ -478,11 +508,17 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
             total_prices[p_type] += item_prices[p_type] * gift_factor * (1 - item_disc)
 
     final_discount_display = 0.0 if has_clearance else base_discount_rate
+    bundle_stock = {}
+    for st in STOCK_TYPES:
+        per_sku_stock = [parse_stock_value(price_db.get(sku, {}).get(st, 0)) for sku in skus]
+        bundle_stock[st] = min(per_sku_stock) if per_sku_stock else 0
 
     result.update({
         "Bundle Discount": final_discount_display,
         "Mark Clearance": "Yes" if has_clearance else "-",
         "Mark Gift": "Yes" if has_gift else "-",
+        **bundle_stock,
+        "Available Stock": summarize_bundle_stock(bundle_stock),
         "sku_items": sku_items
     })
     
@@ -520,7 +556,7 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
         else:
             core_cols = ["SKU", "Input Price"]
             
-        metrics_cols = ["Bundle Discount", "Mark Clearance", "Mark Gift"]
+        metrics_cols = ["Bundle Discount", "Mark Clearance", "Mark Gift", "Available Stock"] + STOCK_TYPES
 
         processing_sheets = [("All", PRICE_TYPES), ("Reminder", PRICE_TYPES)]
         for sc in SHEET_CONFIG:

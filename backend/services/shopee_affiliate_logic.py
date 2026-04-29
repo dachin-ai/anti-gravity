@@ -19,25 +19,25 @@ else:
 
 def get_shopee_stores() -> List[Dict[str, str]]:
     """
-    Fetches the store list from AT1 sheet.
+    Fetches the store list from Store_Info sheet.
     Returns: [{'code': 'FR02OS001', 'name': 'FR02OS001 - Shopee Official'}, ...]
     """
     try:
         gc = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = gc.open_by_url(SPREADSHEET_URL)
-        worksheet = sh.worksheet("AT1")
+        worksheet = sh.worksheet("Store_Info")
         
         # Read all records
         data = worksheet.get_all_records()
         
         stores = []
         for row in data:
-            code = str(row.get('Code', '')).strip()
-            full_name = str(row.get('Full Name', '')).strip()
-            platform = str(row.get('Platform', '')).strip()
+            lower = {str(k).strip().lower(): v for k, v in row.items()}
+            code = str(lower.get('code', '')).strip()
+            full_name = str(lower.get('full name', '') or lower.get('store name', '')).strip()
+            platform = str(lower.get('platform', '')).strip()
             
-            # Since the user specifically showed Shopee stores in the screenshot for Shopee Affiliate
-            # And requested AT1 Code & Full Name:
+            # Keep only Shopee rows from Store_Info
             if code and platform.lower() == 'shopee':
                 stores.append({
                     "code": code,
@@ -54,7 +54,7 @@ def get_shopee_stores() -> List[Dict[str, str]]:
                 
         return unique_stores
     except Exception as e:
-        print(f"Error fetching AT1 stores: {e}")
+        print(f"Error fetching Store_Info stores: {e}")
         return []
 
 def clean_money_field(val: Any) -> float:

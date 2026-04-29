@@ -139,28 +139,40 @@ def get_store_name_map() -> dict:
     try:
         from services.auth_logic import get_sheet_client
         sh = get_sheet_client()
-        ws = sh.worksheet("AT1")
+        ws = sh.worksheet("Store_Info")
         rows = ws.get_all_values()
-        # Col C = code, Col E = fullname (skip header row)
-        for row in rows[1:]:
-            if len(row) > 4 and row[2].strip() and row[4].strip():
-                store_name_map[row[2].strip()] = row[4].strip()
+        if rows:
+            headers = [str(h).strip().lower() for h in rows[0]]
+            code_idx = next((i for i, h in enumerate(headers) if h in ("code", "store code")), None)
+            name_idx = next((i for i, h in enumerate(headers) if h in ("full name", "store name", "name")), None)
+            if code_idx is not None and name_idx is not None:
+                for row in rows[1:]:
+                    code = row[code_idx].strip() if len(row) > code_idx else ""
+                    name = row[name_idx].strip() if len(row) > name_idx else ""
+                    if code and name:
+                        store_name_map[code] = name
     except Exception:
         store_name_map = {}
     return _cache_set("store_name_map", store_name_map)
 
 
 def get_at1_store_codes() -> list[str]:
-    """Return store codes from AT1 col C. Cached for 5 min."""
+    """Return store codes from Store_Info. Cached for 5 min."""
     cached = _cache_get("at1_store_codes")
     if cached is not None:
         return cached
     try:
         from services.auth_logic import get_sheet_client
         sh = get_sheet_client()
-        ws = sh.worksheet("AT1")
+        ws = sh.worksheet("Store_Info")
         rows = ws.get_all_values()
-        stores = sorted(set(r[2].strip() for r in rows[1:] if len(r) > 2 and r[2].strip()))
+        if not rows:
+            return _cache_set("at1_store_codes", [])
+        headers = [str(h).strip().lower() for h in rows[0]]
+        code_idx = next((i for i, h in enumerate(headers) if h in ("code", "store code")), None)
+        if code_idx is None:
+            return _cache_set("at1_store_codes", [])
+        stores = sorted(set(r[code_idx].strip() for r in rows[1:] if len(r) > code_idx and r[code_idx].strip()))
         return _cache_set("at1_store_codes", stores)
     except Exception:
         return _cache_set("at1_store_codes", [])
@@ -1157,7 +1169,7 @@ def get_sku_comparison(db: Session, week_a: str, week_b: str, platform: str = "A
             row["product_name"] = nm.get("product_name")
             row["product_link"] = nm.get("product_link")
             row["mark"] = nm.get("mark")
-            # Use product_performance photo first, fall back to All_Name image URL
+            # Use product_performance photo first, then fallback to SKU_Info link image.
             row["photo"] = photo_map.get(row["sku"]) or nm.get("product_link")
 
     return {

@@ -3,10 +3,22 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import SessionLocal
 from models import AccessRequest, AccountUser
+from services.user_activity_logic import get_user_activity
 from services.auth_logic import verify_token
+from typing import Optional, List
+from datetime import datetime
 
 router = APIRouter(prefix="/api/access", tags=["Access"])
 
+class UserActivityQuery(BaseModel):
+    start_date: Optional[str] = None  # format: YYYY-MM-DD
+    end_date: Optional[str] = None    # format: YYYY-MM-DD
+
+class RequestBody(BaseModel):
+    tool_key: str
+
+class PermissionsBody(BaseModel):
+    permissions: dict
 
 def get_db():
     db = SessionLocal()
@@ -14,7 +26,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 
 def _require_auth(request: Request) -> dict:
     auth = request.headers.get("Authorization", "")
@@ -25,45 +36,48 @@ def _require_auth(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
     return payload
 
-
 def _require_admin(request: Request) -> dict:
     payload = _require_auth(request)
     if payload.get("permissions", {}).get("admin") != 1:
         raise HTTPException(status_code=403, detail="Admin access required")
     return payload
 
-
-class RequestBody(BaseModel):
-    tool_key: str
-
-
-class PermissionsBody(BaseModel):
-    permissions: dict
-
+# Endpoint: User Activity (admin only)
+@router.post("/user-activity")
+def user_activity(
+    body: UserActivityQuery,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    _require_admin(request)
+    # Parse date range
+    start_date = body.start_date
+    end_date = body.end_date
+    return get_user_activity(db, start_date, end_date)
 
 @router.post("/request")
 def submit_request(body: RequestBody, request: Request, db: Session = Depends(get_db)):
     payload = _require_auth(request)
     username = payload["username"]
-
+    
     user = db.query(AccountUser).filter(AccountUser.username == username).first()
     if user and user.permissions and user.permissions.get(body.tool_key) == 1:
         raise HTTPException(status_code=400, detail="You already have access to this tool.")
-
+    
     existing = db.query(AccessRequest).filter(
         AccessRequest.username == username,
         AccessRequest.tool_key == body.tool_key,
         AccessRequest.status == "pending",
     ).first()
+    
     if existing:
         raise HTTPException(status_code=400, detail="You already have a pending request for this tool.")
-
+    
     req = AccessRequest(username=username, tool_key=body.tool_key, status="pending")
     db.add(req)
     db.commit()
     db.refresh(req)
     return {"message": "Request submitted successfully", "id": req.id}
-
 
 @router.get("/my-requests")
 def my_requests(request: Request, db: Session = Depends(get_db)):
@@ -81,7 +95,6 @@ def my_requests(request: Request, db: Session = Depends(get_db)):
         for r in rows
     ]
 
-
 @router.get("/requests")
 def get_requests(request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
@@ -96,7 +109,6 @@ def get_requests(request: Request, db: Session = Depends(get_db)):
         }
         for r in rows
     ]
-
 
 @router.put("/requests/{req_id}/approve")
 def approve_request(req_id: int, request: Request, db: Session = Depends(get_db)):
@@ -113,7 +125,6 @@ def approve_request(req_id: int, request: Request, db: Session = Depends(get_db)
     db.commit()
     return {"message": "Request approved"}
 
-
 @router.put("/requests/{req_id}/reject")
 def reject_request(req_id: int, request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
@@ -124,7 +135,6 @@ def reject_request(req_id: int, request: Request, db: Session = Depends(get_db))
     db.commit()
     return {"message": "Request rejected"}
 
-
 @router.get("/users")
 def get_users(request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
@@ -133,7 +143,6 @@ def get_users(request: Request, db: Session = Depends(get_db)):
         {"username": u.username, "email": u.email, "permissions": u.permissions or {}}
         for u in users
     ]
-
 
 @router.put("/users/{username}/permissions")
 def update_permissions(username: str, body: PermissionsBody, request: Request, db: Session = Depends(get_db)):

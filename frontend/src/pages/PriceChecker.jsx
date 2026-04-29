@@ -79,13 +79,31 @@ const PriceChecker = () => {
     const syncNeonData = async () => {
         setLoadingDb(true);
         try {
-            const res = await api.post('/price-checker/sync-neon');
+            const res = await api.post('/price-checker/sync');
             message.success(res.data.message);
             fetchReferenceData(); // refresh the loaded cache
             logActivity('Price Checker (Sync DB)');
         } catch (error) {
             message.error(error.response?.data?.detail || 'Failed to sync Google Sheets to Database');
         } finally { setLoadingDb(false); }
+    };
+
+    const uploadStockData = async ({ file, onSuccess, onError }) => {
+        setLoadingDb(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.post('/price-checker/upload-stock-data', formData);
+            message.success(res.data.message || 'Stock data uploaded.');
+            onSuccess?.(res.data);
+            logActivity('Price Checker (Upload Stock Data)');
+        } catch (error) {
+            const msg = error.response?.data?.detail || 'Failed to upload stock data';
+            message.error(msg);
+            onError?.(new Error(msg));
+        } finally {
+            setLoadingDb(false);
+        }
     };
 
     const downloadTemplate = async (tplMethod) => {
@@ -186,6 +204,12 @@ const PriceChecker = () => {
         { title: 'Base Price',        dataIndex: 'Base Price (Warning)',     key: 'bp',   width: 130, onCell: r => copyableCellProps(r['Base Price (Warning)']), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
         { title: 'Logic Applied',     dataIndex: 'Logic Applied',           key: 'la',   width: 180, onCell: r => copyableCellProps(r['Logic Applied']) },
         { title: 'Contribution (IDR)',dataIndex: 'Total Contribution (IDR)', key: 'con',  width: 160, onCell: r => copyableCellProps(r['Total Contribution (IDR)']), render: v => (!isNaN(Number(v)) && v !== '' && v !== 'Invalid') ? Number(v).toLocaleString() : v },
+        { title: 'IDR-Ready',         dataIndex: 'IDR-Ready',               key: 'idr_r', width: 120, onCell: r => copyableCellProps(r['IDR-Ready']), render: v => Number(v || 0).toLocaleString() },
+        { title: 'SBY-Ready',         dataIndex: 'SBY-Ready',               key: 'sby_r', width: 120, onCell: r => copyableCellProps(r['SBY-Ready']), render: v => Number(v || 0).toLocaleString() },
+        { title: 'IDR-Lock',          dataIndex: 'IDR-Lock',                key: 'idr_l', width: 120, onCell: r => copyableCellProps(r['IDR-Lock']), render: v => Number(v || 0).toLocaleString() },
+        { title: 'SBY-Lock',          dataIndex: 'SBY-Lock',                key: 'sby_l', width: 120, onCell: r => copyableCellProps(r['SBY-Lock']), render: v => Number(v || 0).toLocaleString() },
+        { title: 'IDR-OTW',           dataIndex: 'IDR-OTW',                 key: 'idr_o', width: 120, onCell: r => copyableCellProps(r['IDR-OTW']), render: v => Number(v || 0).toLocaleString() },
+        { title: 'SBY-OTW',           dataIndex: 'SBY-OTW',                 key: 'sby_o', width: 120, onCell: r => copyableCellProps(r['SBY-OTW']), render: v => Number(v || 0).toLocaleString() },
     ];
 
     const previewColumns = batchOverview?.preview?.length
@@ -210,14 +234,19 @@ const PriceChecker = () => {
                 subtitle={<Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />}
                 accent="#6366f1"
                 actions={<>
-                    <Button
-                        icon={<DatabaseOutlined />}
-                        onClick={fetchReferenceData}
-                        loading={loadingDb}
-                        style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
+                    <Upload
+                        accept=".xlsx,.xls"
+                        showUploadList={false}
+                        customRequest={uploadStockData}
                     >
-                        <Bi e="Load Database" c="加载数据库" />
-                    </Button>
+                        <Button
+                            icon={<UploadOutlined />}
+                            loading={loadingDb}
+                            style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
+                        >
+                            <Bi e="Upload Stock Data" c="上传库存数据" />
+                        </Button>
+                    </Upload>
                     <Button
                         icon={<DatabaseOutlined />}
                         onClick={syncNeonData}
@@ -228,7 +257,7 @@ const PriceChecker = () => {
                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                         }}
                     >
-                        <Bi e="Sync Prices" c="同步价格" />
+                        <Bi e="Sync Price Data" c="同步价格数据" />
                     </Button>
                 </>}
             />
@@ -482,6 +511,11 @@ const PriceChecker = () => {
                                                     <div>
                                                         <Text strong style={{ display: 'block', marginBottom: 6, fontSize: 15 }}>{item.name || item.sku}</Text>
                                                         <Text type="secondary" style={{ display: 'block', fontSize: 12, wordBreak: 'break-all' }}>{item.sku}</Text>
+                                                        {item.stock && (
+                                                            <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                                                                {Object.entries(item.stock).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}: ${Number(v).toLocaleString()}`).join(' | ') || 'No Stock'}
+                                                            </Text>
+                                                        )}
                                                     </div>
                                                     {item.link ? (
                                                         <a href={item.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--indigo)' }}>
@@ -502,8 +536,9 @@ const PriceChecker = () => {
                                     { label: 'Bundle Discount', value: `${Number(directResult.summary.bundle_discount) * 100}%`, color: 'var(--indigo)' },
                                     { label: 'Clearance Status', value: directResult.summary.clearance, color: '#f59e0b' },
                                     { label: 'Gift Status',      value: directResult.summary.gift,      color: '#10b981' },
+                                    { label: 'Available Stock',  value: directResult.summary.available_stock || 'No Stock', color: '#06b6d4' },
                                 ].map(({ label, value, color }) => (
-                                    <Col key={label} xs={24} md={8}>
+                                    <Col key={label} xs={24} md={12}>
                                         <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
                                             <div style={{ fontSize: 30, fontWeight: 800, color, fontFamily: "'Outfit', sans-serif" }}>{value}</div>
                                             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>

@@ -19,19 +19,36 @@ def load_presales_database() -> pd.DataFrame:
         if _cached_client is None:
             _cached_client = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = _cached_client.open_by_url(SPREADSHEET_URL)
-        name_worksheet = sh.worksheet("All_Name")
+        name_worksheet = sh.worksheet("SKU_Info")
         name_data = name_worksheet.get_all_values()
         
         if not name_data or len(name_data) < 2:
             return pd.DataFrame()
             
-        df_names = pd.DataFrame(name_data[1:], columns=name_data[0])
+        headers = [str(h).strip() for h in name_data[0]]
+        df_names = pd.DataFrame(name_data[1:], columns=headers)
+        normalized = {str(c).strip().lower(): c for c in df_names.columns}
+
+        def col(*aliases):
+            for alias in aliases:
+                key = alias.strip().lower()
+                if key in normalized:
+                    return normalized[key]
+            return None
         
+        sku_col = col("SKU")
+        name_col = col("Product-Name", "Product Name", "English Name", "Name")
+        image_col = col("Pic", "Image", "Image URL", "Link")
+        chinese_col = col("Chinese Name", "CN Name")
+
+        if not sku_col:
+            return pd.DataFrame()
+
         master_data = pd.DataFrame()
-        master_data['SKU_KEY'] = df_names.iloc[:, 0].astype(str).str.strip()
-        master_data['English Name'] = df_names.iloc[:, 1] if df_names.shape[1] > 1 else ""
-        master_data['Image Link'] = df_names.iloc[:, 2] if df_names.shape[1] > 2 else ""
-        master_data['Chinese Name'] = df_names.iloc[:, 3] if df_names.shape[1] > 3 else ""
+        master_data['SKU_KEY'] = df_names[sku_col].astype(str).str.strip()
+        master_data['English Name'] = df_names[name_col] if name_col else ""
+        master_data['Image Link'] = df_names[image_col] if image_col else ""
+        master_data['Chinese Name'] = df_names[chinese_col] if chinese_col else ""
         
         _cached_df_names = master_data
         return master_data

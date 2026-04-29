@@ -3,15 +3,16 @@ import axios from 'axios';
 // Determine API endpoint dynamically
 const getBaseURL = () => {
   const isDev = import.meta.env.MODE === 'development';
+  const envBackend = import.meta.env.VITE_API_URL;
+
+  // Allow overriding API target in both dev and production.
+  // Useful when local backend is unavailable but frontend is tested locally.
+  if (envBackend) {
+    return envBackend;
+  }
   
   if (isDev) {
     return 'http://localhost:8000/api';
-  }
-  
-  // Production: Check for environment variable first
-  const envBackend = import.meta.env.VITE_API_URL;
-  if (envBackend) {
-    return envBackend;
   }
   
   // Fallback: Use Cloud Run backend (production deployment)

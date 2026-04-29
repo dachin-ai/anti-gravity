@@ -295,7 +295,7 @@ def get_items(store: str, etalase: str, price_type: str | None = None) -> list[d
                 for token in parse_sku_tokens(variant.get("parent_sku", "")):
                     all_sku_tokens.add(token)
 
-        # Ensure livestream token labels/photos use the latest DB rows from All_Name
+        # Ensure livestream token labels/photos use the latest DB rows synced from SKU_Info
         # even when the shared price-checker cache is stale in memory.
         if all_sku_tokens:
             latest_names = db.query(FreemirName).filter(FreemirName.sku.in_(all_sku_tokens)).all()

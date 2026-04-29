@@ -11,9 +11,11 @@ from services.price_checker_logic import (
     generate_breakdown_table,
     clean_sku_list,
     PRICE_TYPES,
+    STOCK_TYPES,
     generate_template_file,
     convert_df_to_excel_multisheet,
-    sync_google_sheets_to_vps_postgres
+    sync_google_sheets_to_vps_postgres,
+    upload_stock_data_to_google_sheet
 )
 from pydantic import BaseModel
 
@@ -49,6 +51,25 @@ def sync_database():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
+
+
+@router.post("/upload-stock-data", dependencies=[Depends(require_tool_access("price_checker"))])
+async def upload_stock_data(file: UploadFile = File(...)):
+    """Upload stock Excel and replace Google Sheet tab In-Stock (A:CA)."""
+    try:
+        file_content = await file.read()
+        if not file_content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        result = upload_stock_data_to_google_sheet(file_content)
+        return {
+            "success": True,
+            "message": f"Stock data uploaded to {result['sheet']} ({result['rows_uploaded']} rows).",
+            **result
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload stock data: {str(e)}")
 
 @router.get("/refresh", dependencies=[Depends(require_tool_access("price_checker"))])
 def refresh_db():
@@ -113,7 +134,8 @@ def calc_direct(body: DirectInput):
         "summary": {
             "bundle_discount": price_info.get("Bundle Discount"),
             "clearance": price_info.get("Mark Clearance"),
-            "gift": price_info.get("Mark Gift")
+                "gift": price_info.get("Mark Gift"),
+                "available_stock": price_info.get("Available Stock", "No Stock")
         },
         "items": price_info.get("sku_items", []),
         "breakdown": breakdown,
@@ -227,6 +249,9 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
 
         def _invalid_result():
             r = {p_type: "Invalid" for p_type in PRICE_TYPES}
+            for stock_type in STOCK_TYPES:
+                r[stock_type] = 0
+            r["Available Stock"] = "No Stock"
             r["sku_items"] = []
             return r
 
@@ -281,9 +306,9 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         
         preview_fields = ["SKU"]
         if method == "Listing":
-            preview_fields.extend([col_camp_price, "Warning", "Gap Warning"])
+            preview_fields.extend([col_camp_price, "Warning", "Gap Warning", "Available Stock"])
         else:
-            preview_fields.extend([col_target_price, "Warning", "Gap Warning"])
+            preview_fields.extend([col_target_price, "Warning", "Gap Warning", "Available Stock"])
             
         if "Gap Warning" in final_df.columns:
             invalid_rows = len(final_df[final_df["Gap Warning"] == "Invalid"])
