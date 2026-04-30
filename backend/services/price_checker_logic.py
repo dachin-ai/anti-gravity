@@ -5,8 +5,10 @@ import re
 import os
 import json
 import gspread
+import requests
 from gspread.utils import rowcol_to_a1
 from typing import Tuple, Dict, Any, List
+from PIL import Image, ImageOps, UnidentifiedImageError
 from database import SessionLocal
 from models import FreemirPrice, FreemirName
 from services.product_performance_logic import get_sku_photo_map, parse_sku_tokens
@@ -581,9 +583,58 @@ def calculate_prices(sku_string: str, price_db: Dict, name_map: Dict, link_map: 
 
     return result
 
-def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") -> bytes:
+def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", include_pictures: bool = False) -> bytes:
     import xlsxwriter
     output = io.BytesIO()
+    image_cache: Dict[str, bytes | None] = {}
+    frame_w_px = 56
+    frame_h_px = 56
+
+    def _make_framed_thumbnail(raw_bytes: bytes) -> bytes | None:
+        try:
+            with Image.open(io.BytesIO(raw_bytes)) as img:
+                # Normalize to RGB and fit image into fixed frame area.
+                img = img.convert("RGB")
+                inner_w = frame_w_px - 8
+                inner_h = frame_h_px - 8
+                fitted = ImageOps.contain(img, (inner_w, inner_h), method=Image.Resampling.LANCZOS)
+
+                canvas = Image.new("RGB", (frame_w_px, frame_h_px), color=(245, 248, 252))
+                x = (frame_w_px - fitted.width) // 2
+                y = (frame_h_px - fitted.height) // 2
+                canvas.paste(fitted, (x, y))
+
+                # Draw a subtle border frame.
+                border_color = (180, 188, 200)
+                for i in range(1):
+                    canvas.paste(border_color, [i, i, frame_w_px - i, i + 1])
+                    canvas.paste(border_color, [i, frame_h_px - i - 1, frame_w_px - i, frame_h_px - i])
+                    canvas.paste(border_color, [i, i, i + 1, frame_h_px - i])
+                    canvas.paste(border_color, [frame_w_px - i - 1, i, frame_w_px - i, frame_h_px - i])
+
+                out = io.BytesIO()
+                canvas.save(out, format="JPEG", quality=88, optimize=True)
+                return out.getvalue()
+        except (UnidentifiedImageError, OSError, ValueError):
+            return None
+
+    def _get_image_bytes(url: str) -> bytes | None:
+        if not include_pictures:
+            return None
+        if not _is_image_url(url):
+            return None
+        if url in image_cache:
+            return image_cache[url]
+        try:
+            resp = requests.get(url, timeout=3)
+            if resp.status_code == 200 and resp.content:
+                image_cache[url] = _make_framed_thumbnail(resp.content)
+            else:
+                image_cache[url] = None
+        except Exception:
+            image_cache[url] = None
+        return image_cache[url]
+
     with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         workbook = writer.book
         
@@ -657,7 +708,26 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
                 for col_idx, cell_data in enumerate(row_data):
                     col_name = sheet_df.columns[col_idx]
                     if "Link" in col_name:
-                         worksheet.write(row_idx + 1, col_idx, str(cell_data), link_fmt)
+                         link_value = str(cell_data)
+                         img_bytes = _get_image_bytes(link_value)
+                         if img_bytes:
+                             worksheet.set_row(row_idx + 1, 46)
+                             worksheet.write(row_idx + 1, col_idx, "", center_fmt)
+                             worksheet.insert_image(
+                                 row_idx + 1,
+                                 col_idx,
+                                 "img.jpg",
+                                 {
+                                     "image_data": io.BytesIO(img_bytes),
+                                     "x_scale": 1.0,
+                                     "y_scale": 1.0,
+                                     "x_offset": 2,
+                                     "y_offset": 2,
+                                     "object_position": 1
+                                 }
+                             )
+                         else:
+                             worksheet.write(row_idx + 1, col_idx, link_value, link_fmt)
                     elif col_name in ["Product ID", "Variation ID", "SKU", "PID Name", "MID Name"] or "Name" in col_name:
                          worksheet.write(row_idx + 1, col_idx, str(cell_data), text_fmt)
                     elif col_name == "Bundle Discount":
@@ -677,6 +747,8 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
             for i, col_name in enumerate(final_cols):
                 if col_name == "SKU":
                     worksheet.set_column(i, i, 35)
+                elif "Link" in col_name and include_pictures:
+                    worksheet.set_column(i, i, 8.8)
                 elif col_name == "Available Stock":
                     worksheet.set_column(i, i, 24)
                 elif col_name in STOCK_TYPES or col_name == "Gap Available Stock" or col_name.startswith("Gap IDR-") or col_name.startswith("Gap SBY-"):
@@ -687,7 +759,10 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
             for sku_col in sku_info_cols:
                 if sku_col in final_cols:
                     idx = final_cols.index(sku_col)
-                    worksheet.set_column(idx, idx, 4, None, {'hidden': True})
+                    if include_pictures and "Link" in sku_col:
+                        worksheet.set_column(idx, idx, 10)
+                    else:
+                        worksheet.set_column(idx, idx, 4, None, {'hidden': True})
             
             current_gap_cols = [c for c in final_cols if c.startswith("Gap")]
             for col_name in current_gap_cols:

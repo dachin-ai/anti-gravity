@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Tabs, Card, Button, Input, InputNumber,
     Row, Col, Typography, Table, Upload,
@@ -66,6 +66,42 @@ const PriceChecker = () => {
     // Batch
     const [fileList, setFileList] = useState([]);
     const [batchOverview, setBatchOverview] = useState(null);
+    const [lastStockUploadAt, setLastStockUploadAt] = useState(null);
+    const [downloadingWithPicture, setDownloadingWithPicture] = useState(false);
+
+    const formatWibDateTime = (isoString) => {
+        if (!isoString) return '-';
+        try {
+            const dt = new Date(isoString);
+            if (Number.isNaN(dt.getTime())) return '-';
+            const formatted = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            }).format(dt);
+            return `${formatted} Jakarta Time`;
+        } catch {
+            return '-';
+        }
+    };
+
+    const fetchStockUploadStatus = async () => {
+        try {
+            const res = await api.get('/price-checker/upload-stock-data/status');
+            setLastStockUploadAt(res.data?.last_uploaded_at || null);
+        } catch {
+            setLastStockUploadAt(null);
+        }
+    };
+
+    useEffect(() => {
+        fetchStockUploadStatus();
+    }, []);
 
     const fetchReferenceData = async () => {
         setLoadingDb(true);
@@ -96,6 +132,7 @@ const PriceChecker = () => {
             formData.append('file', file);
             const res = await api.post('/price-checker/upload-stock-data', formData);
             message.success(res.data.message || 'Stock data uploaded.');
+            setLastStockUploadAt(res.data?.last_uploaded_at || null);
             onSuccess?.(res.data);
             logActivity('Price Checker (Upload Stock Data)');
         } catch (error) {
@@ -151,6 +188,33 @@ const PriceChecker = () => {
         const buf = new Uint8Array(bytes.length).map((_, i) => bytes.charCodeAt(i));
         const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `PC_${method}_Result.xlsx` }).click();
+    };
+
+    const handleDownloadWithPicture = async () => {
+        if (!fileList.length) {
+            message.warning('Please upload a file first');
+            return;
+        }
+        setDownloadingWithPicture(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', fileList[0]);
+            formData.append('method', method);
+            formData.append('include_pictures', 'true');
+            const res = await api.post('/price-checker/calculate-batch', formData);
+            if (!res.data?.file_base64) {
+                throw new Error('No file generated');
+            }
+            const bytes = atob(res.data.file_base64);
+            const buf = new Uint8Array(bytes.length).map((_, i) => bytes.charCodeAt(i));
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `PC_${method}_Result_With_Picture.xlsx` }).click();
+            message.success('Download with picture is ready.');
+        } catch (err) {
+            message.error(err.response?.data?.detail || err.message || 'Failed to generate file with pictures');
+        } finally {
+            setDownloadingWithPicture(false);
+        }
     };
 
     /* ─── Table Column Definitions ─── */
@@ -218,14 +282,14 @@ const PriceChecker = () => {
     ];
 
     const stockEvalColumns = [
-        { title: 'Stock Type', dataIndex: 'StockType', key: 'StockType', width: 150 },
-        { title: 'Current Stock', dataIndex: 'CurrentStock', key: 'CurrentStock', width: 140, render: v => Number(v || 0).toLocaleString() },
-        { title: 'Target Stock', dataIndex: 'TargetStock', key: 'TargetStock', width: 140, render: v => Number(v || 0).toLocaleString() },
+        { title: 'Stock Type', dataIndex: 'StockType', key: 'StockType', width: 160 },
+        { title: 'Current Stock', dataIndex: 'CurrentStock', key: 'CurrentStock', width: 130, render: v => Number(v || 0).toLocaleString() },
+        { title: 'Target Stock', dataIndex: 'TargetStock', key: 'TargetStock', width: 130, render: v => Number(v || 0).toLocaleString() },
         {
             title: 'Gap',
             dataIndex: 'Gap',
             key: 'Gap',
-            width: 120,
+            width: 130,
             render: v => {
                 const n = Number(v || 0);
                 return <span style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n.toLocaleString()}</span>;
@@ -235,13 +299,31 @@ const PriceChecker = () => {
             title: 'Status',
             dataIndex: 'Status',
             key: 'Status',
-            width: 160,
-            render: v => (
+            width: 110,
+            render: (v, row) => (
+                (() => {
+                    const gap = Number(row?.Gap);
+                    const isNoStockLeft = Number.isFinite(gap) && gap === 0;
+                    const isSafe = Number.isFinite(gap) ? gap > 0 : String(v || '').includes('Safe');
+                    const label = isNoStockLeft ? '⚠️ No Stock Left' : (isSafe ? '✅ Safe' : '❌ Need Restock');
+                    const bg = isSafe
+                        ? 'rgba(16,185,129,0.15)'
+                        : isNoStockLeft
+                            ? 'rgba(250,173,20,0.18)'
+                            : 'rgba(239,68,68,0.15)';
+                    const fg = isSafe
+                        ? '#10b981'
+                        : isNoStockLeft
+                            ? '#faad14'
+                            : '#ef4444';
+                    return (
                 <span style={{
                     display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    background: v.includes('Safe') ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                    color: v.includes('Safe') ? '#10b981' : '#ef4444',
-                }}>{v}</span>
+                    background: bg,
+                    color: fg,
+                }}>{label}</span>
+                    );
+                })()
             ),
         },
     ];
@@ -267,33 +349,43 @@ const PriceChecker = () => {
                 title={<Bi e="Price Checker & Comparator" c="价格检查与比较器" />}
                 subtitle={<Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />}
                 accent="#6366f1"
-                actions={<>
-                    <Upload
-                        accept=".xlsx,.xls"
-                        showUploadList={false}
-                        customRequest={uploadStockData}
-                    >
-                        <Button
-                            icon={<UploadOutlined />}
-                            loading={loadingDb}
-                            style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
-                        >
-                            <Bi e="Upload Stock Data" c="上传库存数据" />
-                        </Button>
-                    </Upload>
-                    <Button
-                        icon={<DatabaseOutlined />}
-                        onClick={syncNeonData}
-                        loading={loadingDb}
-                        style={{
-                            height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13,
-                            background: 'var(--indigo)', color: '#fff', border: 'none',
-                            boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
-                        }}
-                    >
-                        <Bi e="Sync Price Data" c="同步价格数据" />
-                    </Button>
-                </>}
+                actions={
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <Upload
+                                accept=".xlsx,.xls"
+                                showUploadList={false}
+                                customRequest={uploadStockData}
+                            >
+                                <Button
+                                    icon={<UploadOutlined />}
+                                    loading={loadingDb}
+                                    style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
+                                >
+                                    <Bi e="Upload Stock Data" c="上传库存数据" />
+                                </Button>
+                            </Upload>
+                            <Button
+                                icon={<DatabaseOutlined />}
+                                onClick={syncNeonData}
+                                loading={loadingDb}
+                                style={{
+                                    height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13,
+                                    background: 'var(--indigo)', color: '#fff', border: 'none',
+                                    boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
+                                }}
+                            >
+                                <Bi e="Sync Price Data" c="同步价格数据" />
+                            </Button>
+                        </div>
+                        <Text style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            <Bi
+                                e={`Last stock upload: ${formatWibDateTime(lastStockUploadAt)}`}
+                                c={`最后库存上传: ${formatWibDateTime(lastStockUploadAt)}`}
+                            />
+                        </Text>
+                    </div>
+                }
             />
 
             {/* TABS */}
@@ -448,22 +540,38 @@ const PriceChecker = () => {
                                     size="small"
                                     rowKey={(_, i) => i}
                                     scroll={{ x: 'max-content' }}
+                                    className="price-checker-center-table"
                                 />
                             </div>
 
                             {/* Download */}
-                            <Button
-                                size="large"
-                                icon={<FileExcelOutlined />}
-                                onClick={handleDownloadResult}
-                                style={{
-                                    height: 46, borderRadius: 8, fontWeight: 700, fontSize: 14,
-                                    background: '#10b981', color: '#fff', border: 'none',
-                                    boxShadow: '0 2px 10px rgba(16,185,129,0.3)', paddingInline: 28,
-                                }}
-                            >
-                                <Bi e="Download Full Result (Excel)" c="下载完整结果 (Excel)" />
-                            </Button>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <Button
+                                    size="large"
+                                    icon={<FileExcelOutlined />}
+                                    onClick={handleDownloadResult}
+                                    style={{
+                                        height: 46, borderRadius: 8, fontWeight: 700, fontSize: 14,
+                                        background: '#10b981', color: '#fff', border: 'none',
+                                        boxShadow: '0 2px 10px rgba(16,185,129,0.3)', paddingInline: 28,
+                                    }}
+                                >
+                                    <Bi e="Download Full Result (Excel)" c="下载完整结果 (Excel)" />
+                                </Button>
+                                <Button
+                                    size="large"
+                                    icon={<FileExcelOutlined />}
+                                    loading={downloadingWithPicture}
+                                    onClick={handleDownloadWithPicture}
+                                    style={{
+                                        height: 46, borderRadius: 8, fontWeight: 700, fontSize: 14,
+                                        background: '#f59e0b', color: '#fff', border: 'none',
+                                        boxShadow: '0 2px 10px rgba(245,158,11,0.35)', paddingInline: 28,
+                                    }}
+                                >
+                                    <Bi e="Download with Picture" c="下载带图片结果" />
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -609,7 +717,7 @@ const PriceChecker = () => {
                                     size="middle"
                                     rowKey="SKU"
                                     scroll={{ x: 'max-content' }}
-                                    className="copyable-table"
+                                    className="copyable-table price-checker-center-table"
                                 />
                             </div>
 
@@ -625,8 +733,8 @@ const PriceChecker = () => {
                                     pagination={false}
                                     size="middle"
                                     rowKey="Tier"
-                                    scroll={{ x: 'max-content' }}
-                                    className="copyable-table"
+                                    scroll={{ x: 660 }}
+                                    className="copyable-table price-checker-center-table"
                                 />
                             </div>
 
@@ -649,7 +757,8 @@ const PriceChecker = () => {
                                     pagination={false}
                                     size="middle"
                                     rowKey="StockType"
-                                    scroll={{ x: 'max-content' }}
+                                    scroll={{ x: 660 }}
+                                    className="price-checker-center-table"
                                 />
                             </div>
                         </div>

@@ -162,7 +162,7 @@ const UploadTab = ({ stores, storesLoading, isDark }) => {
             <div style={S.label}><Bi e="Select Store" c="选择店铺" /></div>
             <Select showSearch loading={storesLoading} placeholder="Select a Shopee store..."
               style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
-              options={stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))} />
+              options={stores.map(s => ({ value: s.code, label: s.name || s.code }))} />
           </Col>
         </Row>
 
@@ -239,6 +239,8 @@ const CheckerTab = ({ stores, isDark }) => {
 
   const activeStoreCodes = [...new Set(matrixData.flatMap(r => Object.keys(r.stores || {})))].sort();
   const getStoreName = code => { const s = stores.find(x => x.code === code); return s ? s.name.split(' - ').slice(-1)[0] : code; };
+  const STORE_GROUP_WIDTH = 62 + 62 + 75;
+  const checkerScroll = { x: 110 + (activeStoreCodes.length * STORE_GROUP_WIDTH) + 64, y: 480 };
 
   const handleDelete = (date) => {
     Modal.confirm({
@@ -308,6 +310,7 @@ const CheckerTab = ({ stores, isDark }) => {
     },
     ...activeStoreCodes.map(code => ({
       title: <span style={{ color: '#93c5fd' }}>{getStoreName(code)}</span>,
+      width: STORE_GROUP_WIDTH,
       onHeaderCell: getHeaderCell,
       children: [
         { title: <span style={{ color: '#86efac', fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} rowDate={r.date} storeId={code} dataType="product" /> },
@@ -316,7 +319,7 @@ const CheckerTab = ({ stores, isDark }) => {
       ]
     })),
     {
-      title: '', fixed: 'right', width: 50, align: 'center',
+      title: '', fixed: 'right', width: 64, align: 'center',
       onHeaderCell: getHeaderCell,
       render: (_, row) => hasAnyData(row) ? (
         <Button type="text" danger size="small" icon={<DeleteOutlined />}
@@ -342,7 +345,7 @@ const CheckerTab = ({ stores, isDark }) => {
         <DeleteOutlined style={{ color: '#ef4444' }} /> = Bulk click to delete all data (for all stores) on that date
       </div>
       <Table columns={columns} dataSource={matrixData} rowKey="date" loading={loading}
-        bordered size="small" pagination={false} scroll={tblScroll} style={{ background: 'transparent' }}
+        bordered size="small" pagination={false} scroll={checkerScroll} style={{ background: 'transparent' }}
         onRow={getBodyRowStyle} />
     </div>
   );

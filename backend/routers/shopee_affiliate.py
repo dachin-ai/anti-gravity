@@ -8,7 +8,7 @@ from typing import Optional
 import io
 
 from services.shopee_affiliate_logic import get_shopee_stores, process_and_save_upload
-from models import ShopeeAffConversion, ShopeeAffProduct, ShopeeAffCreator
+from models import ShopeeAffConversion, ShopeeAffProduct, ShopeeAffCreator, ProductPerformance, PidStoreMap
 
 router = APIRouter()
 
@@ -16,8 +16,20 @@ router = APIRouter()
 # STORES
 # ─────────────────────────────────────────────────────────────────────────────
 @router.get("/stores", dependencies=[Depends(require_tool_access("affiliate_performance"))])
-def fetch_stores():
+def fetch_stores(db: Session = Depends(get_db)):
     stores = get_shopee_stores()
+    # Fallback for local/dev when Google Sheet credentials are unavailable.
+    # Keep UI usable by deriving store options from existing affiliate data.
+    if not stores:
+        store_ids = set()
+        store_ids.update([r[0] for r in db.query(ShopeeAffConversion.store_id).filter(ShopeeAffConversion.store_id.isnot(None)).distinct().all() if r[0]])
+        store_ids.update([r[0] for r in db.query(ShopeeAffProduct.store_id).filter(ShopeeAffProduct.store_id.isnot(None)).distinct().all() if r[0]])
+        store_ids.update([r[0] for r in db.query(ShopeeAffCreator.store_id).filter(ShopeeAffCreator.store_id.isnot(None)).distinct().all() if r[0]])
+        # Broader fallback: include known store universe from other Freemir datasets.
+        store_ids.update([r[0] for r in db.query(ProductPerformance.store).filter(ProductPerformance.store.isnot(None)).distinct().all() if r[0]])
+        store_ids.update([r[0] for r in db.query(PidStoreMap.store).filter(PidStoreMap.store.isnot(None)).distinct().all() if r[0]])
+        store_ids = {sid.strip() for sid in store_ids if sid and sid.strip() and sid.strip() != "-"}
+        stores = [{"code": sid, "name": sid} for sid in sorted(store_ids)]
     return {"stores": stores}
 
 # ─────────────────────────────────────────────────────────────────────────────

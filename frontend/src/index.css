@@ -33,6 +33,12 @@
   background: rgba(99, 102, 241, 0.08) !important;
 }
 
+/* Price Checker tables centered for readability */
+.price-checker-center-table .ant-table-thead > tr > th,
+.price-checker-center-table .ant-table-tbody > tr > td {
+  text-align: center !important;
+}
+
 /* ============================================
    LIGHT MODE OVERRIDES
    ============================================ */

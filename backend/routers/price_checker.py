@@ -18,6 +18,7 @@ from services.price_checker_logic import (
     upload_stock_data_to_google_sheet
 )
 from pydantic import BaseModel
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api/price-checker", tags=["price-checker"])
 
@@ -25,7 +26,9 @@ db_cache = {
     "price_db": None,
     "name_map": None,
     "link_map": None,
-    "last_refresh": None
+    "last_refresh": None,
+    "last_stock_upload_at": None,
+    "sku_photo_map": {}
 }
 
 def get_db():
@@ -61,15 +64,23 @@ async def upload_stock_data(file: UploadFile = File(...)):
         if not file_content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
         result = upload_stock_data_to_google_sheet(file_content)
+        db_cache["last_stock_upload_at"] = datetime.now(timezone.utc).isoformat()
         return {
             "success": True,
             "message": f"Stock data uploaded to {result['sheet']} ({result['rows_uploaded']} rows).",
+            "last_uploaded_at": db_cache["last_stock_upload_at"],
             **result
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload stock data: {str(e)}")
+
+@router.get("/upload-stock-data/status", dependencies=[Depends(require_tool_access("price_checker"))])
+def get_stock_upload_status():
+    return {
+        "last_uploaded_at": db_cache.get("last_stock_upload_at")
+    }
 
 @router.get("/refresh", dependencies=[Depends(require_tool_access("price_checker"))])
 def refresh_db():
@@ -79,6 +90,7 @@ def refresh_db():
     db_cache["name_map"] = None
     db_cache["link_map"] = None
     db_cache["last_refresh"] = None
+    db_cache["sku_photo_map"] = {}
     
     p, n, l = load_product_database()
     if not p:
@@ -109,8 +121,12 @@ def calc_direct(body: DirectInput):
     price_db, name_map, link_map = get_db()
     if not price_db:
         raise HTTPException(status_code=500, detail="Database not loaded")
-    
-    price_info = calculate_prices(body.sku_string, price_db, name_map, link_map)
+
+    # Keep direct checker fast and stable: avoid on-the-fly reverse photo lookup DB queries.
+    # We still return images when they are already available via link_map.
+    skus = clean_sku_list(body.sku_string)
+    photo_map = {}
+    price_info = calculate_prices(body.sku_string, price_db, name_map, link_map, photo_map=photo_map)
     breakdown = generate_breakdown_table(body.sku_string, price_db, name_map)
     
     eval_data = []
@@ -135,12 +151,18 @@ def calc_direct(body: DirectInput):
     for st in STOCK_TYPES:
         current_stock = int(price_info.get(st, 0) or 0)
         gap_stock = current_stock - int(body.target_stock)
+        if gap_stock > 0:
+            stock_status = "✅ Safe"
+        elif gap_stock == 0:
+            stock_status = "⚠️ No Stock Left"
+        else:
+            stock_status = "❌ Need Restock"
         stock_eval_data.append({
             "StockType": st,
             "CurrentStock": current_stock,
             "TargetStock": int(body.target_stock),
             "Gap": gap_stock,
-            "Status": "✅ Safe" if gap_stock >= 0 else "⚠️ Need Restock",
+            "Status": stock_status,
         })
         
     return {
@@ -157,7 +179,11 @@ def calc_direct(body: DirectInput):
     }
 
 @router.post("/calculate-batch", dependencies=[Depends(require_tool_access("price_checker"))])
-async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
+async def calc_batch(
+    method: str = Form(...),
+    include_pictures: bool = Form(False),
+    file: UploadFile = File(...)
+):
     if method not in ["Listing", "SKU"]:
         raise HTTPException(status_code=400, detail="Method must be Listing or SKU")
     
@@ -189,7 +215,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                 )
             
             # Row limit validation for production
-            max_rows = 1000  # Limit for Cloud Run memory
+            max_rows = 5000  # Raised limit per business request
             if len(df_check) > max_rows:
                 raise HTTPException(
                     status_code=413, 
@@ -232,7 +258,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                 )
             
             # Row limit validation for production
-            max_rows = 1000  # Limit for Cloud Run memory
+            max_rows = 5000  # Raised limit per business request
             if len(df_sku) > max_rows:
                 raise HTTPException(
                     status_code=413, 
@@ -321,7 +347,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         ).fillna(0).astype(int) - final_df[col_target_stock]
 
         try:
-            excel_bytes = convert_df_to_excel_multisheet(final_df, method)
+            excel_bytes = convert_df_to_excel_multisheet(final_df, method, include_pictures=include_pictures)
         except Exception as e:
             raise HTTPException(
                 status_code=500, 

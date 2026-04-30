@@ -19,29 +19,34 @@ else:
 
 def get_shopee_stores() -> List[Dict[str, str]]:
     """
-    Fetches the store list from Store_Info sheet.
-    Returns: [{'code': 'FR02OS001', 'name': 'FR02OS001 - Shopee Official'}, ...]
+    Fetches Shopee stores from Admin Base > Store_Info.
+    Mapping is explicit by column index:
+    - Column B (index 1): Platform
+    - Column C (index 2): Code
+    - Column E (index 4): Full Name
+    Returns: [{'code': 'FR02OS001', 'name': 'FR02RS001 - Shopee Original'}, ...]
     """
     try:
         gc = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sh.worksheet("Store_Info")
-        
-        # Read all records
-        data = worksheet.get_all_records()
-        
+
+        values = worksheet.get_all_values()
+        if len(values) <= 1:
+            return []
+
         stores = []
-        for row in data:
-            lower = {str(k).strip().lower(): v for k, v in row.items()}
-            code = str(lower.get('code', '')).strip()
-            full_name = str(lower.get('full name', '') or lower.get('store name', '')).strip()
-            platform = str(lower.get('platform', '')).strip()
-            
-            # Keep only Shopee rows from Store_Info
+        # Skip header row.
+        for row in values[1:]:
+            platform = str(row[1]).strip() if len(row) > 1 else ""
+            code = str(row[2]).strip() if len(row) > 2 else ""
+            full_name = str(row[4]).strip() if len(row) > 4 else ""
+
+            # Keep only Shopee rows from Store_Info and require Code.
             if code and platform.lower() == 'shopee':
                 stores.append({
                     "code": code,
-                    "name": full_name
+                    "name": full_name or code
                 })
         
         # Deduplicate just in case
@@ -187,10 +192,56 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 return {"succeed": False, "message": f"CSV Conversion tidak cocok. Kolom yang tidak ditemukan: {missing}. Kolom yang ada di file: {found_preview}..."}
 
             new_records = []
+            skipped_no_order_id = 0
+            skipped_no_datetime = 0
+
+            fallback_date_str = manual_date or extract_date_from_filename(filename)
+            fallback_order_dt = None
+            if fallback_date_str:
+                try:
+                    fallback_order_dt = datetime.strptime(fallback_date_str, '%Y-%m-%d')
+                except Exception:
+                    fallback_order_dt = None
+
+            def parse_order_time(raw_val: Any):
+                if pd.isna(raw_val):
+                    return None
+                txt = str(raw_val).strip()
+                if not txt or txt.lower() == 'nan':
+                    return None
+                # Try strict formats first (common Shopee exports), then pandas fallback.
+                for fmt in (
+                    '%Y-%m-%d %H:%M:%S',
+                    '%Y-%m-%d %H:%M',
+                    '%d/%m/%Y %H:%M:%S',
+                    '%d/%m/%Y %H:%M',
+                    '%d-%m-%Y %H:%M:%S',
+                    '%d-%m-%Y %H:%M',
+                    '%m/%d/%Y %H:%M:%S',
+                    '%m/%d/%Y %H:%M',
+                ):
+                    try:
+                        return datetime.strptime(txt, fmt)
+                    except Exception:
+                        continue
+                try:
+                    parsed = pd.to_datetime(txt, dayfirst=True, errors='coerce')
+                    if not pd.isna(parsed):
+                        return parsed.to_pydatetime() if hasattr(parsed, 'to_pydatetime') else parsed
+                except Exception:
+                    pass
+                try:
+                    parsed = pd.to_datetime(txt, dayfirst=False, errors='coerce')
+                    if not pd.isna(parsed):
+                        return parsed.to_pydatetime() if hasattr(parsed, 'to_pydatetime') else parsed
+                except Exception:
+                    pass
+                return None
 
             for index, row in df.iterrows():
                 order_id = str(row[col_order_id]).strip()
                 if not order_id or order_id == 'nan':
+                    skipped_no_order_id += 1
                     continue
 
                 status = str(row[col_status]).strip()
@@ -209,14 +260,12 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                 elif 'shopeevideo' in channel_raw.lower():
                     channel_label = 'Video'
 
-                order_time = row[col_time]
-                if pd.isna(order_time) or str(order_time) == 'nan':
-                    order_time = None
-                else:
-                    try:
-                        order_time = pd.to_datetime(order_time)
-                    except:
-                        order_time = None
+                order_time = parse_order_time(row[col_time])
+                if order_time is None:
+                    order_time = fallback_order_dt
+                if order_time is None:
+                    skipped_no_datetime += 1
+                    continue
 
                 record = ShopeeAffConversion(
                     order_id=order_id,
@@ -233,6 +282,17 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                     channel=channel_label
                 )
                 new_records.append(record)
+
+            if not new_records:
+                return {
+                    "succeed": False,
+                    "message": (
+                        "Tidak ada baris conversion valid yang bisa disimpan. "
+                        f"Dilewati tanpa Order ID: {skipped_no_order_id}, "
+                        f"dilewati tanpa tanggal Order Time valid: {skipped_no_datetime}. "
+                        "Pastikan kolom Order Time berisi tanggal/jam valid, atau gunakan nama file yang mengandung tanggal (YYYYMMDD)."
+                    )
+                }
 
             # Auto-detect order_ids to replace from the parsed records
             order_ids_to_replace = list(set([r.order_id for r in new_records if r.order_id]))
@@ -318,6 +378,8 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                     roi=roi
                 )
                 new_records.append(rec)
+            if not new_records:
+                return {"succeed": False, "message": "Tidak ada baris Product valid yang bisa disimpan (ID produk kosong/invalid)."}
             db.bulk_save_objects(new_records)
             db.commit()
             records_processed = len(new_records)
@@ -394,6 +456,8 @@ def process_and_save_upload(db: Session, file_content: bytes, filename: str, fil
                     roi=roi
                 )
                 new_records.append(rec)
+            if not new_records:
+                return {"succeed": False, "message": "Tidak ada baris Creator valid yang bisa disimpan (username kosong/invalid)."}
             db.bulk_save_objects(new_records)
             db.commit()
             records_processed = len(new_records)
