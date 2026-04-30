@@ -59,7 +59,8 @@ const PriceChecker = () => {
 
     // Direct Input
     const [skuInput, setSkuInput] = useState('');
-    const [targetPrice, setTargetPrice] = useState(0);
+    const [targetPrice, setTargetPrice] = useState(null);
+    const [targetStock, setTargetStock] = useState(null);
     const [directResult, setDirectResult] = useState(null);
 
     // Batch
@@ -118,7 +119,11 @@ const PriceChecker = () => {
         if (!skuInput) { message.warning('Please enter a SKU first'); return; }
         setCalcLoading(true); setDirectResult(null);
         try {
-            const res = await api.post('/price-checker/calculate-direct', { sku_string: skuInput, target_price: targetPrice });
+            const res = await api.post('/price-checker/calculate-direct', {
+                sku_string: skuInput,
+                target_price: Number(targetPrice || 0),
+                target_stock: Number(targetStock || 0),
+            });
             setDirectResult(res.data);
             logActivity('Price Checker (Direct)');
         } catch (err) { message.error(err.response?.data?.detail || 'Calculation failed');
@@ -210,6 +215,35 @@ const PriceChecker = () => {
         { title: 'SBY-Lock',          dataIndex: 'SBY-Lock',                key: 'sby_l', width: 120, onCell: r => copyableCellProps(r['SBY-Lock']), render: v => Number(v || 0).toLocaleString() },
         { title: 'IDR-OTW',           dataIndex: 'IDR-OTW',                 key: 'idr_o', width: 120, onCell: r => copyableCellProps(r['IDR-OTW']), render: v => Number(v || 0).toLocaleString() },
         { title: 'SBY-OTW',           dataIndex: 'SBY-OTW',                 key: 'sby_o', width: 120, onCell: r => copyableCellProps(r['SBY-OTW']), render: v => Number(v || 0).toLocaleString() },
+    ];
+
+    const stockEvalColumns = [
+        { title: 'Stock Type', dataIndex: 'StockType', key: 'StockType', width: 150 },
+        { title: 'Current Stock', dataIndex: 'CurrentStock', key: 'CurrentStock', width: 140, render: v => Number(v || 0).toLocaleString() },
+        { title: 'Target Stock', dataIndex: 'TargetStock', key: 'TargetStock', width: 140, render: v => Number(v || 0).toLocaleString() },
+        {
+            title: 'Gap',
+            dataIndex: 'Gap',
+            key: 'Gap',
+            width: 120,
+            render: v => {
+                const n = Number(v || 0);
+                return <span style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n.toLocaleString()}</span>;
+            },
+        },
+        {
+            title: 'Status',
+            dataIndex: 'Status',
+            key: 'Status',
+            width: 160,
+            render: v => (
+                <span style={{
+                    display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: v.includes('Safe') ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                    color: v.includes('Safe') ? '#10b981' : '#ef4444',
+                }}>{v}</span>
+            ),
+        },
     ];
 
     const previewColumns = batchOverview?.preview?.length
@@ -450,17 +484,32 @@ const PriceChecker = () => {
                                 style={{ borderRadius: 8, height: 46 }}
                             />
                         </Col>
-                        <Col xs={24} md={8}>
+                        <Col xs={24} md={4}>
                             <Label><Bi e="Target Price (IDR)" c="目标价格 (IDR)" /></Label>
                             <InputNumber
                                 size="large"
                                 style={{ width: '100%', borderRadius: 8, height: 46 }}
+                                placeholder="Enter target price"
                                 min={0}
                                 step={1000}
                                 value={targetPrice}
                                 onChange={setTargetPrice}
-                                formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                                parser={v => v.replace(/\./g, '')}
+                                onFocus={() => { if (targetPrice === 0) setTargetPrice(null); }}
+                                formatter={(v) => (v === null || v === undefined || v === '' ? '' : `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.'))}
+                                parser={(v) => (v ? v.replace(/\./g, '') : '')}
+                            />
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Label><Bi e="Target Stock" c="目标库存" /></Label>
+                            <InputNumber
+                                size="large"
+                                style={{ width: '100%', borderRadius: 8, height: 46 }}
+                                placeholder="Enter target stock"
+                                min={0}
+                                step={1}
+                                value={targetStock}
+                                onChange={setTargetStock}
+                                onFocus={() => { if (targetStock === 0) setTargetStock(null); }}
                             />
                         </Col>
                     </Row>
@@ -578,6 +627,29 @@ const PriceChecker = () => {
                                     rowKey="Tier"
                                     scroll={{ x: 'max-content' }}
                                     className="copyable-table"
+                                />
+                            </div>
+
+                            {/* Stock Evaluation Table */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
+                                <SectionHeading icon={<BarChartOutlined />}><Bi e="Stock Evaluation by Type" c="按库存类型进行评估" /></SectionHeading>
+                                <Button
+                                    size="small"
+                                    icon={<FileTextOutlined />}
+                                    onClick={() => copyTable(directResult.stock_evaluation || [], stockEvalColumns)}
+                                    style={{ fontSize: 12 }}
+                                >
+                                    Copy Table
+                                </Button>
+                            </div>
+                            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                <Table
+                                    dataSource={directResult.stock_evaluation || []}
+                                    columns={stockEvalColumns}
+                                    pagination={false}
+                                    size="middle"
+                                    rowKey="StockType"
+                                    scroll={{ x: 'max-content' }}
                                 />
                             </div>
                         </div>

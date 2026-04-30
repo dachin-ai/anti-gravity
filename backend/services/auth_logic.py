@@ -1,6 +1,9 @@
 import gspread
 import os
+import re
+import json
 import hashlib
+import json
 import jwt
 import datetime
 import traceback
@@ -39,7 +42,7 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 TOOL_KEYS = [
     "price_checker", "order_planner", "order_review",
     "affiliate_performance", "pre_sales", "affiliate_analyzer", "ads_analyzer",
-    "admin"
+    "admin", "product_performance", "livestream_display"
 ]
 
 # TIMEOUT PROTECTION for Google Sheets API
@@ -79,6 +82,37 @@ _cached_users_timestamp = 0
 _cached_users = []
 CACHE_DURATION = 300  # Cache Google Sheets data for 5 minutes
 
+def normalize_permissions(raw_permissions) -> Dict:
+    """Normalize permissions value to a dict, handling legacy JSON-string rows."""
+    if isinstance(raw_permissions, dict):
+        return raw_permissions
+    if isinstance(raw_permissions, str):
+        text = raw_permissions.strip()
+        if not text:
+            return {}
+        try:
+            parsed = json.loads(text)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def is_permission_enabled(value) -> bool:
+    """Normalize truthy permission flags across int/bool/string formats."""
+    if value in (1, True):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return False
+
+
+def has_permission(raw_permissions, key: str) -> bool:
+    perms = normalize_permissions(raw_permissions)
+    if is_permission_enabled(perms.get("admin")):
+        return True
+    return is_permission_enabled(perms.get(key))
+
 def get_sheet_client():
     global _cached_client, _cached_sh
     if _cached_sh is None:
@@ -110,7 +144,33 @@ def get_users() -> List[Dict]:
     def fetch_from_sheet():
         sh = get_sheet_client()
         ws = sh.worksheet("Account")
-        return ws.get_all_records()
+        rows = ws.get_all_values()
+        if not rows:
+            return []
+
+        headers_raw = rows[0]
+        headers = []
+        seen = set()
+        for idx, h in enumerate(headers_raw):
+            key = str(h).strip() if h is not None else ""
+            if not key:
+                key = f"col_{idx + 1}"
+            # Ensure header keys are unique so dict mapping stays stable.
+            if key in seen:
+                suffix = 2
+                while f"{key}_{suffix}" in seen:
+                    suffix += 1
+                key = f"{key}_{suffix}"
+            headers.append(key)
+            seen.add(key)
+
+        result = []
+        for raw in rows[1:]:
+            row = list(raw) + [""] * (len(headers) - len(raw))
+            item = {headers[i]: row[i] for i in range(len(headers))}
+            if any(str(v).strip() for v in item.values()):
+                result.append(item)
+        return result
     
     success, result = call_with_timeout(fetch_from_sheet, timeout_sec=SHEETS_API_TIMEOUT)
     
@@ -141,12 +201,19 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
         users = get_users()
         db = SessionLocal()
         try:
+            max_id = db.query(AccountUser.id).order_by(AccountUser.id.desc()).first()
+            next_id = (max_id[0] + 1) if max_id and max_id[0] is not None else 1
+
             # Get usernames dari sheet
-            sheet_usernames = set(user.get("Username", "").strip() for user in users if user.get("Username", "").strip())
+            sheet_usernames = {
+                str(user.get("Username", "")).strip()
+                for user in users
+                if str(user.get("Username", "")).strip()
+            }
             
             # Get existing usernames dari DB
             existing_users = db.query(AccountUser.username).all()
-            existing_usernames = set(u.username for u in existing_users)
+            existing_usernames = {str(u.username).strip() for u in existing_users if u.username and str(u.username).strip()}
             
             # Delete users yang tidak ada di sheet anymore
             to_delete = existing_usernames - sheet_usernames
@@ -176,16 +243,23 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
                     existing.password = str(user.get("Password", "")).strip()
                     existing.approval = str(user.get("Approval", "")).strip()
                     existing.permissions = perms
+                    sheet_name = str(user.get("Name", "")).strip()
+                    if sheet_name:
+                        existing.name = sheet_name
                 else:
                     # Insert new user
+                    sheet_name = str(user.get("Name", "")).strip()
                     new_user = AccountUser(
+                        id=next_id,
                         email=str(user.get("Email", "")).strip(),
                         username=username,
+                        name=sheet_name or username,
                         password=str(user.get("Password", "")).strip(),
                         approval=str(user.get("Approval", "")).strip(),
                         permissions=perms
                     )
                     db.add(new_user)
+                    next_id += 1
             
             db.commit()
             
@@ -218,9 +292,10 @@ def find_user_by_username(username: str) -> Optional[Dict]:
             return {
                 "Email": user.email,
                 "Username": user.username,
+                "Name": user.name or user.username,
                 "Password": user.password,
                 "Approval": user.approval,
-                "permissions": user.permissions or {}
+                "permissions": normalize_permissions(user.permissions)
             }
         return None
     finally:
@@ -239,9 +314,10 @@ def find_user_by_email(email: str) -> Optional[Dict]:
             return {
                 "Email": user.email,
                 "Username": user.username,
+                "Name": user.name or user.username,
                 "Password": user.password,
                 "Approval": user.approval,
-                "permissions": user.permissions or {}
+                "permissions": normalize_permissions(user.permissions)
             }
         return None
     finally:
@@ -276,9 +352,10 @@ def login_user_optimized(username: str, password: str) -> Tuple[bool, str, Optio
                 return False, "Your account has been rejected or is inactive.", None
             
             # Generate JWT
-            permissions = user.permissions or {}
+            permissions = normalize_permissions(user.permissions)
             payload = {
                 "username": user.username,
+                "name": user.name or user.username,
                 "email": user.email or "",
                 "permissions": permissions,
                 "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_EXPIRE_HOURS),
@@ -345,9 +422,10 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
             return False, "Your account has been rejected or is inactive.", None
 
         # Generate JWT
-        permissions = user.get("permissions", {})
+        permissions = normalize_permissions(user.get("permissions", {}))
         payload = {
             "username": user["Username"],
+            "name": user.get("Name") or user["Username"],
             "email": user.get("Email", ""),
             "permissions": permissions,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_EXPIRE_HOURS),
@@ -372,18 +450,21 @@ def verify_token(token: str) -> Optional[Dict]:
 
 
 def log_activity(username: str, tool_name: str, ip_address: str = ""):
-    """Menyimpan riwayat pengguna (Activity Log) ke PostgreSQL (Neon) dan ke DingTalk."""
+    """Store user activity log in PostgreSQL and DingTalk."""
     try:
         db = SessionLocal()
         
         jakarta_tz = datetime.timezone(datetime.timedelta(hours=7))
         # Get raw Jakarta time, then strip timezone details and microseconds so PostgreSQL stores the literal numbers safely.
         now_dt = datetime.datetime.now(jakarta_tz).replace(tzinfo=None, microsecond=0)
+        tool_general = re.sub(r"\s*\([^)]*\)\s*", " ", tool_name or "").strip()
+        tool_general = re.sub(r"\s+", " ", tool_general)
         
         new_log = ActivityLog(
             time=now_dt,
             username=username,
-            tools=tool_name
+            tools=tool_name,
+            tools_general=tool_general or tool_name,
         )
         db.add(new_log)
         db.commit()

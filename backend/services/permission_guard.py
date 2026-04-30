@@ -9,7 +9,7 @@ Account sheet / PostgreSQL `account_users.permissions` JSON column).
 """
 
 from fastapi import Request, HTTPException, Depends
-from services.auth_logic import verify_token
+from services.auth_logic import verify_token, has_permission
 
 
 def _extract_token(request: Request) -> str:
@@ -36,7 +36,7 @@ def require_tool_access(tool_key: str):
             raise HTTPException(status_code=401, detail="Token expired or invalid.")
 
         permissions = payload.get("permissions", {})
-        if permissions.get(tool_key) != 1:
+        if not has_permission(permissions, tool_key):
             raise HTTPException(
                 status_code=403,
                 detail=f"Access denied. You do not have permission for '{tool_key}'. Contact admin."

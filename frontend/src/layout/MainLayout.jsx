@@ -256,10 +256,12 @@ const MainLayout = () => {
                     style={{ background: 'linear-gradient(135deg, #6366f1, #3b82f6)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
                     onClick={() => setChangePwdOpen(true)}
                   >
-                    {user.username[0].toUpperCase()}
+                    {(user.name || user.username)[0].toUpperCase()}
                   </Avatar>
                 </Tooltip>
-                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 500 }}>{user.username}</Text>
+                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 500 }}>
+                  {user.name || user.username}
+                </Text>
                 <Tooltip title="Logout">
                   <Button
                     type="text"

@@ -5,14 +5,18 @@ const getBaseURL = () => {
   const isDev = import.meta.env.MODE === 'development';
   const envBackend = import.meta.env.VITE_API_URL;
 
-  // Allow overriding API target in both dev and production.
-  // Useful when local backend is unavailable but frontend is tested locally.
+  // In local dev, default to local backend to avoid mixing
+  // local frontend with stale/older remote APIs.
+  if (isDev) {
+    if (envBackend && /localhost|127\.0\.0\.1/.test(envBackend)) {
+      return envBackend;
+    }
+    return 'http://localhost:8000/api';
+  }
+
+  // Allow overriding API target outside development.
   if (envBackend) {
     return envBackend;
-  }
-  
-  if (isDev) {
-    return 'http://localhost:8000/api';
   }
   
   // Fallback: Use Cloud Run backend (production deployment)
@@ -59,10 +63,11 @@ export const askAssistant = (messages) => api.post('/chat/ask', { messages });
 export const submitAccessRequest = (tool_key) => api.post('/access/request', { tool_key });
 export const getMyAccessRequests = () => api.get('/access/my-requests');
 export const getAccessRequests = () => api.get('/access/requests');
-export const approveAccessRequest = (id) => api.put(`/access/requests/${id}/approve`);
+export const approveAccessRequest = (id, name) => api.put(`/access/requests/${id}/approve`, { name });
 export const rejectAccessRequest = (id) => api.put(`/access/requests/${id}/reject`);
 export const getAllUsersWithPermissions = () => api.get('/access/users');
-export const updateUserPermissions = (username, permissions) => api.put(`/access/users/${username}/permissions`, { permissions });
+export const updateUserPermissions = (username, permissions, name) => api.put(`/access/users/${username}/permissions`, { permissions, name });
+export const getUserActivity = (payload) => api.post('/access/user-activity', payload);
 
 export default api;
 

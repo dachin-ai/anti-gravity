@@ -11,6 +11,20 @@ function getTodayStr() {
     return new Date().toISOString().split('T')[0]; // "2026-04-09"
 }
 
+function normalizePermissions(rawPermissions) {
+    if (!rawPermissions) return {};
+    if (typeof rawPermissions === 'object') return rawPermissions;
+    if (typeof rawPermissions === 'string') {
+        try {
+            const parsed = JSON.parse(rawPermissions);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);         // { username, email }
     const [loading, setLoading] = useState(true);   // initial check
@@ -58,7 +72,12 @@ export function AuthProvider({ children }) {
         // Verify token with backend (short timeout to avoid long spinner)
         api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 })
             .then(res => {
-                const verifiedUser = { username: res.data.username, email: res.data.email, permissions: res.data.permissions || {} };
+                const verifiedUser = {
+                    username: res.data.username,
+                    name: res.data.name || res.data.username,
+                    email: res.data.email,
+                    permissions: normalizePermissions(res.data.permissions),
+                };
                 localStorage.setItem(USER_KEY, JSON.stringify(verifiedUser));
                 setUser(verifiedUser);
             })
@@ -84,12 +103,18 @@ export function AuthProvider({ children }) {
         if (res.data?.username) {
             userData = {
                 username: res.data.username,
+                name: res.data.name || res.data.username,
                 email: res.data.email || '',
-                permissions: res.data.permissions || {},
+                permissions: normalizePermissions(res.data.permissions),
             };
         } else {
             const verify = await api.post('/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 });
-            userData = { username: verify.data.username, email: verify.data.email, permissions: verify.data.permissions || {} };
+            userData = {
+                username: verify.data.username,
+                name: verify.data.name || verify.data.username,
+                email: verify.data.email,
+                permissions: normalizePermissions(verify.data.permissions),
+            };
         }
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         setUser(userData);
@@ -98,7 +123,20 @@ export function AuthProvider({ children }) {
 
     const hasAccess = useCallback((toolKey) => {
         if (!user || !user.permissions) return false;
-        return user.permissions[toolKey] === 1;
+
+        const perms = normalizePermissions(user.permissions);
+        const toBool = (value) => {
+            if (value === 1 || value === true) return true;
+            if (typeof value === 'string') {
+                return ['1', 'true', 'yes', 'y'].includes(value.trim().toLowerCase());
+            }
+            return false;
+        };
+
+        // Admin users can access all tools.
+        if (toBool(perms.admin)) return true;
+
+        return toBool(perms[toolKey]);
     }, [user]);
 
     const signup = useCallback(async (email, username, password) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Table, Button, Tag, Checkbox, message, Typography, Space, Badge } from 'antd';
+import { Tabs, Table, Button, Tag, Checkbox, message, Typography, Space, Badge, Input } from 'antd';
 import {
     CheckOutlined, CloseOutlined, ReloadOutlined,
     ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -61,9 +61,12 @@ function AccessRequestsTab() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleApprove = async (id) => {
+        const nameInput = window.prompt('Enter display name for this user (required if empty):');
+        if (nameInput === null) return;
+
         setActing(id);
         try {
-            await approveAccessRequest(id);
+            await approveAccessRequest(id, nameInput.trim());
             message.success('Request approved');
             fetchData();
         } catch (err) {
@@ -164,12 +167,39 @@ function UserPermissionsTab() {
     const [users, setUsers]     = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving]   = useState(null); // username being saved
+    const [editingNames, setEditingNames] = useState({});
+
+    const normalizePermissions = (permissions) => {
+        if (!permissions) return {};
+        if (typeof permissions === 'object') return permissions;
+        if (typeof permissions === 'string') {
+            try {
+                const parsed = JSON.parse(permissions);
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch {
+                return {};
+            }
+        }
+        return {};
+    };
+
+    const toPermissionInt = (value) => {
+        if (value === 1 || value === true) return 1;
+        if (typeof value === 'string' && ['1', 'true', 'yes', 'y'].includes(value.trim().toLowerCase())) return 1;
+        return 0;
+    };
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
             const res = await getAllUsersWithPermissions();
-            setUsers(res.data);
+            const normalized = (res.data || []).map((u) => ({
+                ...u,
+                name: u.name || u.username,
+                permissions: normalizePermissions(u.permissions),
+            }));
+            setUsers(normalized);
+            setEditingNames(Object.fromEntries(normalized.map((u) => [u.username, u.name || u.username])));
         } catch {
             message.error('Failed to load users');
         } finally {
@@ -180,7 +210,8 @@ function UserPermissionsTab() {
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
     const togglePermission = async (username, toolKey, currentValue) => {
-        const newValue = currentValue === 1 ? 0 : 1;
+        const currentInt = toPermissionInt(currentValue);
+        const newValue = currentInt === 1 ? 0 : 1;
         // Optimistic update
         setUsers(prev => prev.map(u =>
             u.username === username
@@ -190,16 +221,40 @@ function UserPermissionsTab() {
         setSaving(username);
         try {
             const user = users.find(u => u.username === username);
-            const updatedPerms = { ...(user?.permissions || {}), [toolKey]: newValue };
-            await updateUserPermissions(username, updatedPerms);
+            const updatedPerms = { ...normalizePermissions(user?.permissions), [toolKey]: newValue };
+            await updateUserPermissions(username, updatedPerms, editingNames[username] ?? user?.name ?? username);
         } catch (err) {
             message.error('Failed to update permission');
             // Revert on failure
             setUsers(prev => prev.map(u =>
                 u.username === username
-                    ? { ...u, permissions: { ...u.permissions, [toolKey]: currentValue } }
+                    ? { ...u, permissions: { ...u.permissions, [toolKey]: currentInt } }
                     : u
             ));
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    const saveDisplayName = async (username) => {
+        const user = users.find((u) => u.username === username);
+        if (!user) return;
+        const nextName = (editingNames[username] || '').trim();
+        if (!nextName) {
+            message.warning('Name cannot be empty.');
+            setEditingNames((prev) => ({ ...prev, [username]: user.name || user.username }));
+            return;
+        }
+        if (nextName === (user.name || user.username)) return;
+
+        setSaving(username);
+        try {
+            await updateUserPermissions(username, normalizePermissions(user.permissions), nextName);
+            setUsers((prev) => prev.map((u) => (u.username === username ? { ...u, name: nextName } : u)));
+            message.success(`Name updated for ${username}`);
+        } catch (err) {
+            message.error(err.response?.data?.detail || 'Failed to update name');
+            setEditingNames((prev) => ({ ...prev, [username]: user.name || user.username }));
         } finally {
             setSaving(null);
         }
@@ -228,7 +283,7 @@ function UserPermissionsTab() {
             align: 'center',
             render: (_, row) => (
                 <Checkbox
-                    checked={row.permissions?.[tool.key] === 1}
+                    checked={toPermissionInt(row.permissions?.[tool.key]) === 1}
                     disabled={saving === row.username}
                     onChange={() => togglePermission(row.username, tool.key, row.permissions?.[tool.key] ?? 0)}
                 />
@@ -244,6 +299,24 @@ function UserPermissionsTab() {
             fixed: 'left',
             width: 150,
             render: v => <Text strong style={{ color: 'var(--text-main)' }}>{v}</Text>,
+        },
+        {
+            title: 'Name',
+            dataIndex: 'name',
+            key: 'name',
+            width: 180,
+            render: (_, row) => (
+                <Input
+                    size="small"
+                    value={editingNames[row.username] ?? row.name ?? row.username}
+                    disabled={saving === row.username}
+                    onChange={(e) =>
+                        setEditingNames((prev) => ({ ...prev, [row.username]: e.target.value }))
+                    }
+                    onBlur={() => saveDisplayName(row.username)}
+                    onPressEnter={() => saveDisplayName(row.username)}
+                />
+            ),
         },
         {
             title: 'Email',

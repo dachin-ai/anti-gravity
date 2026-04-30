@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password, change_password
+from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password, change_password, normalize_permissions
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -49,12 +49,14 @@ def login(body: LoginRequest, request: Request):
             msg = f"{msg} Try refreshing users from the login page first."
         raise HTTPException(status_code=401, detail=msg)
     payload = verify_token(token)
+    payload_permissions = normalize_permissions(payload.get("permissions", {})) if payload else {}
     return {
         "message": msg,
         "token": token,
         "username": payload.get("username", body.username.strip()) if payload else body.username.strip(),
+        "name": payload.get("name", payload.get("username", body.username.strip())) if payload else body.username.strip(),
         "email": payload.get("email", "") if payload else "",
-        "permissions": payload.get("permissions", {}) if payload else {},
+        "permissions": payload_permissions,
     }
 
 
@@ -91,7 +93,14 @@ def verify(request: Request):
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
-    return {"valid": True, "username": payload["username"], "email": payload.get("email", ""), "permissions": payload.get("permissions", {})}
+    payload_permissions = normalize_permissions(payload.get("permissions", {}))
+    return {
+        "valid": True,
+        "username": payload["username"],
+        "name": payload.get("name", payload["username"]),
+        "email": payload.get("email", ""),
+        "permissions": payload_permissions,
+    }
 
 
 @router.post("/log-activity")

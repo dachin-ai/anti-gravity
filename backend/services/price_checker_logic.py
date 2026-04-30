@@ -3,6 +3,7 @@ import numpy as np
 import io
 import re
 import os
+import json
 import gspread
 from gspread.utils import rowcol_to_a1
 from typing import Tuple, Dict, Any, List
@@ -78,8 +79,19 @@ def load_product_database() -> Tuple[Dict, Dict, Dict]:
         price_db = {}
         for p in prices:
             item = {"Category": p.category, "Clearance": p.clearance}
-            if p.prices:
-                item.update(p.prices)
+            raw_prices = p.prices
+            if isinstance(raw_prices, dict):
+                item.update(raw_prices)
+            elif isinstance(raw_prices, str):
+                text = raw_prices.strip()
+                if text:
+                    try:
+                        parsed = json.loads(text)
+                        if isinstance(parsed, dict):
+                            item.update(parsed)
+                    except Exception:
+                        # Keep working even if legacy/corrupted rows exist.
+                        pass
             price_db[p.sku] = item
             
         name_map = {}
@@ -245,7 +257,44 @@ def upload_stock_data_to_google_sheet(file_bytes: bytes) -> Dict[str, Any]:
         df = df.iloc[:, :max_cols]
 
     headers = [str(col).strip() for col in df.columns.tolist()]
-    data_rows = df.values.tolist()
+
+    id_like_keywords = ("sku", "code", "id", "name", "link", "url", "warehouse")
+
+    def _normalize_cell(header: str, value: Any):
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if text.startswith("'"):
+            text = text[1:].strip()
+        if text == "":
+            return ""
+
+        # Keep identifier columns as text to avoid accidental type conversion.
+        lowered_header = str(header).strip().lower()
+        if any(k in lowered_header for k in id_like_keywords):
+            return text
+
+        # Convert numeric-looking values to actual numbers for SUMIF compatibility.
+        numeric_text = text.replace(",", "")
+        if re.fullmatch(r"[-+]?\d+", numeric_text):
+            try:
+                return int(numeric_text)
+            except Exception:
+                return text
+        if re.fullmatch(r"[-+]?\d*\.\d+", numeric_text):
+            try:
+                return float(numeric_text)
+            except Exception:
+                return text
+        return text
+
+    data_rows = []
+    for row in df.values.tolist():
+        normalized_row = []
+        for idx, raw_val in enumerate(row):
+            col_header = headers[idx] if idx < len(headers) else ""
+            normalized_row.append(_normalize_cell(col_header, raw_val))
+        data_rows.append(normalized_row)
     values = [headers] + data_rows
 
     client = gspread.service_account(filename=CREDENTIALS_FILE)
@@ -259,7 +308,7 @@ def upload_stock_data_to_google_sheet(file_bytes: bytes) -> Dict[str, Any]:
         end_col = max(len(r) for r in values) if values else 1
         end_col = max(1, min(end_col, max_cols))
         range_a1 = f"A1:{rowcol_to_a1(end_row, end_col)}"
-        ws.update(range_a1, values, value_input_option="RAW")
+        ws.update(range_a1, values, value_input_option="USER_ENTERED")
 
     return {
         "rows_uploaded": len(data_rows),
@@ -538,7 +587,9 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
     with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         workbook = writer.book
         
-        header_fmt = workbook.add_format({'bold': True, 'bg_color': '#0c2461', 'font_color': 'white', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
+        header_fmt_dark = workbook.add_format({'bold': True, 'bg_color': '#0c2461', 'font_color': 'white', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
+        header_fmt_stock = workbook.add_format({'bold': True, 'bg_color': '#DCFCE7', 'font_color': '#14532D', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
+        header_fmt_price = workbook.add_format({'bold': True, 'bg_color': '#DBEAFE', 'font_color': '#1E3A8A', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
         text_fmt = workbook.add_format({'num_format': '@', 'border': 1})
         num_fmt = workbook.add_format({'num_format': '0', 'border': 1}) 
         percent_fmt = workbook.add_format({'num_format': '0.0%', 'border': 1, 'align': 'center'}) 
@@ -552,11 +603,12 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
         sku_info_cols.sort(key=lambda x: (int(x.split()[1]), x.split()[2]))
 
         if method == "Listing":
-            core_cols = ["Product ID", "PID Name", "Variation ID", "MID Name", "Campaign Price", "SKU"]
+            core_cols = ["Product ID", "PID Name", "Variation ID", "MID Name", "Campaign Price", "Target Stock", "SKU"]
         else:
-            core_cols = ["SKU", "Input Price"]
+            core_cols = ["SKU", "Input Price", "Target Stock"]
             
-        metrics_cols = ["Bundle Discount", "Mark Clearance", "Mark Gift", "Available Stock"] + STOCK_TYPES
+        identity_cols = ["Bundle Discount", "Mark Clearance", "Mark Gift"]
+        stock_cols = ["Available Stock", "Gap Available Stock"] + STOCK_TYPES + [f"Gap {st}" for st in STOCK_TYPES]
 
         processing_sheets = [("All", PRICE_TYPES), ("Reminder", PRICE_TYPES)]
         for sc in SHEET_CONFIG:
@@ -575,12 +627,17 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
                 else:
                     current_df = pd.DataFrame(columns=current_df.columns)
 
-            interleaved_cols = []
+            interleaved_price_cols = []
             for pc in price_cols:
-                interleaved_cols.append(pc)
-                interleaved_cols.append(f"Gap {pc}")
+                interleaved_price_cols.append(pc)
+                interleaved_price_cols.append(f"Gap {pc}")
+
+            interleaved_stock_cols = ["Available Stock", "Gap Available Stock"]
+            for st in STOCK_TYPES:
+                interleaved_stock_cols.append(st)
+                interleaved_stock_cols.append(f"Gap {st}")
             
-            target_cols = core_cols + sku_info_cols + metrics_cols + interleaved_cols
+            target_cols = core_cols + sku_info_cols + identity_cols + interleaved_stock_cols + interleaved_price_cols
             final_cols = [c for c in target_cols if c in current_df.columns]
             
             sheet_df = current_df[final_cols].fillna("").replace([np.inf, -np.inf], "")
@@ -588,6 +645,12 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
             worksheet = writer.sheets[sheet_name]
             
             for col_num, value in enumerate(sheet_df.columns.values):
+                if value in interleaved_price_cols:
+                    header_fmt = header_fmt_price
+                elif value in stock_cols:
+                    header_fmt = header_fmt_stock
+                else:
+                    header_fmt = header_fmt_dark
                 worksheet.write(0, col_num, value, header_fmt)
             
             for row_idx, row_data in enumerate(sheet_df.values):
@@ -612,10 +675,14 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing") ->
             worksheet.set_column('A:B', 20)
             
             for i, col_name in enumerate(final_cols):
-                if col_name in PRICE_TYPES or col_name.startswith("Gap "):
-                    worksheet.set_column(i, i, 16)
-                elif col_name == "SKU":
+                if col_name == "SKU":
                     worksheet.set_column(i, i, 35)
+                elif col_name == "Available Stock":
+                    worksheet.set_column(i, i, 24)
+                elif col_name in STOCK_TYPES or col_name == "Gap Available Stock" or col_name.startswith("Gap IDR-") or col_name.startswith("Gap SBY-"):
+                    worksheet.set_column(i, i, 14)
+                elif col_name in PRICE_TYPES or col_name.startswith("Gap "):
+                    worksheet.set_column(i, i, 16)
 
             for sku_col in sku_info_cols:
                 if sku_col in final_cols:
@@ -640,7 +707,7 @@ def generate_template_file(method_type: str) -> bytes:
         header_fmt = workbook.add_format({'bold': True, 'bg_color': '#D3D3D3', 'border': 1})
         
         if method_type == "Listing":
-            df_check = pd.DataFrame(columns=["Product ID", "Variation ID", "Campaign Price"])
+            df_check = pd.DataFrame(columns=["Product ID", "Variation ID", "Campaign Price", "Target Stock"])
             df_check.to_excel(writer, index=False, sheet_name='Check Price')
             
             df_mass = pd.DataFrame(columns=["PID", "Listing Name", "MID", "Variations", "Parent SKU", "SKU"])
@@ -653,10 +720,10 @@ def generate_template_file(method_type: str) -> bytes:
                 for idx, col in enumerate(cols):
                     ws.write(0, idx, col, header_fmt)
         else:
-            df_sku = pd.DataFrame(columns=["SKU", "Input Price"])
+            df_sku = pd.DataFrame(columns=["SKU", "Input Price", "Target Stock"])
             df_sku.to_excel(writer, index=False, sheet_name='Price Check')
             ws = writer.sheets['Price Check']
-            ws.set_column('A:B', 25)
+            ws.set_column('A:C', 25)
             for idx, col in enumerate(df_sku.columns):
                 ws.write(0, idx, col, header_fmt)
 

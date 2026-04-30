@@ -102,6 +102,7 @@ def get_template(method: str):
 class DirectInput(BaseModel):
     sku_string: str
     target_price: float
+    target_stock: int = 0
 
 @router.post("/calculate-direct", dependencies=[Depends(require_tool_access("price_checker"))])
 def calc_direct(body: DirectInput):
@@ -129,6 +130,18 @@ def calc_direct(body: DirectInput):
             "Gap": gap_val,
             "Status": status
         })
+
+    stock_eval_data = []
+    for st in STOCK_TYPES:
+        current_stock = int(price_info.get(st, 0) or 0)
+        gap_stock = current_stock - int(body.target_stock)
+        stock_eval_data.append({
+            "StockType": st,
+            "CurrentStock": current_stock,
+            "TargetStock": int(body.target_stock),
+            "Gap": gap_stock,
+            "Status": "✅ Safe" if gap_stock >= 0 else "⚠️ Need Restock",
+        })
         
     return {
         "summary": {
@@ -139,7 +152,8 @@ def calc_direct(body: DirectInput):
         },
         "items": price_info.get("sku_items", []),
         "breakdown": breakdown,
-        "evaluation": eval_data
+        "evaluation": eval_data,
+        "stock_evaluation": stock_eval_data,
     }
 
 @router.post("/calculate-batch", dependencies=[Depends(require_tool_access("price_checker"))])
@@ -183,6 +197,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                 )
             
             col_pid, col_var_id, col_camp_price = df_check.columns[:3]
+            col_target_stock = df_check.columns[3] if len(df_check.columns) > 3 else None
             col_target_price = col_camp_price
             col_mass_pid, col_mass_name, col_mass_mid, col_mass_varname, col_mass_parent, col_mass_sku = df_mass.columns[:6]
             
@@ -201,6 +216,10 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
             df_check["PID Name"] = df_check[col_pid].map(pid_name_map)
             df_check["MID Name"] = df_check[col_var_id].map(mid_name_map)
             df_check["SKU"] = df_check[col_var_id].map(mid_sku_map)
+            if col_target_stock is None:
+                col_target_stock = "Target Stock"
+                df_check[col_target_stock] = 0
+            df_check[col_target_stock] = pd.to_numeric(df_check[col_target_stock], errors='coerce').fillna(0).astype(int)
             
             df_final = df_check
         else:
@@ -220,9 +239,15 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                     detail=f"Too many rows. Maximum {max_rows} rows allowed. Found {len(df_sku)} rows."
                 )
             
-            df_sku.columns = ["SKU", "Input Price"]
+            if len(df_sku.columns) >= 3:
+                df_sku = df_sku.iloc[:, :3]
+                df_sku.columns = ["SKU", "Input Price", "Target Stock"]
+            else:
+                df_sku.columns = ["SKU", "Input Price"]
+                df_sku["Target Stock"] = 0
             df_sku["SKU"] = df_sku["SKU"].astype(str).str.strip()
             col_target_price = "Input Price"
+            col_target_stock = "Target Stock"
             df_final = df_sku
 
         # PERFORMANCE OPTIMIZATION: Collect all unique SKUs first, then batch fetch photo_map
@@ -276,6 +301,7 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
         final_df = pd.concat([df_final, price_df], axis=1)
         
         final_df[col_target_price] = pd.to_numeric(final_df[col_target_price], errors='coerce').fillna(0)
+        final_df[col_target_stock] = pd.to_numeric(final_df[col_target_stock], errors='coerce').fillna(0).astype(int)
         
         for p_type in PRICE_TYPES:
             def get_gap_value(row):
@@ -287,6 +313,12 @@ async def calc_batch(method: str = Form(...), file: UploadFile = File(...)):
                     return inp_price - val
                 except: return "Invalid"
             final_df[f"Gap {p_type}"] = final_df.apply(get_gap_value, axis=1)
+
+        for stock_type in STOCK_TYPES:
+            final_df[f"Gap {stock_type}"] = pd.to_numeric(final_df[stock_type], errors='coerce').fillna(0).astype(int) - final_df[col_target_stock]
+        final_df["Gap Available Stock"] = pd.to_numeric(
+            final_df["Available Stock"].astype(str).str.extract(r"^(\d+)")[0], errors='coerce'
+        ).fillna(0).astype(int) - final_df[col_target_stock]
 
         try:
             excel_bytes = convert_df_to_excel_multisheet(final_df, method)

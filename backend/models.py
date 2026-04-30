@@ -75,6 +75,7 @@ class ActivityLog(Base):
     time = Column(DateTime)
     username = Column(String, index=True)
     tools = Column(String)
+    tools_general = Column(String, index=True)
 
 class AccountUser(Base):
     __tablename__ = "account_users"
@@ -82,6 +83,7 @@ class AccountUser(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
+    name = Column(String)
     password = Column(String)
     approval = Column(String)
     permissions = Column(JSON)

@@ -54,6 +54,29 @@ def _run_migrations():
         """
         DO $$
         BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name = 'account_users'
+            ) THEN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'account_users' AND column_name = 'name'
+                ) THEN
+                    ALTER TABLE account_users ADD COLUMN name VARCHAR;
+                END IF;
+
+                UPDATE account_users
+                SET name = username
+                WHERE (name IS NULL OR TRIM(name) = '')
+                  AND username IS NOT NULL
+                  AND TRIM(username) <> '';
+            END IF;
+        END
+        $$;
+        """,
+        """
+        DO $$
+        BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM information_schema.tables
                 WHERE table_name = 'pid_store_map'
@@ -161,6 +184,28 @@ def _run_migrations():
                 WHERE table_name='product_performance' AND column_name='visitor'
             ) THEN
                 ALTER TABLE product_performance ADD COLUMN visitor FLOAT;
+            END IF;
+        END
+        $$;
+        """,
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name = 'activity_logs'
+            ) THEN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='activity_logs' AND column_name='tools_general'
+                ) THEN
+                    ALTER TABLE activity_logs ADD COLUMN tools_general VARCHAR;
+                END IF;
+
+                UPDATE activity_logs
+                SET tools_general = TRIM(REGEXP_REPLACE(REGEXP_REPLACE(COALESCE(tools, ''), '\\s*\\([^)]*\\)\\s*', ' ', 'g'), '\\s+', ' ', 'g'))
+                WHERE tools IS NOT NULL
+                  AND (tools_general IS NULL OR tools_general = '');
             END IF;
         END
         $$;

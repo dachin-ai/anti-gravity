@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from database import SessionLocal
 from models import AccessRequest, AccountUser
 from services.user_activity_logic import get_user_activity
-from services.auth_logic import verify_token
+from services.auth_logic import verify_token, normalize_permissions, has_permission
 from typing import Optional, List
 from datetime import datetime
 
@@ -13,12 +13,20 @@ router = APIRouter(prefix="/api/access", tags=["Access"])
 class UserActivityQuery(BaseModel):
     start_date: Optional[str] = None  # format: YYYY-MM-DD
     end_date: Optional[str] = None    # format: YYYY-MM-DD
+    tool_view: Optional[str] = "specific"  # specific | general
+    exclude_admin: Optional[bool] = False
 
 class RequestBody(BaseModel):
     tool_key: str
 
 class PermissionsBody(BaseModel):
     permissions: dict
+    name: Optional[str] = None
+
+
+class ApproveBody(BaseModel):
+    name: Optional[str] = None
+
 
 def get_db():
     db = SessionLocal()
@@ -38,7 +46,9 @@ def _require_auth(request: Request) -> dict:
 
 def _require_admin(request: Request) -> dict:
     payload = _require_auth(request)
-    if payload.get("permissions", {}).get("admin") != 1:
+
+    perms = normalize_permissions(payload.get("permissions", {}) if isinstance(payload, dict) else {})
+    if not has_permission(perms, "admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return payload
 
@@ -50,10 +60,13 @@ def user_activity(
     db: Session = Depends(get_db)
 ):
     _require_admin(request)
-    # Parse date range
     start_date = body.start_date
     end_date = body.end_date
-    return get_user_activity(db, start_date, end_date)
+    tool_view = (body.tool_view or "specific").lower()
+    exclude_admin = bool(body.exclude_admin)
+    if tool_view not in {"specific", "general"}:
+        raise HTTPException(status_code=400, detail="tool_view must be either 'specific' or 'general'")
+    return get_user_activity(db, start_date, end_date, tool_view, exclude_admin)
 
 @router.post("/request")
 def submit_request(body: RequestBody, request: Request, db: Session = Depends(get_db)):
@@ -61,7 +74,7 @@ def submit_request(body: RequestBody, request: Request, db: Session = Depends(ge
     username = payload["username"]
     
     user = db.query(AccountUser).filter(AccountUser.username == username).first()
-    if user and user.permissions and user.permissions.get(body.tool_key) == 1:
+    if user and has_permission(user.permissions, body.tool_key):
         raise HTTPException(status_code=400, detail="You already have access to this tool.")
     
     existing = db.query(AccessRequest).filter(
@@ -111,7 +124,7 @@ def get_requests(request: Request, db: Session = Depends(get_db)):
     ]
 
 @router.put("/requests/{req_id}/approve")
-def approve_request(req_id: int, request: Request, db: Session = Depends(get_db)):
+def approve_request(req_id: int, request: Request, body: Optional[ApproveBody] = None, db: Session = Depends(get_db)):
     _require_admin(request)
     req = db.query(AccessRequest).filter(AccessRequest.id == req_id).first()
     if not req:
@@ -122,6 +135,11 @@ def approve_request(req_id: int, request: Request, db: Session = Depends(get_db)
         perms = dict(user.permissions or {})
         perms[req.tool_key] = 1
         user.permissions = perms
+        new_name = (body.name.strip() if body and body.name else "")
+        if not (user.name and str(user.name).strip()) and not new_name:
+            raise HTTPException(status_code=400, detail="Name is required before approving access for this user.")
+        if new_name:
+            user.name = new_name
     db.commit()
     return {"message": "Request approved"}
 
@@ -140,7 +158,12 @@ def get_users(request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
     users = db.query(AccountUser).order_by(AccountUser.username).all()
     return [
-        {"username": u.username, "email": u.email, "permissions": u.permissions or {}}
+        {
+            "username": u.username,
+            "name": (u.name or u.username),
+            "email": u.email,
+            "permissions": normalize_permissions(u.permissions),
+        }
         for u in users
     ]
 
@@ -150,6 +173,8 @@ def update_permissions(username: str, body: PermissionsBody, request: Request, d
     user = db.query(AccountUser).filter(AccountUser.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.permissions = body.permissions
+    user.permissions = normalize_permissions(body.permissions)
+    if body.name is not None:
+        user.name = body.name.strip() if body.name else None
     db.commit()
     return {"message": "Permissions updated"}
