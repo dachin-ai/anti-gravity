@@ -19,8 +19,8 @@ const getBaseURL = () => {
     return envBackend;
   }
   
-  // Fallback: Use Cloud Run backend (production deployment)
-  return 'https://anti-gravity-123563250077.asia-southeast1.run.app/api';
+  // Fallback: Cloud Run backend (freemir-web-api; override with VITE_API_URL in build)
+  return 'https://freemir-web-api-123563250077.asia-southeast1.run.app/api';
 };
 
 const baseURL = getBaseURL();

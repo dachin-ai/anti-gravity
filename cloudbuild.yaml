@@ -1,30 +1,29 @@
+# Cloud Build for repo dachin-ai/freemir-web (trigger: deploy-freemir-web).
+# Override substitutions in the trigger UI if service names or API URL differ.
 steps:
   # ── BACKEND ──────────────────────────────────────────────
-  # 1. Build backend Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-backend'
     args:
       - build
       - '-t'
-      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_BACKEND_IMAGE}:$COMMIT_SHA'
       - './backend'
 
-  # 2. Push backend image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-backend'
     args:
       - push
-      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_BACKEND_IMAGE}:$COMMIT_SHA'
 
-  # 3. Deploy backend to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-backend'
     entrypoint: gcloud
     args:
       - run
       - deploy
-      - anti-gravity
-      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
+      - '${_BACKEND_SERVICE}'
+      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_BACKEND_IMAGE}:$COMMIT_SHA'
       - '--region=asia-southeast1'
       - '--allow-unauthenticated'
       - '--set-env-vars=DATABASE_URL=${_DATABASE_URL},JWT_SECRET=${_JWT_SECRET}'
@@ -33,44 +32,51 @@ steps:
       - '--max-instances=3'
       - '--quiet'
 
-  # ── FRONTEND ─────────────────────────────────────────────
-  # 4. Build frontend Docker image
+  # ── FRONTEND (VITE_API_URL must match backend Cloud Run URL) ──
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-frontend'
     args:
       - build
+      - '--build-arg'
+      - 'VITE_API_URL=${_VITE_API_URL}'
       - '-t'
-      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_FRONTEND_IMAGE}:$COMMIT_SHA'
       - './frontend'
 
-  # 5. Push frontend image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-frontend'
     args:
       - push
-      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+      - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_FRONTEND_IMAGE}:$COMMIT_SHA'
 
-  # 6. Deploy frontend to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-frontend'
     entrypoint: gcloud
     args:
       - run
       - deploy
-      - frontend-anti-gravity
-      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+      - '${_FRONTEND_SERVICE}'
+      - '--image=asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_FRONTEND_IMAGE}:$COMMIT_SHA'
       - '--region=asia-southeast1'
       - '--allow-unauthenticated'
       - '--quiet'
 
 images:
-  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/anti-gravity:$COMMIT_SHA'
-  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/frontend-anti-gravity:$COMMIT_SHA'
+  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_BACKEND_IMAGE}:$COMMIT_SHA'
+  - 'asia-southeast1-docker.pkg.dev/dachin-ai-493209/cloud-run-source-deploy/${_FRONTEND_IMAGE}:$COMMIT_SHA'
 
 timeout: '1800s'
 options:
   logging: CLOUD_LOGGING_ONLY
 
 substitutions:
+  # Cloud Run service names (must match or be created on first deploy)
+  _BACKEND_SERVICE: 'freemir-web-api'
+  _FRONTEND_SERVICE: 'freemir-web'
+  # Artifact Registry image names (under .../cloud-run-source-deploy/)
+  _BACKEND_IMAGE: 'freemir-web-api'
+  _FRONTEND_IMAGE: 'freemir-web'
+  # Frontend build: project number 123563250077 → default Run URL for the backend service
+  _VITE_API_URL: 'https://freemir-web-api-123563250077.asia-southeast1.run.app/api'
   _JWT_SECRET: 'freemir_antigravity_2026_prod_secret'
   _DATABASE_URL: 'postgresql://dena_admin:AntiGrav2026Secure@35.198.222.19:5432/antigravity_db'
