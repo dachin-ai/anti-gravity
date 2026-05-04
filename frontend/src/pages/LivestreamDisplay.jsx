@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Button, Select, AutoComplete, Space, Typography, message, Spin, Empty, Tag } from 'antd';
 import { AppstoreOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import Bi from '../components/Bi';
 
@@ -19,6 +20,7 @@ const formatPrice = (value) => {
 };
 
 const LivestreamDisplay = () => {
+  const { t } = useTranslation();
   const [stores, setStores] = useState([]);
   const [store, setStore] = useState(null);
   const [etalases, setEtalases] = useState([]);
@@ -136,8 +138,8 @@ const LivestreamDisplay = () => {
   return (
     <div>
       <PageHeader
-        title={<Bi e="Livestream Display" c="直播展示" />}
-        subtitle={<Bi e="Load a dedicated Google Sheet into PostgreSQL and preview storefront collections." c="从专用 Google 表加载到 PostgreSQL 并预览橱窗集合。" />}
+        title={<Bi i18nKey="livestream.title" />}
+        subtitle={<Bi i18nKey="livestream.subtitle" />}
         accent="#0f766e"
         actions={(
           <Button
@@ -147,7 +149,7 @@ const LivestreamDisplay = () => {
             onClick={handleSync}
             style={{ height: 36, borderRadius: 10, fontWeight: 600 }}
           >
-            <Bi e="Sync Sheet" c="同步表格" />
+            <Bi i18nKey="livestream.syncSheet" />
           </Button>
         )}
       />
@@ -155,7 +157,7 @@ const LivestreamDisplay = () => {
       <Card style={{ borderRadius: 18, border: '1px solid var(--border)', marginBottom: 24 }}>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} md={8}>
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>Store</Text>
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>{t('livestream.store')}</Text>
             <Select
               value={store}
               placeholder="Select store"

@@ -83,13 +83,10 @@ const PermissionGate = ({ toolKey, children }) => {
                     size="large"
                     onClick={() => navigate('/')}
                     style={{
-                        background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
-                        border: 'none',
                         borderRadius: 12,
                         height: 44,
                         fontWeight: 600,
                         fontSize: 14,
-                        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
                     }}
                 >
                     Back to Dashboard

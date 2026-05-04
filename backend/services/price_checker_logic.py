@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import numbers
 import io
 import re
 import os
@@ -31,6 +32,24 @@ STOCK_TYPES = [
     "IDR-Lock", "SBY-Lock",
     "IDR-OTW", "SBY-OTW",
 ]
+
+# Stock-related "Gap *" columns in export (tri-color: >0 green, 0 yellow, <0 red)
+STOCK_GAP_COLUMN_NAMES = frozenset(
+    ["Gap Available Stock"] + [f"Gap {st}" for st in STOCK_TYPES]
+)
+
+# Listing export: secondary warehouse columns (non-primary). Hidden with the same set_column(...)
+# API as SKU Name/Link columns — per-index hidden works reliably; letter range O:V does not in some clients.
+LISTING_STOCK_DETAIL_COLS_HIDDEN = (
+    "SBY-Ready",
+    "Gap SBY-Ready",
+    "IDR-Lock",
+    "Gap IDR-Lock",
+    "SBY-Lock",
+    "Gap SBY-Lock",
+    "IDR-OTW",
+    "Gap IDR-OTW",
+)
 
 SHEET_CONFIG = [
     ("All", PRICE_TYPES),
@@ -589,6 +608,8 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
     image_cache: Dict[str, bytes | None] = {}
     frame_w_px = 56
     frame_h_px = 56
+    image_cell_w_px = 68
+    image_cell_h_px = 64
 
     def _make_framed_thumbnail(raw_bytes: bytes) -> bytes | None:
         try:
@@ -641,14 +662,45 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
         header_fmt_dark = workbook.add_format({'bold': True, 'bg_color': '#0c2461', 'font_color': 'white', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
         header_fmt_stock = workbook.add_format({'bold': True, 'bg_color': '#DCFCE7', 'font_color': '#14532D', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
         header_fmt_price = workbook.add_format({'bold': True, 'bg_color': '#DBEAFE', 'font_color': '#1E3A8A', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
-        text_fmt = workbook.add_format({'num_format': '@', 'border': 1})
-        num_fmt = workbook.add_format({'num_format': '0', 'border': 1}) 
-        percent_fmt = workbook.add_format({'num_format': '0.0%', 'border': 1, 'align': 'center'}) 
+        # Data: default center + vertical middle; column A (data rows) uses left + vertical middle
+        text_fmt = workbook.add_format({'num_format': '@', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+        text_fmt_a = workbook.add_format({'num_format': '@', 'border': 1, 'align': 'left', 'valign': 'vcenter'})
+        num_fmt = workbook.add_format({'num_format': '0', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+        num_fmt_a = workbook.add_format({'num_format': '0', 'border': 1, 'align': 'left', 'valign': 'vcenter'})
+        percent_fmt = workbook.add_format({'num_format': '0.0%', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+        percent_fmt_a = workbook.add_format({'num_format': '0.0%', 'border': 1, 'align': 'left', 'valign': 'vcenter'})
         center_fmt = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'border': 1})
-        green_bg = workbook.add_format({'bg_color': '#C6EFCE', 'font_color': '#006100', 'num_format': '0'})
-        red_bg = workbook.add_format({'bg_color': '#FFC7CE', 'font_color': '#9C0006', 'num_format': '0'})
-        invalid_fmt = workbook.add_format({'bg_color': '#FFFFE0', 'font_color': '#b71540', 'border': 1, 'align': 'center'})
-        link_fmt = workbook.add_format({'bg_color': '#e3f2fd', 'border': 1, 'num_format': '@'})
+        left_fmt = workbook.add_format({'align': 'left', 'valign': 'vcenter', 'border': 1})
+        green_bg = workbook.add_format({
+            'bg_color': '#C6EFCE', 'font_color': '#006100', 'num_format': '0', 'align': 'center', 'valign': 'vcenter', 'border': 1,
+        })
+        red_bg = workbook.add_format({
+            'bg_color': '#FFC7CE', 'font_color': '#9C0006', 'num_format': '0', 'align': 'center', 'valign': 'vcenter', 'border': 1,
+        })
+        yellow_bg = workbook.add_format({
+            'bg_color': '#FFEB9C', 'font_color': '#9C6500', 'num_format': '0', 'align': 'center', 'valign': 'vcenter', 'border': 1,
+        })
+        invalid_fmt = workbook.add_format({'bg_color': '#FFFFE0', 'font_color': '#b71540', 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+        invalid_fmt_a = workbook.add_format({'bg_color': '#FFFFE0', 'font_color': '#b71540', 'border': 1, 'align': 'left', 'valign': 'vcenter'})
+        link_fmt = workbook.add_format({'bg_color': '#e3f2fd', 'border': 1, 'num_format': '@', 'align': 'center', 'valign': 'vcenter'})
+        link_fmt_a = workbook.add_format({'bg_color': '#e3f2fd', 'border': 1, 'num_format': '@', 'align': 'left', 'valign': 'vcenter'})
+        # Available Stock: long text should wrap (still respects stock column width)
+        header_fmt_avail_stock = workbook.add_format({
+            'bold': True, 'bg_color': '#DCFCE7', 'font_color': '#14532D', 'border': 1,
+            'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
+        })
+        num_fmt_avail = workbook.add_format({
+            'num_format': '0', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
+        })
+        num_fmt_avail_a = workbook.add_format({
+            'num_format': '0', 'border': 1, 'align': 'left', 'valign': 'vcenter', 'text_wrap': True,
+        })
+        text_fmt_avail = workbook.add_format({
+            'num_format': '@', 'border': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
+        })
+        text_fmt_avail_a = workbook.add_format({
+            'num_format': '@', 'border': 1, 'align': 'left', 'valign': 'vcenter', 'text_wrap': True,
+        })
 
         sku_info_cols = [c for c in df.columns if re.match(r'SKU \d+ (Name|Link)', c)]
         sku_info_cols.sort(key=lambda x: (int(x.split()[1]), x.split()[2]))
@@ -692,12 +744,18 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
             final_cols = [c for c in target_cols if c in current_df.columns]
             
             sheet_df = current_df[final_cols].fillna("").replace([np.inf, -np.inf], "")
-            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name)
+            # Only create the sheet + header row; writing full data here then overwriting every
+            # cell in the loop below doubled generation time for large exports.
+            pd.DataFrame(columns=sheet_df.columns).to_excel(
+                writer, index=False, sheet_name=sheet_name
+            )
             worksheet = writer.sheets[sheet_name]
             
             for col_num, value in enumerate(sheet_df.columns.values):
                 if value in interleaved_price_cols:
                     header_fmt = header_fmt_price
+                elif value == "Available Stock":
+                    header_fmt = header_fmt_avail_stock
                 elif value in stock_cols:
                     header_fmt = header_fmt_stock
                 else:
@@ -707,11 +765,12 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
             for row_idx, row_data in enumerate(sheet_df.values):
                 for col_idx, cell_data in enumerate(row_data):
                     col_name = sheet_df.columns[col_idx]
+                    is_col_a = col_idx == 0
                     if "Link" in col_name:
                          link_value = str(cell_data)
                          img_bytes = _get_image_bytes(link_value)
                          if img_bytes:
-                             worksheet.set_row(row_idx + 1, 46)
+                             worksheet.set_row(row_idx + 1, 48)
                              worksheet.write(row_idx + 1, col_idx, "", center_fmt)
                              worksheet.insert_image(
                                  row_idx + 1,
@@ -721,38 +780,66 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
                                      "image_data": io.BytesIO(img_bytes),
                                      "x_scale": 1.0,
                                      "y_scale": 1.0,
-                                     "x_offset": 2,
-                                     "y_offset": 2,
+                                     "x_offset": max(0, (image_cell_w_px - frame_w_px) // 2),
+                                     "y_offset": max(0, (image_cell_h_px - frame_h_px) // 2),
                                      "object_position": 1
                                  }
                              )
                          else:
-                             worksheet.write(row_idx + 1, col_idx, link_value, link_fmt)
+                             worksheet.write(row_idx + 1, col_idx, link_value, link_fmt_a if is_col_a else link_fmt)
                     elif col_name in ["Product ID", "Variation ID", "SKU", "PID Name", "MID Name"] or "Name" in col_name:
-                         worksheet.write(row_idx + 1, col_idx, str(cell_data), text_fmt)
-                    elif col_name == "Bundle Discount":
-                        if cell_data == "": worksheet.write(row_idx + 1, col_idx, "", center_fmt)
+                         worksheet.write(row_idx + 1, col_idx, str(cell_data), text_fmt_a if is_col_a else text_fmt)
+                    elif col_name == "Available Stock":
+                        if cell_data == "Invalid":
+                            worksheet.write(
+                                row_idx + 1, col_idx, cell_data,
+                                invalid_fmt_a if is_col_a else invalid_fmt,
+                            )
+                        elif isinstance(cell_data, numbers.Real) and not isinstance(cell_data, bool):
+                            worksheet.write(
+                                row_idx + 1, col_idx, cell_data,
+                                num_fmt_avail_a if is_col_a else num_fmt_avail,
+                            )
                         else:
-                            try: worksheet.write(row_idx + 1, col_idx, float(cell_data), percent_fmt)
-                            except: worksheet.write(row_idx + 1, col_idx, cell_data, center_fmt)
+                            worksheet.write(
+                                row_idx + 1, col_idx, str(cell_data),
+                                text_fmt_avail_a if is_col_a else text_fmt_avail,
+                            )
+                    elif col_name == "Bundle Discount":
+                        if cell_data == "":
+                            worksheet.write(row_idx + 1, col_idx, "", left_fmt if is_col_a else center_fmt)
+                        else:
+                            try:
+                                worksheet.write(
+                                    row_idx + 1, col_idx, float(cell_data),
+                                    percent_fmt_a if is_col_a else percent_fmt,
+                                )
+                            except Exception:
+                                worksheet.write(row_idx + 1, col_idx, cell_data, left_fmt if is_col_a else center_fmt)
                     elif cell_data == "Invalid":
-                        worksheet.write(row_idx + 1, col_idx, cell_data, invalid_fmt)
-                    elif isinstance(cell_data, (int, float)):
-                        worksheet.write(row_idx + 1, col_idx, cell_data, num_fmt)
+                        worksheet.write(row_idx + 1, col_idx, cell_data, invalid_fmt_a if is_col_a else invalid_fmt)
+                    # numpy int/float (e.g. int64) are not isinstance of int/float; must write true numbers
+                    # or Excel conditional formats on gap columns (numeric rules) will not apply.
+                    elif isinstance(cell_data, numbers.Real) and not isinstance(cell_data, bool):
+                        worksheet.write(row_idx + 1, col_idx, cell_data, num_fmt_a if is_col_a else num_fmt)
                     else:
-                        worksheet.write(row_idx + 1, col_idx, str(cell_data), center_fmt)
+                        worksheet.write(row_idx + 1, col_idx, str(cell_data), left_fmt if is_col_a else center_fmt)
 
             worksheet.set_column('A:B', 20)
-            
+            # Target Stock + inventory block: same compact width (SKU layout: Target Stock = col C)
+            stock_block_width = 10
+
             for i, col_name in enumerate(final_cols):
                 if col_name == "SKU":
                     worksheet.set_column(i, i, 35)
                 elif "Link" in col_name and include_pictures:
-                    worksheet.set_column(i, i, 8.8)
+                    worksheet.set_column(i, i, 9.5)
+                elif col_name == "Target Stock":
+                    worksheet.set_column(i, i, stock_block_width)
                 elif col_name == "Available Stock":
-                    worksheet.set_column(i, i, 24)
+                    worksheet.set_column(i, i, stock_block_width)
                 elif col_name in STOCK_TYPES or col_name == "Gap Available Stock" or col_name.startswith("Gap IDR-") or col_name.startswith("Gap SBY-"):
-                    worksheet.set_column(i, i, 14)
+                    worksheet.set_column(i, i, stock_block_width)
                 elif col_name in PRICE_TYPES or col_name.startswith("Gap "):
                     worksheet.set_column(i, i, 16)
 
@@ -763,15 +850,29 @@ def convert_df_to_excel_multisheet(df: pd.DataFrame, method: str = "Listing", in
                         worksheet.set_column(idx, idx, 10)
                     else:
                         worksheet.set_column(idx, idx, 4, None, {'hidden': True})
-            
+
             current_gap_cols = [c for c in final_cols if c.startswith("Gap")]
             for col_name in current_gap_cols:
                 col_idx = final_cols.index(col_name)
                 col_letter = xlsxwriter.utility.xl_col_to_name(col_idx)
                 last_row = len(sheet_df) + 1
-                worksheet.conditional_format(f'{col_letter}2:{col_letter}{last_row}', {'type': 'text', 'criteria': 'containing', 'value': 'Invalid', 'format': invalid_fmt})
-                worksheet.conditional_format(f'{col_letter}2:{col_letter}{last_row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': green_bg})
-                worksheet.conditional_format(f'{col_letter}2:{col_letter}{last_row}', {'type': 'cell', 'criteria': '<', 'value': 0, 'format': red_bg})
+                rng = f"{col_letter}2:{col_letter}{last_row}"
+                worksheet.conditional_format(rng, {"type": "text", "criteria": "containing", "value": "Invalid", "format": invalid_fmt})
+                if col_name in STOCK_GAP_COLUMN_NAMES:
+                    # Stock gaps: >0 green, 0 yellow, <0 red
+                    worksheet.conditional_format(rng, {"type": "cell", "criteria": "greater than", "value": 0, "format": green_bg})
+                    worksheet.conditional_format(rng, {"type": "cell", "criteria": "equal to", "value": 0, "format": yellow_bg})
+                    worksheet.conditional_format(rng, {"type": "cell", "criteria": "less than", "value": 0, "format": red_bg})
+                else:
+                    worksheet.conditional_format(rng, {"type": "cell", "criteria": "greater than or equal to", "value": 0, "format": green_bg})
+                    worksheet.conditional_format(rng, {"type": "cell", "criteria": "less than", "value": 0, "format": red_bg})
+
+            # Same hide pattern as SKU Name/Link (per-column index). Letter-range O:V grouped <col> can be ignored by some Excel builds / viewers.
+            if method == "Listing":
+                for _hide_name in LISTING_STOCK_DETAIL_COLS_HIDDEN:
+                    if _hide_name in final_cols:
+                        _hi = final_cols.index(_hide_name)
+                        worksheet.set_column(_hi, _hi, 4, None, {"hidden": True})
 
     return output.getvalue()
 

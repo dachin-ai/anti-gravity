@@ -20,6 +20,12 @@ from services.price_checker_logic import (
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
+from services.tool_update_info import (
+    TOOL_KEY_PRICE_CHECKER_STOCK,
+    get_tool_info,
+    upsert_tool_info,
+)
+
 router = APIRouter(prefix="/api/price-checker", tags=["price-checker"])
 
 db_cache = {
@@ -27,7 +33,6 @@ db_cache = {
     "name_map": None,
     "link_map": None,
     "last_refresh": None,
-    "last_stock_upload_at": None,
     "sku_photo_map": {}
 }
 
@@ -56,19 +61,37 @@ def sync_database():
         raise HTTPException(status_code=500, detail=f"Failed to sync: {str(e)}")
 
 
+_MAX_KETERANGAN_LEN = 4000
+
+
 @router.post("/upload-stock-data", dependencies=[Depends(require_tool_access("price_checker"))])
-async def upload_stock_data(file: UploadFile = File(...)):
-    """Upload stock Excel and replace Google Sheet tab In-Stock (A:CA)."""
+async def upload_stock_data(
+    file: UploadFile = File(...),
+    keterangan: str | None = Form(None),
+):
+    """Upload stock Excel and replace Google Sheet tab In-Stock (A:CA). Persists last upload time + optional note to PostgreSQL."""
     try:
         file_content = await file.read()
         if not file_content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        note = (keterangan or "").strip() or None
+        if note and len(note) > _MAX_KETERANGAN_LEN:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Keterangan terlalu panjang (maks {_MAX_KETERANGAN_LEN} karakter).",
+            )
         result = upload_stock_data_to_google_sheet(file_content)
-        db_cache["last_stock_upload_at"] = datetime.now(timezone.utc).isoformat()
+        db = SessionLocal()
+        try:
+            saved = upsert_tool_info(db, TOOL_KEY_PRICE_CHECKER_STOCK, note)
+        finally:
+            db.close()
         return {
             "success": True,
             "message": f"Stock data uploaded to {result['sheet']} ({result['rows_uploaded']} rows).",
-            "last_uploaded_at": db_cache["last_stock_upload_at"],
+            "last_uploaded_at": saved["last_uploaded_at"],
+            "keterangan": saved.get("keterangan"),
+            "waktu": saved.get("waktu"),
             **result
         }
     except HTTPException:
@@ -76,10 +99,58 @@ async def upload_stock_data(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload stock data: {str(e)}")
 
+
+class StockUploadInfoPatch(BaseModel):
+    keterangan: str | None = None
+
+
+@router.patch("/upload-stock-data/info", dependencies=[Depends(require_tool_access("price_checker"))])
+def patch_stock_upload_info(body: StockUploadInfoPatch):
+    """Update keterangan saja (baris yang sama di DB), tanpa upload file. Waktu upload terakhir tidak diubah."""
+    note = (body.keterangan or "").strip() or None
+    if note and len(note) > _MAX_KETERANGAN_LEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Keterangan terlalu panjang (maks {_MAX_KETERANGAN_LEN} karakter).",
+        )
+    db = SessionLocal()
+    try:
+        from models import ToolUpdateInfo
+        row = db.query(ToolUpdateInfo).filter(
+            ToolUpdateInfo.tool_key == TOOL_KEY_PRICE_CHECKER_STOCK
+        ).first()
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail="Belum ada riwayat upload stok. Unggah file dulu.",
+            )
+        row.keterangan = note
+        db.commit()
+        db.refresh(row)
+        waktu_iso = row.waktu.isoformat() if row.waktu else None
+        return {
+            "success": True,
+            "keterangan": row.keterangan,
+            "waktu": waktu_iso,
+            "last_uploaded_at": waktu_iso,
+        }
+    finally:
+        db.close()
+
+
 @router.get("/upload-stock-data/status", dependencies=[Depends(require_tool_access("price_checker"))])
 def get_stock_upload_status():
+    db = SessionLocal()
+    try:
+        info = get_tool_info(db, TOOL_KEY_PRICE_CHECKER_STOCK)
+    finally:
+        db.close()
+    if not info:
+        return {"last_uploaded_at": None, "keterangan": None, "waktu": None}
     return {
-        "last_uploaded_at": db_cache.get("last_stock_upload_at")
+        "last_uploaded_at": info.get("last_uploaded_at"),
+        "keterangan": info.get("keterangan"),
+        "waktu": info.get("waktu"),
     }
 
 @router.get("/refresh", dependencies=[Depends(require_tool_access("price_checker"))])

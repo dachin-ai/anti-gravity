@@ -7,6 +7,7 @@ import {
     InfoCircleOutlined, FolderOpenOutlined, BarChartOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
@@ -30,6 +31,7 @@ const getBase64 = (file) =>
     });
 
 const TikTokAds = () => {
+    const { t } = useTranslation();
     const [fileList, setFileList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -37,7 +39,7 @@ const TikTokAds = () => {
 
     const handleUpload = async () => {
         if (!fileList.length) {
-            message.warning('Please upload at least one TikTok Ads Export file (.csv or .xlsx)');
+            message.warning(t('tiktokAds.uploadWarn'));
             return;
         }
 
@@ -59,10 +61,10 @@ const TikTokAds = () => {
             });
 
             setResult(res.data);
-            message.success('Analysis complete!');
+            message.success(t('tiktokAds.analysisComplete'));
             logActivity('TikTok Ads Analysis');
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Calculation failed. Please check the file structure.');
+            message.error(err.response?.data?.detail || t('tiktokAds.calcFail'));
         } finally {
             setLoading(false);
         }
@@ -124,24 +126,24 @@ const TikTokAds = () => {
     return (
         <div>
             <PageHeader
-                title={<Bi e="Ads Analyzer" c="广告分析" />}
-                subtitle={<Bi e="Analyze and consolidate your TikTok Ads performance data" c="分析并整合您的 TikTok Ads 表现数据" />}
+                title={<Bi i18nKey="tiktokAds.title" />}
+                subtitle={<Bi i18nKey="tiktokAds.subtitle" />}
                 accent="#ec4899"
             />
 
             <Row gutter={24}>
                 <Col xs={24} md={6}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                         <SectionHeading icon={<InfoCircleOutlined />}><Bi e="Instructions" c="操作说明" /></SectionHeading>
+                         <SectionHeading icon={<InfoCircleOutlined />}><Bi i18nKey="tiktokAds.instructions" /></SectionHeading>
                          <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                            <Bi e="Upload your exported TikTok Ads performance reports. You can upload multiple files at once." c="上传您的 TikTok Ads 表现报告，支持同时上传多个文件。" />
+                            <Bi i18nKey="tiktokAds.instrBody" />
                          </Text>
                         <div style={{ marginTop: 24, padding: '16px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                             <Text strong style={{ color: 'var(--text-main)', display: 'block', marginBottom: 10 }}>
-                                <Bi e="Analysis Mode" c="分析模式" />
+                                <Bi i18nKey="tiktokAds.analysisMode" />
                             </Text>
                             <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginTop: 10 }}>
-                                Aggregate mode combines all uploaded files into one summary.
+                                {t('tiktokAds.analysisModeHelp')}
                             </Text>
                          </div>
                     </div>
@@ -149,7 +151,7 @@ const TikTokAds = () => {
 
                 <Col xs={24} md={18}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                        <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Data Export" c="上传数据" /></SectionHeading>
+                        <SectionHeading icon={<FolderOpenOutlined />}><Bi i18nKey="tiktokAds.uploadData" /></SectionHeading>
                         <Dragger
                             multiple
                             beforeUpload={beforeUpload}
@@ -159,10 +161,10 @@ const TikTokAds = () => {
                         >
                             <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#ec4899' }} /></p>
                             <p className="ant-upload-text" style={{ color: 'var(--text-main)', fontSize: 16 }}>
-                                <Bi e="Click or drag TikTok Ads files here" c="点击或拖拽 TikTok Ads 文件到此处" />
+                                <Bi i18nKey="tiktokAds.uploadHint" />
                             </p>
                             <p className="ant-upload-hint" style={{ color: 'var(--text-muted)' }}>
-                                <Bi e="Support for a single or bulk upload." c="支持单个或批量上传" />
+                                <Bi i18nKey="tiktokAds.bulkHint" />
                             </p>
                         </Dragger>
 
@@ -177,14 +179,14 @@ const TikTokAds = () => {
                                 boxShadow: '0 4px 14px rgba(245,87,108,0.3)',
                             }}
                         >
-                            {loading ? 'Processing Data...' : 'Analyze Ads Data'}
+                            {loading ? t('tiktokAds.processingData') : t('tiktokAds.analyzeBtn')}
                         </Button>
                     </div>
 
                     {result && !loading && (
                         <div style={{ marginTop: 24 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Preview Results" c="结果预览" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi i18nKey="tiktokAds.preview" /></SectionHeading>
 
                             <Tabs
                                 items={[

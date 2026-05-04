@@ -1,16 +1,36 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import i18n, { FM_LANG_STORAGE_KEY } from '../i18n/config';
 
-const LangContext = createContext();
+const SUPPORTED = ['en', 'zh', 'id'];
+
+const LangContext = createContext(null);
 
 export const LangProvider = ({ children }) => {
-  const [lang, setLang] = useState('en'); // 'en' or 'zh'
-  const toggleLang = () => setLang(l => (l === 'en' ? 'zh' : 'en'));
-  const setLanguage = (l) => setLang(l);
-  return (
-    <LangContext.Provider value={{ lang, toggleLang, setLanguage }}>
-      {children}
-    </LangContext.Provider>
-  );
+  const [lang, setLangState] = useState(() => {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(FM_LANG_STORAGE_KEY) : null;
+    return SUPPORTED.includes(stored) ? stored : 'en';
+  });
+
+  const setLanguage = useCallback((next) => {
+    if (!SUPPORTED.includes(next)) return;
+    setLangState(next);
+    localStorage.setItem(FM_LANG_STORAGE_KEY, next);
+    void i18n.changeLanguage(next);
+  }, []);
+
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      void i18n.changeLanguage(lang);
+    }
+  }, [lang]);
+
+  const value = useMemo(() => ({ lang, setLanguage, supportedLangs: SUPPORTED }), [lang, setLanguage]);
+
+  return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 };
 
-export const useLang = () => useContext(LangContext);
+export const useLang = () => {
+  const ctx = useContext(LangContext);
+  if (!ctx) throw new Error('useLang must be used within LangProvider');
+  return ctx;
+};

@@ -83,8 +83,8 @@ const ShopeeAffiliate = () => {
   return (
     <div style={S.page}>
       <PageHeader
-        title={<Bi e="Shopee Affiliate Hub" c="Shopee 联盟中心" />}
-        subtitle={<Bi e="Centralized data integration & analytics for Product · Creator · Conversion" c="产品、创作者、转化的集中数据集成与分析" />}
+        title={<Bi i18nKey="shopeeAffiliate.title" />}
+        subtitle={<Bi i18nKey="shopeeAffiliate.subtitle" />}
         accent="#f97316"
       />
 
@@ -92,11 +92,11 @@ const ShopeeAffiliate = () => {
         styles={{ body: { padding: 0 } }}
       >
         <Tabs size="large" style={{ padding: '0 8px' }} items={[
-          { key: 'upload',      label: <span><CloudUploadOutlined /> <Bi e="Upload Data" c="上传数据" /></span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} isDark={isDark} /> },
-          { key: 'checker',     label: <span><AppstoreOutlined /> <Bi e="Checker Matrix" c="检查矩阵" /></span>,       children: <CheckerTab   stores={stores} isDark={isDark} /> },
-          { key: 'analytics',   label: <span><LineChartOutlined /> <Bi e="Analytics" c="分析" /></span>,            children: <AnalyticsTab stores={stores} isDark={isDark} /> },
-          { key: 'report',      label: <span><FileTextOutlined /> <Bi e="Full Report" c="完整报告" /></span>,           children: <ReportTab    stores={stores} isDark={isDark} /> },
-          { key: 'comparison',  label: <span><SwapOutlined /> <Bi e="Period Comparison" c="期间对比" /></span>,         children: <ComparisonTab stores={stores} isDark={isDark} /> },
+          { key: 'upload',      label: <span><CloudUploadOutlined /> <Bi i18nKey="shopeeAffiliate.tabUpload" /></span>,       children: <UploadTab    stores={stores} storesLoading={storesLoading} isDark={isDark} /> },
+          { key: 'checker',     label: <span><AppstoreOutlined /> <Bi i18nKey="shopeeAffiliate.tabChecker" /></span>,       children: <CheckerTab   stores={stores} isDark={isDark} /> },
+          { key: 'analytics',   label: <span><LineChartOutlined /> <Bi i18nKey="shopeeAffiliate.tabAnalytics" /></span>,            children: <AnalyticsTab stores={stores} isDark={isDark} /> },
+          { key: 'report',      label: <span><FileTextOutlined /> <Bi i18nKey="shopeeAffiliate.tabReport" /></span>,           children: <ReportTab    stores={stores} isDark={isDark} /> },
+          { key: 'comparison',  label: <span><SwapOutlined /> <Bi i18nKey="shopeeAffiliate.tabComparison" /></span>,         children: <ComparisonTab stores={stores} isDark={isDark} /> },
         ]} />
       </Card>
     </div>
@@ -149,7 +149,7 @@ const UploadTab = ({ stores, storesLoading, isDark }) => {
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Row gutter={16}>
           <Col span={12}>
-            <div style={S.label}><Bi e="Data Type" c="数据类型" /></div>
+            <div style={S.label}><Bi i18nKey="shopeeAffiliate.dataType" /></div>
             <Select style={{ width: '100%', marginTop: 6 }} value={uploadType}
               onChange={v => { setUploadType(v); setFileList([]); }}
               options={[
@@ -159,7 +159,7 @@ const UploadTab = ({ stores, storesLoading, isDark }) => {
               ]} />
           </Col>
           <Col span={12}>
-            <div style={S.label}><Bi e="Select Store" c="选择店铺" /></div>
+            <div style={S.label}><Bi i18nKey="shopeeAffiliate.selectStore" /></div>
             <Select showSearch loading={storesLoading} placeholder="Select a Shopee store..."
               style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
               options={stores.map(s => ({ value: s.code, label: s.name || s.code }))} />
@@ -185,7 +185,7 @@ const UploadTab = ({ stores, storesLoading, isDark }) => {
                   <span>All uploaded files in this batch will be tagged as <strong>{manualDate.format('DD MMMM YYYY')}</strong>.</span>
                 </div>
               ) : (
-                <div style={{ ...S.infoBox, color: '#a5b4fc', fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ ...S.infoBox, color: isDark ? '#a5b4fc' : 'var(--text-main)', fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <InfoCircleOutlined style={{ marginTop: 2, flexShrink: 0 }} />
                   <span>Dates are <strong>auto-detected</strong> from filenames (e.g. <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>_20260401</code> or <code style={{ background: 'rgba(99,102,241,0.2)', padding: '1px 5px', borderRadius: 4 }}>202604101458</code>). Batch uploading is allowed.</span>
                 </div>
@@ -205,7 +205,7 @@ const UploadTab = ({ stores, storesLoading, isDark }) => {
         <Button type="primary" block size="large" icon={<UploadOutlined />}
           loading={uploading} onClick={handleUpload}
           style={{ background: 'linear-gradient(135deg,#ff4d4f,#ff7a45)', border: 'none', fontWeight: 600, height: 48 }}>
-          <Bi e="Start ETL Process" c="开始 ETL 处理" />
+          <Bi i18nKey="shopeeAffiliate.startEtl" />
         </Button>
       </Space>
     </div>
@@ -295,27 +295,33 @@ const CheckerTab = ({ stores, isDark }) => {
         </Tooltip>
       );
     }
-    return <MinusCircleFilled style={{ color: '#1e3a5f', fontSize: 13 }} />;
+    const missingColor = isDark ? '#94a3b8' : '#64748b';
+    return <MinusCircleFilled style={{ color: missingColor, fontSize: 13 }} />;
   };
 
   const hasAnyData = (row) => {
     return Object.values(row.stores || {}).some(s => s.product || s.creator || s.conversion);
   };
 
+  const hdrStore = isDark ? '#93c5fd' : '#0c4a6e';
+  const hdrProduct = isDark ? '#86efac' : '#166534';
+  const hdrCreator = isDark ? '#fbbf24' : '#a16207';
+  const hdrConversion = isDark ? '#60a5fa' : '#1d4ed8';
+
   const columns = [
     {
       title: 'Date', dataIndex: 'date', fixed: 'left', width: 110,
       onHeaderCell: getHeaderCell,
-      render: t => <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{dayjs(t).format('DD MMM YYYY')}</span>,
+      render: t => <span style={{ color: textPrimary, fontWeight: 600 }}>{dayjs(t).format('DD MMM YYYY')}</span>,
     },
     ...activeStoreCodes.map(code => ({
-      title: <span style={{ color: '#93c5fd' }}>{getStoreName(code)}</span>,
+      title: <span style={{ color: hdrStore }}>{getStoreName(code)}</span>,
       width: STORE_GROUP_WIDTH,
       onHeaderCell: getHeaderCell,
       children: [
-        { title: <span style={{ color: '#86efac', fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} rowDate={r.date} storeId={code} dataType="product" /> },
-        { title: <span style={{ color: '#fbbf24', fontSize: 10 }}>Creator</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} rowDate={r.date} storeId={code} dataType="creator" /> },
-        { title: <span style={{ color: '#60a5fa', fontSize: 10 }}>Conversion</span>, align: 'center', width: 75, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} rowDate={r.date} storeId={code} dataType="conversion" /> },
+        { title: <span style={{ color: hdrProduct, fontSize: 10 }}>Product</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.product} rowDate={r.date} storeId={code} dataType="product" /> },
+        { title: <span style={{ color: hdrCreator, fontSize: 10 }}>Creator</span>, align: 'center', width: 62, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.creator} rowDate={r.date} storeId={code} dataType="creator" /> },
+        { title: <span style={{ color: hdrConversion, fontSize: 10 }}>Conversion</span>, align: 'center', width: 75, onHeaderCell: getHeaderCell, render: (_, r) => <Tick val={r.stores[code]?.conversion} rowDate={r.date} storeId={code} dataType="conversion" /> },
       ]
     })),
     {
@@ -334,14 +340,14 @@ const CheckerTab = ({ stores, isDark }) => {
     <div style={{ padding: '20px 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <Text style={{ color: '#94a3b8' }}>Filter Month:</Text>
+          <Text style={{ color: 'var(--text-muted)' }}>Filter Month:</Text>
           <DatePicker picker="month" value={selectedMonth} onChange={d => d && setSelectedMonth(d)} allowClear={false} />
         </Space>
         <Button icon={<ReloadOutlined />} onClick={fetchMatrix} loading={loading}>Refresh</Button>
       </div>
-      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
         <CheckCircleFilled style={{ color: '#22c55e' }} /> = Data available (Click on the tick to delete specific data)<br/>
-        <MinusCircleFilled style={{ color: '#1e3a5f' }} /> = Missing data &nbsp;&nbsp;&nbsp;&nbsp;
+        <MinusCircleFilled style={{ color: isDark ? '#94a3b8' : '#64748b' }} /> = Missing data &nbsp;&nbsp;&nbsp;&nbsp;
         <DeleteOutlined style={{ color: '#ef4444' }} /> = Bulk click to delete all data (for all stores) on that date
       </div>
       <Table columns={columns} dataSource={matrixData} rowKey="date" loading={loading}
@@ -400,11 +406,11 @@ const AnalyticsTab = ({ stores, isDark }) => {
     <div style={{ padding: '20px 24px' }}>
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={14}>
-          <div style={S.label}><Bi e="Date Range" c="日期范围" /></div>
+          <div style={S.label}><Bi i18nKey="shopeeAffiliate.dateRange" /></div>
           <RangePicker style={{ width: '100%', marginTop: 6 }} value={dateRange} onChange={setDateRange} />
         </Col>
         <Col span={10}>
-          <div style={S.label}><Bi e="Store" c="店铺" /></div>
+          <div style={S.label}><Bi i18nKey="shopeeAffiliate.store" /></div>
           <Select showSearch style={{ width: '100%', marginTop: 6 }} value={selectedStore} onChange={setSelectedStore}
             options={[{ value: 'ALL', label: '🌐 All Stores' }, ...stores.map(s => ({ value: s.code, label: `${s.code} — ${s.name}` }))]} />
         </Col>
@@ -575,7 +581,7 @@ const ReportTab = ({ stores, isDark }) => {
     ];
     return (
       <div style={{ padding: '8px 32px', background: isDark ? 'rgba(10,20,35,0.8)' : '#f1f5f9' }}>
-        <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8, display: 'block' }}>Creators who drove this product:</Text>
+        <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, marginBottom: 8, display: 'block' }}>Creators who drove this product:</Text>
         <Table columns={subCols} dataSource={record.creators} rowKey="username"
           bordered size="small" pagination={false} scroll={{ x: 'max-content' }}
           style={{ background: 'transparent' }} onRow={getBodyRowStyle} />
@@ -701,7 +707,7 @@ const ComparisonTab = ({ stores, isDark }) => {
       render: r => <span style={{ color: textPrimary, fontFamily: 'monospace' }}>{prefix}{fmtRp(r[`b_${metricKey}`])}</span>
     },
     {
-      title: <span style={{ color: '#a5b4fc' }}>Δ {label}</span>,
+      title: <span style={{ color: isDark ? '#a5b4fc' : '#4338ca' }}>Δ {label}</span>,
       align: 'center', width: 110, onHeaderCell: getHeaderCell,
       sorter: (a, b) => (a[`delta_${metricKey}`] || -999) - (b[`delta_${metricKey}`] || -999),
       render: r => <DeltaBadge val={r[`delta_${metricKey}`]} />
@@ -710,7 +716,7 @@ const ComparisonTab = ({ stores, isDark }) => {
 
   const roiCompCols = () => [
     {
-      title: <span style={{ color: '#93c5fd' }}>ROI A</span>,
+      title: <span style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>ROI A</span>,
       align: 'right', width: 100, onHeaderCell: getHeaderCell,
       render: r => {
         const v = r.a_roi || 0;
@@ -719,7 +725,7 @@ const ComparisonTab = ({ stores, isDark }) => {
       }
     },
     {
-      title: <span style={{ color: '#fbbf24' }}>ROI B</span>,
+      title: <span style={{ color: isDark ? '#fbbf24' : '#b45309' }}>ROI B</span>,
       align: 'right', width: 100, onHeaderCell: getHeaderCell,
       render: r => {
         const v = r.b_roi || 0;
@@ -728,7 +734,7 @@ const ComparisonTab = ({ stores, isDark }) => {
       }
     },
     {
-      title: <span style={{ color: '#a5b4fc' }}>Δ ROI</span>,
+      title: <span style={{ color: isDark ? '#a5b4fc' : '#4338ca' }}>Δ ROI</span>,
       align: 'center', width: 110, onHeaderCell: getHeaderCell,
       sorter: (a, b) => (a.delta_roi || -999) - (b.delta_roi || -999),
       render: r => <DeltaBadge val={r.delta_roi} />

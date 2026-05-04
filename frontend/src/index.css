@@ -32,6 +32,9 @@
 .copyable-table .ant-table-cell:hover {
   background: rgba(99, 102, 241, 0.08) !important;
 }
+:root[data-theme="light"] .copyable-table .ant-table-cell:hover {
+  background: rgba(14, 165, 233, 0.12) !important;
+}
 
 /* Price Checker tables centered for readability */
 .price-checker-center-table .ant-table-thead > tr > th,
@@ -40,37 +43,39 @@
 }
 
 /* ============================================
-   LIGHT MODE OVERRIDES
+   LIGHT MODE — musim panas: langit & air, biru segar (bukan hijau)
    ============================================ */
 :root[data-theme="light"] {
-  --indigo-dim:   #e0e7ff; /* Indigo 100 */
+  /* Aksen: sky blue (segar, tetap “matang” — bukan biru neon) */
+  --indigo:       #0284c7; /* sky-600 */
+  --indigo-dark:  #0369a1; /* sky-700 */
+  --indigo-dim:   #e0f2fe; /* sky-100 */
 
-  --bg-app:       #f1f5f9; /* Slate 100 */
-  --bg-panel:     #f8fafc; /* Slate 50  */
+  --bg-app:       #f0f9ff; /* sky-50 */
+  --bg-panel:     #eff6ff; /* blue-50 — sedikit lebih “udara” */
   --bg-card:      #ffffff;
 
-  --text-main:    #0f172a; /* Slate 900 */
-  --text-muted:   #64748b; /* Slate 500 */
+  --text-main:    #0c4a6e; /* sky-900 */
+  --text-muted:   #5b8fb8; /* antara sky & slate, enak di mata */
 
-  --border:       #e2e8f0; /* Slate 200 */
-  --border-light: #cbd5e1; /* Slate 300 */
+  --border:       #bae6fd; /* sky-200 */
+  --border-light: #dbeafe; /* blue-100 */
 
   --success-bg:   #ecfdf5;
 }
 
-/* ── Light mode: blue sky + cloud silhouettes ── */
+/* ── Langit musim panas: biru cerah → horizon lembut → hint pasir/panas ── */
 :root[data-theme="light"] body::before {
   opacity: 1;
   transition: opacity 0.35s ease;
   transform: none;
   background:
-    /* sky gradient — bright sky blue top → lighter horizon */
-    linear-gradient(180deg,
+    linear-gradient(188deg,
       #7dd3fc 0%,
-      #93c5fd 20%,
-      #bae6fd 55%,
-      #e0f2fe 80%,
-      #f0f9ff 100%
+      #bae6fd 28%,
+      #e0f2fe 58%,
+      #f0f9ff 85%,
+      #fff7ed 100%
     );
 }
 
@@ -80,33 +85,17 @@
   transition: opacity 0.35s ease;
 }
 
-/* Cloud silhouettes layer */
-:root[data-theme="light"] body {
-  background-image:
-    /* cloud 1 — large, upper-left */
-    radial-gradient(ellipse 18%  9% at 12%  22%, rgba(255,255,255,0.88) 60%, transparent 100%),
-    radial-gradient(ellipse 10%  7% at 18%  19%, rgba(255,255,255,0.82) 50%, transparent 100%),
-    radial-gradient(ellipse  8%  6% at  7%  23%, rgba(255,255,255,0.75) 50%, transparent 100%),
-    /* cloud 2 — mid-right */
-    radial-gradient(ellipse 16%  8% at 75%  35%, rgba(255,255,255,0.85) 60%, transparent 100%),
-    radial-gradient(ellipse  9%  6% at 83%  32%, rgba(255,255,255,0.78) 50%, transparent 100%),
-    radial-gradient(ellipse  7%  5% at 68%  37%, rgba(255,255,255,0.70) 50%, transparent 100%),
-    /* cloud 3 — small, upper-right corner */
-    radial-gradient(ellipse 10%  6% at 92%  14%, rgba(255,255,255,0.80) 55%, transparent 100%),
-    radial-gradient(ellipse  6%  5% at 96%  12%, rgba(255,255,255,0.72) 50%, transparent 100%),
-    /* cloud 4 — lower-left, flatter */
-    radial-gradient(ellipse 14%  6% at 22%  68%, rgba(255,255,255,0.65) 55%, transparent 100%),
-    radial-gradient(ellipse  7%  4% at 30%  66%, rgba(255,255,255,0.58) 50%, transparent 100%),
-    /* cloud 5 — center-bottom faint */
-    radial-gradient(ellipse 12%  5% at 55%  78%, rgba(255,255,255,0.50) 55%, transparent 100%)
-  ;
-  background-attachment: fixed;
-}
-
-/* Light mode body */
+/* Awan putih + sedikit cahaya biru di sudut (tanpa hijau) */
 :root[data-theme="light"] body {
   background-color: var(--bg-app) !important;
   color: var(--text-main) !important;
+  background-image:
+    radial-gradient(ellipse 24% 11% at 12% 20%, rgba(255, 255, 255, 0.92) 0%, transparent 72%),
+    radial-gradient(ellipse 18% 9% at 22% 16%, rgba(255, 255, 255, 0.78) 0%, transparent 68%),
+    radial-gradient(ellipse 20% 10% at 78% 26%, rgba(255, 255, 255, 0.88) 0%, transparent 70%),
+    radial-gradient(ellipse 14% 9% at 92% 18%, rgba(186, 230, 253, 0.55) 0%, transparent 65%),
+    radial-gradient(ellipse 16% 8% at 48% 78%, rgba(255, 255, 255, 0.5) 0%, transparent 68%);
+  background-attachment: fixed;
 }
 
 /* Subtle transition when switching theme */
@@ -121,7 +110,7 @@ body {
 
 /* Light mode table row hover */
 :root[data-theme="light"] .ant-table-tbody > tr:hover > td {
-  background: #f1f5f9 !important;
+  background: rgba(224, 242, 254, 0.85) !important;
 }
 
 /* Light mode tabs */
@@ -141,12 +130,6 @@ body {
 /* Light mode upload drag */
 :root[data-theme="light"] .ant-upload-drag {
   background: var(--bg-panel) !important;
-}
-
-/* Light mode alert info */
-:root[data-theme="light"] .ant-alert-info {
-  background: #eef2ff !important;
-  border-color: rgba(99,102,241,0.3) !important;
 }
 
 /* Light mode select / dropdown overrides handled by ConfigProvider algorithm */
@@ -336,6 +319,13 @@ h4.ant-typography {
   border-color: var(--indigo-dark) !important;
 }
 
+:root[data-theme="light"] .ant-btn-primary {
+  box-shadow: 0 2px 14px rgba(2, 132, 199, 0.28) !important;
+}
+:root[data-theme="light"] .ant-btn-primary:hover {
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.38) !important;
+}
+
 /* ============================================
    INPUTS (Clean Green state as requested)
    ============================================ */
@@ -480,6 +470,11 @@ h4.ant-typography {
 }
 
 .ant-alert-info .ant-alert-icon { color: #818cf8 !important; }
+:root[data-theme="light"] .ant-alert-info {
+  background: rgba(224, 242, 254, 0.75) !important;
+  border: 1px solid rgba(2, 132, 199, 0.22) !important;
+}
+:root[data-theme="light"] .ant-alert-info .ant-alert-icon { color: #0284c7 !important; }
 .ant-alert-message { color: var(--text-main) !important; font-weight: 600 !important; }
 .ant-alert-description { color: var(--text-muted) !important; font-size: 13px !important; }
 
@@ -531,6 +526,10 @@ h4.ant-typography {
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.28) !important;
   border-color: rgba(99, 102, 241, 0.55) !important;
 }
+:root[data-theme="light"] .card-freemir:hover {
+  box-shadow: 0 10px 32px rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.32) !important;
+}
 .card-shopee:hover {
   box-shadow: 0 8px 32px rgba(249, 115, 22, 0.25) !important;
   border-color: rgba(249, 115, 22, 0.5) !important;
@@ -538,6 +537,28 @@ h4.ant-typography {
 .card-tiktok:hover {
   box-shadow: 0 8px 32px rgba(236, 72, 153, 0.25) !important;
   border-color: rgba(236, 72, 153, 0.5) !important;
+}
+
+/* ============================================
+   LANGUAGE SELECT — match header theme button (36×36 area), compact width
+   ============================================ */
+.fm-lang-select.ant-select {
+  flex-shrink: 0;
+}
+.fm-lang-select.ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding-inline: 10px 30px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.fm-lang-select.ant-select-single .ant-select-selection-item,
+.fm-lang-select.ant-select-single .ant-select-selection-placeholder {
+  line-height: 34px !important;
+}
+.fm-lang-select.ant-select-single .ant-select-selection-search-input {
+  height: 34px !important;
 }
 
 /* ============================================
@@ -562,6 +583,21 @@ h4.ant-typography {
 .wajan-ring {
   stroke: rgba(99, 102, 241, 0.35);
   animation: pulse-wajan 2.8s ease-in-out infinite alternate;
+}
+
+:root[data-theme="light"] .wajan-container {
+  filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4));
+}
+:root[data-theme="light"] .wajan-container:hover {
+  filter: drop-shadow(0 0 14px rgba(2, 132, 199, 0.45));
+}
+:root[data-theme="light"] .wajan-ring {
+  animation: pulse-wajan-light 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-wajan-light {
+  0%   { stroke: rgba(56, 189, 248, 0.45); }
+  100% { stroke: rgba(2, 132, 199, 0.75); }
 }
 
 @keyframes rotate-wajan {

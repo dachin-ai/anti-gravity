@@ -1,38 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Select, Button, Card, Tag, Typography, Space, Empty, Table, message } from 'antd';
 import { SendOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { submitAccessRequest, getMyAccessRequests } from '../api';
 import PageHeader from '../components/PageHeader';
 
 const { Text } = Typography;
 
-const ALL_TOOLS = [
-    { key: 'price_checker',         label: 'Price Checker' },
-    { key: 'order_planner',         label: 'Order Planner' },
-    { key: 'product_performance',   label: 'Product Performance' },
-    { key: 'order_review',          label: 'Order Review' },
-    { key: 'affiliate_performance', label: 'Shopee Affiliate Performance' },
-    { key: 'livestream_display',    label: 'Livestream Display' },
-    { key: 'pre_sales',             label: 'Pre-Sales Checker' },
-    { key: 'affiliate_analyzer',    label: 'Affiliate Analyzer' },
-    { key: 'ads_analyzer',          label: 'TikTok Ads Analyzer' },
+const TOOL_KEYS = [
+    'price_checker',
+    'order_planner',
+    'product_performance',
+    'order_review',
+    'affiliate_performance',
+    'livestream_display',
+    'pre_sales',
+    'affiliate_analyzer',
+    'ads_analyzer',
 ];
 
-const statusTag = (status) => {
-    if (status === 'pending')  return <Tag icon={<ClockCircleOutlined />}  color="gold">Pending</Tag>;
-    if (status === 'approved') return <Tag icon={<CheckCircleOutlined />}  color="success">Approved</Tag>;
-    return                            <Tag icon={<CloseCircleOutlined />}  color="error">Rejected</Tag>;
-};
+function StatusTagRequest({ status }) {
+    const { t } = useTranslation();
+    if (status === 'pending') {
+        return <Tag icon={<ClockCircleOutlined />} color="gold">{t('accessMgmt.statusPending')}</Tag>;
+    }
+    if (status === 'approved') {
+        return <Tag icon={<CheckCircleOutlined />} color="success">{t('accessMgmt.statusApproved')}</Tag>;
+    }
+    return <Tag icon={<CloseCircleOutlined />} color="error">{t('accessMgmt.statusRejected')}</Tag>;
+}
 
 export default function RequestAccess() {
+    const { t } = useTranslation();
     const { hasAccess } = useAuth();
     const [selected, setSelected] = useState(null);
     const [loading, setLoading]   = useState(false);
     const [requests, setRequests] = useState([]);
     const [fetching, setFetching] = useState(true);
 
-    const availableTools = ALL_TOOLS.filter(t => !hasAccess(t.key));
+    const availableTools = TOOL_KEYS.filter((key) => !hasAccess(key));
 
     const fetchRequests = async () => {
         try {
@@ -52,11 +59,11 @@ export default function RequestAccess() {
         setLoading(true);
         try {
             await submitAccessRequest(selected);
-            message.success('Request submitted! Admin will review soon.');
+            message.success(t('accessRequest.msgSubmitted'));
             setSelected(null);
             fetchRequests();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to submit request');
+            message.error(err.response?.data?.detail || t('accessRequest.msgSubmitFail'));
         } finally {
             setLoading(false);
         }
@@ -64,33 +71,32 @@ export default function RequestAccess() {
 
     const columns = [
         {
-            title: 'Tool',
+            title: t('accessRequest.colTool'),
             dataIndex: 'tool_key',
-            render: v => ALL_TOOLS.find(t => t.key === v)?.label || v,
+            render: (v) => t(`accessRequest.tools.${v}`, { defaultValue: v }),
         },
         {
-            title: 'Status',
+            title: t('accessRequest.colStatus'),
             dataIndex: 'status',
-            render: statusTag,
+            render: (s) => <StatusTagRequest status={s} />,
             width: 140,
         },
         {
-            title: 'Requested At',
+            title: t('accessRequest.colRequestedAt'),
             dataIndex: 'created_at',
             width: 180,
             render: v => v ? new Date(v).toLocaleString() : '—',
         },
     ];
 
-    // Filter out tools that already have a pending request
     const pendingKeys = requests.filter(r => r.status === 'pending').map(r => r.tool_key);
-    const selectableTools = availableTools.filter(t => !pendingKeys.includes(t.key));
+    const selectableTools = availableTools.filter((key) => !pendingKeys.includes(key));
 
     return (
         <div style={{ padding: '24px 32px', maxWidth: 720, margin: '0 auto' }}>
             <PageHeader
-                title="Request Access"
-                subtitle="Request access to tools you need. Admin will review your request."
+                title={t('accessRequest.title')}
+                subtitle={t('accessRequest.subtitle')}
             />
 
             <Card
@@ -105,23 +111,26 @@ export default function RequestAccess() {
                     <Empty description={
                         <Text style={{ color: 'var(--text-muted)' }}>
                             {availableTools.length === 0
-                                ? 'You already have access to all tools!'
-                                : 'All your requests are already pending or approved.'}
+                                ? t('accessRequest.emptyAllAccess')
+                                : t('accessRequest.emptyPending')}
                         </Text>
                     } />
                 ) : (
                     <Space direction="vertical" style={{ width: '100%' }} size={12}>
                         <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                            Select the tool you want to request access to:
+                            {t('accessRequest.selectPrompt')}
                         </Text>
                         <Space.Compact style={{ width: '100%' }}>
                             <Select
                                 style={{ flex: 1 }}
-                                placeholder="Select a tool..."
+                                placeholder={t('accessRequest.placeholderTool')}
                                 value={selected}
                                 onChange={setSelected}
                                 size="large"
-                                options={selectableTools.map(t => ({ value: t.key, label: t.label }))}
+                                options={selectableTools.map((key) => ({
+                                    value: key,
+                                    label: t(`accessRequest.tools.${key}`),
+                                }))}
                             />
                             <Button
                                 type="primary"
@@ -132,7 +141,7 @@ export default function RequestAccess() {
                                 size="large"
                                 style={{ background: 'linear-gradient(135deg,#6366f1,#3b82f6)', border: 'none' }}
                             >
-                                Submit
+                                {t('accessRequest.submit')}
                             </Button>
                         </Space.Compact>
                     </Space>
@@ -141,7 +150,7 @@ export default function RequestAccess() {
 
             {(fetching || requests.length > 0) && (
                 <Card
-                    title={<Text style={{ color: 'var(--text-main)', fontWeight: 600 }}>My Requests</Text>}
+                    title={<Text style={{ color: 'var(--text-main)', fontWeight: 600 }}>{t('accessRequest.myRequests')}</Text>}
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16 }}
                 >
                     <Table

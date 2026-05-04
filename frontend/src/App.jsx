@@ -1,7 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme, Spin } from 'antd';
+import enUS from 'antd/locale/en_US';
+import zhCN from 'antd/locale/zh_CN';
+import idID from 'antd/locale/id_ID';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { LangProvider, useLang } from './context/LangContext';
 import MainLayout from './layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import PriceChecker from './pages/PriceChecker';
@@ -23,22 +27,26 @@ import AccessManagement from './pages/AccessManagement';
 import ProductPerformanceCleaner from './pages/ProductPerformanceCleaner';
 import LivestreamDisplay from './pages/LivestreamDisplay';
 import PermissionGate from './components/PermissionGate';
+import { useTranslation } from 'react-i18next';
+
+const antdLocales = { en: enUS, zh: zhCN, id: idID };
 
 // Protected route wrapper
 function ProtectedApp() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
       <div style={{
-        minHeight: '100vh', background: isDark ? '#020617' : '#f8fafc',
+        minHeight: '100vh', background: isDark ? '#020617' : '#f0f9ff',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 16
       }}>
         <Spin size="large" />
         <div style={{ color: '#64748b', fontSize: 14, fontFamily: "'Inter', sans-serif" }}>
-          Verifying session...
+          {t('common.verifyingSession')}
         </div>
       </div>
     );
@@ -77,17 +85,19 @@ function ProtectedApp() {
 
 function AppContent() {
   const { isDark } = useTheme();
+  const { lang } = useLang();
 
   return (
     <ConfigProvider
+      locale={antdLocales[lang] || enUS}
       theme={{
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#6366f1',
-          colorBgBase:       isDark ? '#0f172a'              : '#f8fafc',
+          colorPrimary: isDark ? '#6366f1' : '#0284c7',
+          colorBgBase:       isDark ? '#0f172a'              : '#f0f9ff',
           colorBgContainer:  isDark ? 'rgba(30,41,59,0.6)'   : '#ffffff',
           colorBgElevated:   isDark ? 'rgba(30,41,59,0.8)'   : '#ffffff',
-          colorBorder:       isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          colorBorder:       isDark ? 'rgba(255,255,255,0.1)' : 'rgba(2, 132, 199, 0.14)',
           fontFamily: "'Inter', sans-serif",
           borderRadius: 12,
         },
@@ -105,7 +115,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <LangProvider>
+        <AppContent />
+      </LangProvider>
     </ThemeProvider>
   );
 }

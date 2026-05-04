@@ -8,6 +8,7 @@ import {
     SettingOutlined, UnorderedListOutlined, FolderOpenOutlined, BarChartOutlined, FundOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
@@ -37,6 +38,7 @@ const statCardStyle = (accentColor, bgColor) => ({
 });
 
 const OrderLossReview = () => {
+    const { t } = useTranslation();
     const [fileList, setFileList] = useState([]);
     const [priceType, setPriceType] = useState('Warning');
     const [method, setMethod] = useState('Profit Review');
@@ -46,7 +48,7 @@ const OrderLossReview = () => {
 
     const handleUpload = async () => {
         if (!fileList.length) {
-            message.warning('Please upload an Excel or CSV file first');
+            message.warning(t('orderLoss.uploadWarn'));
             return;
         }
 
@@ -61,10 +63,10 @@ const OrderLossReview = () => {
         try {
             const res = await api.post('/order-loss/calculate', formData);
             setResult(res.data);
-            message.success('Audit complete! See summary below.');
+            message.success(t('orderLoss.auditComplete'));
             logActivity('Order Loss Review');
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Calculation failed. Please check the file structure.');
+            message.error(err.response?.data?.detail || t('orderLoss.calcFail'));
         } finally {
             setLoading(false);
         }
@@ -82,8 +84,8 @@ const OrderLossReview = () => {
     return (
         <div>
             <PageHeader
-                title={<Bi e="Order Review" c="订单审核" />}
-                subtitle={<Bi e="Double-Layer Pricing & Profitability Audit System" c="双层定价和盈利审计系统" />}
+                title={<Bi i18nKey="orderLoss.title" />}
+                subtitle={<Bi i18nKey="orderLoss.subtitle" />}
                 accent="#f97316"
             />
 
@@ -91,9 +93,9 @@ const OrderLossReview = () => {
                 {/* CONFIGURATION */}
                 <Col xs={24} md={8}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                        <SectionHeading icon={<SettingOutlined />}><Bi e="Audit Configuration" c="审计配置" /></SectionHeading>
+                        <SectionHeading icon={<SettingOutlined />}><Bi i18nKey="orderLoss.auditConfig" /></SectionHeading>
                         <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
-                            <Bi e="Select Processing Method" c="选择处理方法" />
+                            <Bi i18nKey="orderLoss.selectMethod" />
                         </Text>
                         <Select
                             size="large"
@@ -108,7 +110,7 @@ const OrderLossReview = () => {
                         {method === 'Profit Review' && (
                             <>
                                 <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
-                                    <Bi e="Select Target Base Price" c="选择目标基准价格" />
+                                    <Bi i18nKey="orderLoss.selectBasePrice" />
                                 </Text>
                                 <Select
                                     size="large"
@@ -126,7 +128,7 @@ const OrderLossReview = () => {
 
                         <Divider style={{ borderColor: 'var(--border)', margin: '24px 0' }} />
 
-                            <SectionHeading icon={<UnorderedListOutlined />}><Bi e="Requirements" c="文件要求" /></SectionHeading>
+                            <SectionHeading icon={<UnorderedListOutlined />}><Bi i18nKey="orderLoss.requirements" /></SectionHeading>
                         <ul style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 20, margin: 0 }}>
                             <li style={{ marginBottom: 6 }}>Store (店铺)</li>
                             <li style={{ marginBottom: 6 }}>Original Order Number (原始单号)</li>
@@ -153,7 +155,7 @@ const OrderLossReview = () => {
                 {/* UPLOAD & PROCESS */}
                 <Col xs={24} md={16}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                            <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
+                            <SectionHeading icon={<FolderOpenOutlined />}><Bi i18nKey="orderLoss.uploadFile" /></SectionHeading>
                         <Dragger
                             maxCount={1}
                             beforeUpload={(file) => { setFileList([file]); return false; }}
@@ -180,10 +182,10 @@ const OrderLossReview = () => {
                         >
                             <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#38bdf8' }} /></p>
                             <p className="ant-upload-text" style={{ color: 'var(--text-main)', fontSize: 16 }}>
-                                <Bi e="Click or drag a Qianyi ERP file here" c="点击或拖拽千已 ERP 文件到此处" />
+                                <Bi i18nKey="orderLoss.uploadErp" />
                             </p>
                             <p className="ant-upload-hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                                <Bi e="Support for .xlsx or .csv files." c="支持 .xlsx 或 .csv 格式" />
+                                <Bi i18nKey="orderLoss.fileTypes" />
                             </p>
                         </Dragger>
 
@@ -198,7 +200,7 @@ const OrderLossReview = () => {
                                 boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
                             }}
                         >
-                            {loading ? <Bi e="Running Audit Diagnostics..." c="正在运行审计诊断..." /> : <Bi e="Start Full Audit" c="开始全面审计" />}
+                            {loading ? <Bi i18nKey="orderLoss.running" /> : <Bi i18nKey="orderLoss.startAudit" />}
                         </Button>
                     </div>
 
@@ -206,7 +208,7 @@ const OrderLossReview = () => {
                     {result && !loading && (
                         <div style={{ marginTop: 24 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Audit Output Summary" c="审计输出摘要" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi i18nKey="orderLoss.outputSummary" /></SectionHeading>
 
                             {method === 'Profit Review' ? (
                                 <>
@@ -249,7 +251,7 @@ const OrderLossReview = () => {
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
                                             <div style={{...statCardStyle('#3b82f6', 'rgba(59,130,246,0.1)'), border: 'none', borderLeft: '4px solid #3b82f6', background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
                                                 <Text style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                    <Bi e="Total Transactions" c="总交易" />
+                                                    <Bi i18nKey="orderLoss.totalTx" />
                                                 </Text>
                                                 <div style={{ fontSize: 26, color: '#fff', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                     {result.summary.total_transactions.toLocaleString()}
@@ -259,7 +261,7 @@ const OrderLossReview = () => {
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
                                             <div style={{...statCardStyle('#f59e0b', 'rgba(245,158,11,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #f59e0b' }}>
                                                 <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                    <Bi e="Sales Loss" c="销售亏损" />
+                                                    <Bi i18nKey="orderLoss.salesLoss" />
                                                 </Text>
                                                 <div style={{ fontSize: 26, color: '#f59e0b', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                     {result.summary.sales_loss.toLocaleString()}
@@ -269,7 +271,7 @@ const OrderLossReview = () => {
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
                                             <div style={{...statCardStyle('#ec4899', 'rgba(236,72,153,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #ec4899' }}>
                                                 <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                    <Bi e="After Sales Loss" c="售后亏损" />
+                                                    <Bi i18nKey="orderLoss.afterSalesLoss" />
                                                 </Text>
                                                 <div style={{ fontSize: 26, color: '#ec4899', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                     {result.summary.aftersales_loss.toLocaleString()}
@@ -279,7 +281,7 @@ const OrderLossReview = () => {
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
                                             <div style={{...statCardStyle('#10b981', 'rgba(16,185,129,0.05)'), border: '1px solid var(--border)', borderLeft: '4px solid #10b981' }}>
                                                 <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                    <Bi e="Total Profit" c="总利润" />
+                                                    <Bi i18nKey="orderLoss.totalProfit" />
                                                 </Text>
                                                 <div style={{ fontSize: 26, color: '#10b981', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                     {result.summary.total_profit.toLocaleString()}
@@ -289,7 +291,7 @@ const OrderLossReview = () => {
                                         <Col style={{ flex: '1 1 20%', minWidth: 150 }}>
                                             <div style={{...statCardStyle('#f8fafc', 'transparent'), border: '1px solid var(--border)', borderLeft: '4px solid #475569' }}>
                                                 <Text style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                    <Bi e="Final Profit" c="最终利润" />
+                                                    <Bi i18nKey="orderLoss.finalProfit" />
                                                 </Text>
                                                 <div style={{ fontSize: 26, color: 'var(--text-main)', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                     {result.summary.final_profit.toLocaleString()}
@@ -303,7 +305,7 @@ const OrderLossReview = () => {
                                     <Col xs={24} md={8}>
                                         <div style={{...statCardStyle('#3b82f6', 'rgba(59, 130, 246, 0.15)'), borderLeft: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)', color: 'white' }}>
                                             <Text style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                <Bi e="Total Rows Analyzed" c="已分析总行数" />
+                                                <Bi i18nKey="orderLoss.rowsAnalyzed" />
                                             </Text>
                                             <div style={{ fontSize: 42, color: '#fff', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                 {result.summary.total_orders.toLocaleString()}
@@ -313,7 +315,7 @@ const OrderLossReview = () => {
                                     <Col xs={24} md={8}>
                                         <div style={{...statCardStyle('#10b981', 'rgba(16, 185, 129, 0.05)'), borderLeft: '4px solid #10b981' }}>
                                             <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                <Bi e="Pre-Sale Rows Found" c="发现预售订单数" />
+                                                <Bi i18nKey="orderLoss.presaleRows" />
                                             </Text>
                                             <div style={{ fontSize: 42, color: '#10b981', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                 {result.summary.review_orders.toLocaleString()}
@@ -323,7 +325,7 @@ const OrderLossReview = () => {
                                     <Col xs={24} md={8}>
                                         <div style={{...statCardStyle('#a855f7', 'rgba(168, 85, 247, 0.05)'), borderLeft: '4px solid #a855f7' }}>
                                             <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                                                <Bi e="Total Pre-Sale Units" c="预售商品总件数 (Qty)" />
+                                                <Bi i18nKey="orderLoss.presaleUnits" />
                                             </Text>
                                             <div style={{ fontSize: 42, color: '#a855f7', fontWeight: 900, fontFamily: "'Outfit', sans-serif" }}>
                                                 {result.summary.total_profit.toLocaleString()}
@@ -343,7 +345,7 @@ const OrderLossReview = () => {
                                     boxShadow: '0 4px 14px rgba(16,185,129,0.3)', width: '100%',
                                 }}
                             >
-                                <Bi e={`Download ${method === 'Profit Review' ? 'Extensive Audit' : 'Pre-Sales'} Report (.xlsx)`} c="下载详细报告 (.xlsx)" />
+                                {method === 'Profit Review' ? <Bi i18nKey="orderLoss.downloadProfit" /> : <Bi i18nKey="orderLoss.downloadPresales" />}
                             </Button>
                         </div>
                     )}

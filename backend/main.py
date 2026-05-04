@@ -6,6 +6,17 @@ from routers import price_checker, order_loss, failed_delivery, presales, erp_oo
 from database import engine, Base
 import models  # noqa: F401 - ensure all models are registered before create_all
 import os
+import sys
+
+# Windows consoles often use cp1252; avoid UnicodeEncodeError on startup logs / exception text.
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 # AI Chat router is optional (only loaded if GEMINI_API_KEY is configured)
 ai_chat_available = False
@@ -14,9 +25,9 @@ if os.getenv("GEMINI_API_KEY"):
         from routers import ai_chat
         ai_chat_available = True
     except Exception as e:
-        print(f"[Startup] ⚠ AI Chat not available: {e}")
+        print(f"[Startup] [WARN] AI Chat not available: {e}")
 else:
-    print("[Startup] ℹ GEMINI_API_KEY not configured. AI Chat endpoint will not be available.")
+    print("[Startup] [INFO] GEMINI_API_KEY not configured. AI Chat endpoint will not be available.")
 
 
 def _run_migrations():
@@ -215,7 +226,7 @@ def _run_migrations():
         for sql in migrations:
             conn.execute(text(sql))
         conn.commit()
-    print("[Startup] ✓ Database migrations checked / applied.")
+    print("[Startup] [OK] Database migrations checked / applied.")
 
 
 @asynccontextmanager
@@ -223,21 +234,21 @@ async def lifespan(app: FastAPI):
     # Server sudah listen di port 8080 saat ini — DB init di background
     try:
         Base.metadata.create_all(bind=engine)
-        print("[Startup] ✓ Database tables created/verified.")
+        print("[Startup] [OK] Database tables created/verified.")
     except Exception as e:
-        print(f"[Startup] ⚠ Database not yet available: {e}")
+        print(f"[Startup] [WARN] Database not yet available: {e}")
     try:
         _run_migrations()
     except Exception as e:
-        print(f"[Startup] ⚠ Migration warning: {e}")
+        print(f"[Startup] [WARN] Migration warning: {e}")
     # Warm Google Sheets cache so first user request is fast
     try:
         from services.product_performance_logic import get_store_name_map, get_at1_store_codes
         get_store_name_map()
         get_at1_store_codes()
-        print("[Startup] ✓ Sheets cache warmed.")
+        print("[Startup] [OK] Sheets cache warmed.")
     except Exception as e:
-        print(f"[Startup] ⚠ Sheets cache warm failed (non-fatal): {e}")
+        print(f"[Startup] [WARN] Sheets cache warm failed (non-fatal): {e}")
     yield
 
 

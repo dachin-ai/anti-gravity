@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import api from '../api';
 import * as XLSX from 'xlsx-js-style';
+import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 
 const { Text } = Typography;
@@ -76,6 +77,7 @@ const MarkTag = ({ mark }) => {
 // Tab 1 — Upload
 // ─────────────────────────────────────────────────────────────────
 function UploadTab({ weeks }) {
+    const { t } = useTranslation();
     const [platform, setPlatform] = useState('Shopee');
     const [weekNum, setWeekNum]       = useState(null);
     const [fileList, setFileList]     = useState([]);
@@ -83,12 +85,12 @@ function UploadTab({ weeks }) {
     const [preview, setPreview]       = useState(null);
 
     const handleUpload = async () => {
-        if (!weekNum && weekNum !== 0) { message.error('Please select a week'); return; }
-        if (!fileList.length)          { message.error('Please select a file'); return; }
+        if (!weekNum && weekNum !== 0) { message.error(t('productPerf.msgSelectWeek')); return; }
+        if (!fileList.length)          { message.error(t('productPerf.msgSelectFile')); return; }
 
         const name = fileList[0]?.name || '';
         if (platform === 'Shopee' && /tiktok|^tt/i.test(name)) {
-            message.error('This file looks like TikTok data. Please switch platform to TikTok.');
+            message.error(t('productPerf.msgTikTokHint'));
             return;
         }
 
@@ -105,44 +107,44 @@ function UploadTab({ weeks }) {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setPreview(res.data);
-            message.success(`Saved ${res.data.saved} records for ${res.data.week}`);
+            message.success(t('productPerf.msgSavedRecords', { n: res.data.saved, week: res.data.week }));
             setFileList([]);
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Upload failed');
+            message.error(err.response?.data?.detail || t('productPerf.msgUploadFailed'));
         } finally {
             setUploading(false);
         }
     };
 
     const previewCols = [
-        { title: 'Store',        dataIndex: 'store',        width: 110 },
-        { title: 'PID',          dataIndex: 'pid',          width: 140 },
+        { title: t('productPerf.colStore'),        dataIndex: 'store',        width: 110 },
+        { title: t('productPerf.colPid'),          dataIndex: 'pid',          width: 140 },
         {
-            title: 'Picture',
+            title: t('productPerf.colPicture'),
             dataIndex: 'product_picture',
             width: 70,
             render: v => v ? <Image src={v} width={36} height={36} style={{ borderRadius: 4, objectFit: 'cover' }} preview={false} /> : '—',
         },
-        { title: 'Unit',         dataIndex: 'unit',         width: 80,  render: fmt },
-        { title: 'GMV',          dataIndex: 'gmv',          width: 120, render: fmt },
-        { title: 'Impression',   dataIndex: 'impression',   width: 100, render: fmt },
-        { title: 'Visitor',      dataIndex: 'visitor',      width: 100, render: fmt },
-        { title: 'Click',        dataIndex: 'click',        width: 80,  render: fmt },
-        { title: 'CTR',          dataIndex: 'ctr',          width: 80,  render: fmtPct },
-        { title: 'CO',           dataIndex: 'co',           width: 80,  render: fmtPct },
+        { title: t('productPerf.colUnit'),         dataIndex: 'unit',         width: 80,  render: fmt },
+        { title: t('productPerf.colGmv'),          dataIndex: 'gmv',          width: 120, render: fmt },
+        { title: t('productPerf.colImpression'),   dataIndex: 'impression',   width: 100, render: fmt },
+        { title: t('productPerf.colVisitor'),      dataIndex: 'visitor',      width: 100, render: fmt },
+        { title: t('productPerf.colClick'),        dataIndex: 'click',        width: 80,  render: fmt },
+        { title: t('productPerf.colCtr'),          dataIndex: 'ctr',          width: 80,  render: fmtPct },
+        { title: t('productPerf.colCo'),           dataIndex: 'co',           width: 80,  render: fmtPct },
     ];
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size={20}>
             <div style={sectionCard}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                    <SectionHeading icon={<CloudUploadOutlined />} color="#10b981">Upload Product Performance Data</SectionHeading>
+                    <SectionHeading icon={<CloudUploadOutlined />} color="#10b981">{t('productPerf.uploadSectionTitle')}</SectionHeading>
                 </div>
                 <div style={{ padding: '20px' }}>
                     <Space direction="vertical" style={{ width: '100%' }} size={16}>
                         <Row gutter={24}>
                             <Col xs={24} md={10}>
-                                <Label>Platform</Label>
+                                <Label>{t('productPerf.labelPlatform')}</Label>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={platform}
@@ -155,10 +157,10 @@ function UploadTab({ weeks }) {
                                 />
                             </Col>
                             <Col xs={24} md={14}>
-                                <Label>Week</Label>
+                                <Label>{t('productPerf.labelWeek')}</Label>
                                 <Select
                                     style={{ width: '100%' }}
-                                    placeholder="Choose week..."
+                                    placeholder={t('productPerf.phWeek')}
                                     value={weekNum}
                                     onChange={setWeekNum}
                                     size="large"
@@ -167,7 +169,7 @@ function UploadTab({ weeks }) {
                             </Col>
                         </Row>
                         <div>
-                            <Label>{platform} Excel File</Label>
+                            <Label>{t('productPerf.uploadExcelFile', { platform })}</Label>
                             <Dragger
                                 accept=".xlsx,.xls"
                                 fileList={fileList}
@@ -176,11 +178,11 @@ function UploadTab({ weeks }) {
                                 style={{ borderRadius: 10 }}
                             >
                                 <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                <p className="ant-upload-text">Click or drag {platform} product performance Excel here</p>
+                                <p className="ant-upload-text">{t('productPerf.draggerMain', { platform })}</p>
                                 <p className="ant-upload-hint">
                                     {platform === 'TikTok'
-                                        ? 'TT Data New: A=Store, B=PID, C=Picture, metrics by header names'
-                                        : 'Sheet: 商品表现明细'}
+                                        ? t('productPerf.draggerHintTikTok')
+                                        : t('productPerf.draggerHintShopee')}
                                 </p>
                             </Dragger>
                         </div>
@@ -196,7 +198,7 @@ function UploadTab({ weeks }) {
                                 boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
                             }}
                         >
-                            Process & Save
+                            {t('productPerf.btnProcessSave')}
                         </Button>
                     </Space>
                 </div>
@@ -205,18 +207,18 @@ function UploadTab({ weeks }) {
             {preview && (
                 <div style={sectionCard}>
                     <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                        <SectionHeading icon={<CheckOutlined />} color="#22c55e">Preview — {preview.week} ({platform})</SectionHeading>
+                        <SectionHeading icon={<CheckOutlined />} color="#22c55e">{t('productPerf.previewTitle', { week: preview.week, platform })}</SectionHeading>
                         <Space>
-                            <Tag color="green">Saved: {preview.saved}</Tag>
-                            <Tag color="orange">Skipped: {preview.skipped}</Tag>
+                            <Tag color="green">{t('productPerf.tagSaved', { n: preview.saved })}</Tag>
+                            <Tag color="orange">{t('productPerf.tagSkipped', { n: preview.skipped })}</Tag>
                         </Space>
                     </div>
                     <div style={{ padding: '16px 20px' }}>
                         <Row gutter={[16, 12]} style={{ marginBottom: 16 }}>
                             {[
-                                { label: 'Period', val: `${preview.week_start} – ${preview.week_end}`, accent: '#6366f1' },
-                                { label: 'Records Saved', val: preview.saved, accent: '#10b981' },
-                                { label: 'Showing', val: `${preview.preview.length} / ${preview.saved}`, accent: '#3b82f6' },
+                                { label: t('productPerf.statPeriod'), val: `${preview.week_start} – ${preview.week_end}`, accent: '#6366f1' },
+                                { label: t('productPerf.statRecordsSaved'), val: preview.saved, accent: '#10b981' },
+                                { label: t('productPerf.statShowing'), val: `${preview.preview.length} / ${preview.saved}`, accent: '#3b82f6' },
                             ].map(({ label, val, accent }) => (
                                 <Col key={label}>
                                     <div style={statCard(accent)}>
@@ -245,6 +247,7 @@ function UploadTab({ weeks }) {
 // Tab 2 — Data Viewer
 // ─────────────────────────────────────────────────────────────────
 function DataViewerTab() {
+    const { t } = useTranslation();
     const [data, setData]         = useState([]);
     const [summary, setSummary]   = useState({ weeks: [], platforms: [], stores: [] });
     const [filters, setFilters]   = useState({ week: null, platform: null, store: null });
@@ -269,7 +272,7 @@ function DataViewerTab() {
             const res = await api.get('/product-performance/data', { params });
             setData(res.data);
         } catch {
-            message.error('Failed to load data');
+            message.error(t('productPerf.msgLoadDataFailed'));
         } finally {
             setLoading(false);
         }
@@ -290,7 +293,7 @@ function DataViewerTab() {
 
     const handleDelete = async () => {
         if (!filters.week || !filters.platform) {
-            message.warning('Select a week and platform to delete');
+            message.warning(t('productPerf.msgSelectWeekPlatformDelete'));
             return;
         }
         setDeleting(true);
@@ -298,11 +301,11 @@ function DataViewerTab() {
             const res = await api.delete('/product-performance/data', {
                 params: { week: filters.week, platform: filters.platform },
             });
-            message.success(`Deleted ${res.data.deleted} records`);
+            message.success(t('productPerf.msgDeletedRecords', { n: res.data.deleted }));
             fetchData();
             fetchSummary();
         } catch {
-            message.error('Delete failed');
+            message.error(t('productPerf.msgDeleteFailed'));
         } finally {
             setDeleting(false);
         }
@@ -310,7 +313,7 @@ function DataViewerTab() {
 
     const handleDeleteWeek = async () => {
         if (!filters.week) {
-            message.warning('Select a week to delete');
+            message.warning(t('productPerf.msgSelectWeekDelete'));
             return;
         }
         setDeletingWeek(true);
@@ -318,75 +321,75 @@ function DataViewerTab() {
             const res = await api.delete('/product-performance/data/week', {
                 params: { week: filters.week },
             });
-            message.success(`Deleted ${res.data.deleted} records`);
+            message.success(t('productPerf.msgDeletedRecords', { n: res.data.deleted }));
             fetchData();
             fetchSummary();
         } catch {
-            message.error('Delete failed');
+            message.error(t('productPerf.msgDeleteFailed'));
         } finally {
             setDeletingWeek(false);
         }
     };
 
     const columns = [
-        { title: 'Week',    dataIndex: 'week',    width: 90,  fixed: 'left' },
-        { title: 'Platform',dataIndex: 'platform', width: 90 },
-        { title: 'Store',   dataIndex: 'store',   width: 110 },
-        { title: 'PID',     dataIndex: 'pid',     width: 140, ellipsis: true },
+        { title: t('productPerf.colWeek'),    dataIndex: 'week',    width: 90,  fixed: 'left' },
+        { title: t('productPerf.colPlatform'),dataIndex: 'platform', width: 90 },
+        { title: t('productPerf.colStore'),   dataIndex: 'store',   width: 110 },
+        { title: t('productPerf.colPid'),     dataIndex: 'pid',     width: 140, ellipsis: true },
         {
-            title: 'Picture',
+            title: t('productPerf.colPicture'),
             dataIndex: 'product_picture',
             width: 70,
             render: v => v ? <Image src={v} width={32} height={32} style={{ borderRadius: 4, objectFit: 'cover' }} preview={false} /> : '—',
         },
-        { title: 'Impression', dataIndex: 'impression', width: 110, align: 'right', render: fmt },
-        { title: 'Visitor',    dataIndex: 'visitor',    width: 110, align: 'right', render: fmt },
-        { title: 'Click',      dataIndex: 'click',      width: 80,  align: 'right', render: fmt },
-        { title: 'Unit',       dataIndex: 'unit',       width: 80,  align: 'right', render: fmt },
-        { title: 'GMV',        dataIndex: 'gmv',        width: 120, align: 'right', render: fmt },
-        { title: 'CTR',        dataIndex: 'ctr',        width: 80,  align: 'right', render: fmtPct },
-        { title: 'CO',         dataIndex: 'co',         width: 80,  align: 'right', render: fmtPct },
+        { title: t('productPerf.colImpression'), dataIndex: 'impression', width: 110, align: 'right', render: fmt },
+        { title: t('productPerf.colVisitor'),    dataIndex: 'visitor',    width: 110, align: 'right', render: fmt },
+        { title: t('productPerf.colClick'),      dataIndex: 'click',      width: 80,  align: 'right', render: fmt },
+        { title: t('productPerf.colUnit'),       dataIndex: 'unit',       width: 80,  align: 'right', render: fmt },
+        { title: t('productPerf.colGmv'),        dataIndex: 'gmv',        width: 120, align: 'right', render: fmt },
+        { title: t('productPerf.colCtr'),        dataIndex: 'ctr',        width: 80,  align: 'right', render: fmtPct },
+        { title: t('productPerf.colCo'),         dataIndex: 'co',         width: 80,  align: 'right', render: fmtPct },
     ];
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size={16}>
             <div style={sectionCard}>
                 <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                    <SectionHeading icon={<UnorderedListOutlined />} color="#3b82f6">Platform Performance Data</SectionHeading>
+                    <SectionHeading icon={<UnorderedListOutlined />} color="#3b82f6">{t('productPerf.viewerTitle')}</SectionHeading>
                 </div>
                 <div style={{ padding: '14px 20px' }}>
                     <Space wrap align="end">
                         <div>
-                            <Label>Week</Label>
+                            <Label>{t('productPerf.labelWeek')}</Label>
                             <Select
-                                allowClear placeholder="All Weeks" style={{ width: 200 }}
+                                allowClear placeholder={t('productPerf.phAllWeeks')} style={{ width: 200 }}
                                 value={filters.week}
                                 onChange={v => setFilters(f => ({ ...f, week: v }))}
                                 options={summary.weeks.map(w => ({ value: w, label: w }))}
                             />
                         </div>
                         <div>
-                            <Label>Platform</Label>
+                            <Label>{t('productPerf.labelPlatform')}</Label>
                             <Select
-                                allowClear placeholder="All Platforms" style={{ width: 140 }}
+                                allowClear placeholder={t('productPerf.phAllPlatforms')} style={{ width: 140 }}
                                 value={filters.platform}
                                 onChange={v => setFilters(f => ({ ...f, platform: v }))}
                                 options={summary.platforms.map(p => ({ value: p, label: p }))}
                             />
                         </div>
                         <div>
-                            <Label>Store</Label>
+                            <Label>{t('productPerf.labelStore')}</Label>
                             <Select
-                                allowClear placeholder="All Stores" style={{ width: 160 }}
+                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 160 }}
                                 value={filters.store}
                                 onChange={v => setFilters(f => ({ ...f, store: v }))}
                                 options={summary.stores.map(s => ({ value: s, label: s }))}
                             />
                         </div>
                         <Space>
-                            <Button icon={<ReloadOutlined />} onClick={handleRefresh} style={{ height: 32, borderRadius: 6 }}>Refresh</Button>
+                            <Button icon={<ReloadOutlined />} onClick={handleRefresh} style={{ height: 32, borderRadius: 6 }}>{t('productPerf.btnRefresh')}</Button>
                             <Popconfirm
-                                title={`Delete all ${filters.week || '?'} / ${filters.platform || '?'} data?`}
+                                title={t('productPerf.confirmDeleteSel', { week: filters.week || '?', platform: filters.platform || '?' })}
                                 onConfirm={handleDelete}
                                 disabled={!filters.week || !filters.platform}
                             >
@@ -396,11 +399,11 @@ function DataViewerTab() {
                                     disabled={!filters.week || !filters.platform}
                                     style={{ height: 32, borderRadius: 6 }}
                                 >
-                                    Delete Selection
+                                    {t('productPerf.btnDeleteSelection')}
                                 </Button>
                             </Popconfirm>
                             <Popconfirm
-                                title={`Delete ALL platforms for ${filters.week || '?'}?`}
+                                title={t('productPerf.confirmDeleteWeek', { week: filters.week || '?' })}
                                 onConfirm={handleDeleteWeek}
                                 disabled={!filters.week}
                             >
@@ -410,7 +413,7 @@ function DataViewerTab() {
                                     disabled={!filters.week}
                                     style={{ height: 32, borderRadius: 6 }}
                                 >
-                                    Delete Week
+                                    {t('productPerf.btnDeleteWeek')}
                                 </Button>
                             </Popconfirm>
                         </Space>
@@ -425,7 +428,7 @@ function DataViewerTab() {
                 loading={loading}
                 size="small"
                 scroll={{ x: 'max-content' }}
-                pagination={{ pageSize: 50, showTotal: t => `${t} records` }}
+                pagination={{ pageSize: 50, showTotal: (tot) => t('productPerf.paginationRecords', { total: tot }) }}
             />
         </Space>
     );
@@ -435,6 +438,7 @@ function DataViewerTab() {
 // Converter Data (Upload + View)
 // ─────────────────────────────────────────────────────────────────
 function ConverterTab() {
+    const { t } = useTranslation();
     const [store, setStore]               = useState('');
     const [fileList, setFileList]         = useState([]);
     const [uploading, setUploading]       = useState(false);
@@ -477,15 +481,15 @@ function ConverterTab() {
             });
             setConverterRows(res.data || []);
         } catch {
-            message.error('Failed to load converter data');
+            message.error(t('productPerf.msgLoadConverterFailed'));
         } finally {
             setLoadingRows(false);
         }
     };
 
     const handleUpload = async () => {
-        if (!store) { message.error('Please select a store'); return; }
-        if (!fileList.length) { message.error('Please select a file'); return; }
+        if (!store) { message.error(t('productPerf.msgSelectStore')); return; }
+        if (!fileList.length) { message.error(t('productPerf.msgSelectFile')); return; }
         setUploading(true);
         const formData = new FormData();
         formData.append('file', fileList[0].originFileObj);
@@ -495,11 +499,11 @@ function ConverterTab() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setResult(res.data);
-            message.success(`Saved ${res.data.saved} records for store ${res.data.store}`);
+            message.success(t('productPerf.msgSavedStore', { n: res.data.saved, store: res.data.store }));
             setFileList([]);
             fetchStats();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Upload failed');
+            message.error(err.response?.data?.detail || t('productPerf.msgUploadFailed'));
         } finally {
             setUploading(false);
         }
@@ -511,35 +515,35 @@ function ConverterTab() {
             const res = await api.delete('/product-performance/converter/store', {
                 params: { store: storeCode },
             });
-            message.success(`Deleted ${res.data.deleted} rows for ${storeCode}`);
+            message.success(t('productPerf.msgDeletedRowsStore', { n: res.data.deleted, store: storeCode }));
             setResult(null);
             fetchStats();
         } catch {
-            message.error('Delete failed');
+            message.error(t('productPerf.msgDeleteFailed'));
         } finally {
             setDeletingStore('');
         }
     };
 
     const statsColumns = [
-        { title: 'Store',        dataIndex: 'store_name',  width: 220 },
-        { title: 'Unique PIDs',  dataIndex: 'pid_count',   width: 120, align: 'center', render: v => <Tag color="blue">{v}</Tag> },
-        { title: 'Unique MIDs',  dataIndex: 'mid_count',   width: 120, align: 'center', render: v => <Tag color="cyan">{v}</Tag> },
+        { title: t('productPerf.colStore'),        dataIndex: 'store_name',  width: 220 },
+        { title: t('productPerf.colUniquePids'),  dataIndex: 'pid_count',   width: 120, align: 'center', render: v => <Tag color="blue">{v}</Tag> },
+        { title: t('productPerf.colUniqueMids'),  dataIndex: 'mid_count',   width: 120, align: 'center', render: v => <Tag color="cyan">{v}</Tag> },
         {
-            title: 'Last Updated', dataIndex: 'last_updated', width: 180, align: 'center',
+            title: t('productPerf.colLastUpdated'), dataIndex: 'last_updated', width: 180, align: 'center',
             render: v => v ? new Date(v).toLocaleString() : '—',
         },
         {
-            title: 'Action',
+            title: t('productPerf.colAction'),
             dataIndex: 'store_code',
             width: 120,
             render: (code) => (
                 <Popconfirm
-                    title={`Delete converter for ${code}?`}
+                    title={t('productPerf.confirmDeleteConverter', { store: code })}
                     onConfirm={() => handleDeleteStore(code)}
                 >
                     <Button danger size="small" loading={deletingStore === code}>
-                        Delete
+                        {t('productPerf.btnDelete')}
                     </Button>
                 </Popconfirm>
             ),
@@ -547,20 +551,20 @@ function ConverterTab() {
     ];
 
     const converterColumns = [
-        { title: 'Store', dataIndex: 'store_name', width: 220 },
-        { title: 'PID', dataIndex: 'pid', width: 150 },
-        { title: 'MID', dataIndex: 'mid', width: 150 },
-        { title: 'SKU', dataIndex: 'sku', width: 180 },
+        { title: t('productPerf.colStore'), dataIndex: 'store_name', width: 220 },
+        { title: t('productPerf.colPid'), dataIndex: 'pid', width: 150 },
+        { title: t('productPerf.colMid'), dataIndex: 'mid', width: 150 },
+        { title: t('productPerf.colSku'), dataIndex: 'sku', width: 180 },
         {
-            title: 'Updated', dataIndex: 'updated_at', width: 180,
+            title: t('productPerf.colUpdated'), dataIndex: 'updated_at', width: 180,
             render: v => v ? new Date(v).toLocaleString() : '—',
         },
     ];
 
     const previewCols = [
-        { title: 'PID', dataIndex: 'pid', width: 160 },
-        { title: 'MID', dataIndex: 'mid', width: 160 },
-        { title: 'SKU', dataIndex: 'sku' },
+        { title: t('productPerf.colPid'), dataIndex: 'pid', width: 160 },
+        { title: t('productPerf.colMid'), dataIndex: 'mid', width: 160 },
+        { title: t('productPerf.colSku'), dataIndex: 'sku' },
     ];
 
     return (
@@ -570,20 +574,20 @@ function ConverterTab() {
             items={[
                 {
                     key: 'upload',
-                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />Upload</span>,
+                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />{t('productPerf.subTabUpload')}</span>,
                     children: (
                         <Space direction="vertical" style={{ width: '100%' }} size={20}>
                             <div style={sectionCard}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading icon={<CloudUploadOutlined />} color="#10b981">Upload Converter Data</SectionHeading>
+                                    <SectionHeading icon={<CloudUploadOutlined />} color="#10b981">{t('productPerf.convUploadTitle')}</SectionHeading>
                                 </div>
                                 <div style={{ padding: '20px' }}>
                                     <Space direction="vertical" style={{ width: '100%' }} size={16}>
                                         <div style={{ maxWidth: 280 }}>
-                                            <Label>Store Code</Label>
+                                            <Label>{t('productPerf.labelStoreCode')}</Label>
                                             <Select
                                                 style={{ width: '100%' }}
-                                                placeholder="Pilih store..."
+                                                placeholder={t('productPerf.phPickStore')}
                                                 value={store || undefined}
                                                 onChange={setStore}
                                                 showSearch
@@ -591,11 +595,11 @@ function ConverterTab() {
                                                 size="large"
                                                 options={storeOptions.map(s => ({ value: s, label: s }))}
                                                 filterOption={(input, opt) => opt.label.toLowerCase().includes(input.toLowerCase())}
-                                                notFoundContent="No stores found"
+                                                notFoundContent={t('productPerf.noStoresFound')}
                                             />
                                         </div>
                                         <div>
-                                            <Label>Converter File (Excel / ZIP)</Label>
+                                            <Label>{t('productPerf.convFileLabel')}</Label>
                                             <Dragger
                                                 accept=".xlsx,.xls,.zip"
                                                 fileList={fileList}
@@ -604,8 +608,8 @@ function ConverterTab() {
                                                 style={{ borderRadius: 10, maxWidth: 500 }}
                                             >
                                                 <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                                <p className="ant-upload-text">Shopee / TikTok Converter Excel or ZIP</p>
-                                                <p className="ant-upload-hint">Shopee: row 7, A=PID, C=MID, F=SKU. TikTok: row 6, A=PID, D=MID, L=SKU.</p>
+                                                <p className="ant-upload-text">{t('productPerf.convDragger')}</p>
+                                                <p className="ant-upload-hint">{t('productPerf.convDraggerHint')}</p>
                                             </Dragger>
                                         </div>
                                         <Button
@@ -616,7 +620,7 @@ function ConverterTab() {
                                             disabled={!fileList.length || !store}
                                             style={{ height: 44, borderRadius: 8, fontWeight: 700, fontSize: 14, background: '#10b981', color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(16,185,129,0.3)', maxWidth: 500 }}
                                         >
-                                            Update Converter
+                                            {t('productPerf.btnUpdateConverter')}
                                         </Button>
                                     </Space>
                                 </div>
@@ -625,12 +629,12 @@ function ConverterTab() {
                             {result && (
                             <div style={sectionCard}>
                                 <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <SectionHeading icon={<CheckOutlined />} color="#22c55e">Result — {result.store}</SectionHeading>
+                                    <SectionHeading icon={<CheckOutlined />} color="#22c55e">{t('productPerf.convResultTitle', { store: result.store })}</SectionHeading>
                                     <Space>
-                                        <Tag color="green">Saved: {result.saved}</Tag>
-                                        <Tag color="red">Deleted: {result.deleted}</Tag>
-                                        <Tag color="blue">Unique PIDs: {result.unique_pids}</Tag>
-                                        <Tag color="cyan">Unique MIDs: {result.unique_mids}</Tag>
+                                        <Tag color="green">{t('productPerf.tagSaved', { n: result.saved })}</Tag>
+                                        <Tag color="red">{t('productPerf.tagDeleted', { n: result.deleted })}</Tag>
+                                        <Tag color="blue">{t('productPerf.tagUniquePids', { n: result.unique_pids })}</Tag>
+                                        <Tag color="cyan">{t('productPerf.tagUniqueMids', { n: result.unique_mids })}</Tag>
                                     </Space>
                                 </div>
                                 <div style={{ padding: '16px' }}>
@@ -643,15 +647,15 @@ function ConverterTab() {
                 },
                 {
                     key: 'monitor',
-                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><EyeOutlined />Monitor</span>,
+                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><EyeOutlined />{t('productPerf.subTabMonitor')}</span>,
                     children: (
                         <div style={sectionCard}>
                             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <SectionHeading icon={<EyeOutlined />} color="#3b82f6">Store Converter Monitor</SectionHeading>
+                                <SectionHeading icon={<EyeOutlined />} color="#3b82f6">{t('productPerf.convMonitorTitle')}</SectionHeading>
                                 <Space>
-                                    <Tag color="green">Shopee: {summary.shopee}</Tag>
-                                    <Tag color="magenta">TikTok: {summary.tiktok}</Tag>
-                                    <Button icon={<ReloadOutlined />} size="small" onClick={fetchStats} style={{ borderRadius: 6 }}>Refresh</Button>
+                                    <Tag color="green">{t('productPerf.tagShopee', { n: summary.shopee })}</Tag>
+                                    <Tag color="magenta">{t('productPerf.tagTikTok', { n: summary.tiktok })}</Tag>
+                                    <Button icon={<ReloadOutlined />} size="small" onClick={fetchStats} style={{ borderRadius: 6 }}>{t('productPerf.btnRefresh')}</Button>
                                 </Space>
                             </div>
                             <div style={{ padding: '16px' }}>
@@ -669,21 +673,21 @@ function ConverterTab() {
                 },
                 {
                     key: 'data',
-                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><DatabaseOutlined />Data View</span>,
+                    label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><DatabaseOutlined />{t('productPerf.subTabDataView')}</span>,
                     children: (
                         <div style={sectionCard}>
                             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                                <SectionHeading icon={<DatabaseOutlined />} color="#8b5cf6">Converter Data View</SectionHeading>
+                                <SectionHeading icon={<DatabaseOutlined />} color="#8b5cf6">{t('productPerf.convDataViewTitle')}</SectionHeading>
                                 <Space style={{ marginLeft: 'auto' }}>
                                     <Select
                                         allowClear
-                                        placeholder="Filter store..."
+                                        placeholder={t('productPerf.phFilterStore')}
                                         style={{ width: 220 }}
                                         value={filterStore || undefined}
                                         onChange={setFilterStore}
                                         options={storeOptions.map(s => ({ value: s, label: s }))}
                                     />
-                                    <Button icon={<ReloadOutlined />} size="small" onClick={fetchConverterRows} style={{ borderRadius: 6 }}>Load</Button>
+                                    <Button icon={<ReloadOutlined />} size="small" onClick={fetchConverterRows} style={{ borderRadius: 6 }}>{t('productPerf.btnLoad')}</Button>
                                 </Space>
                             </div>
                             <div style={{ padding: '16px' }}>
@@ -709,10 +713,11 @@ function ConverterTab() {
 // Platform Tab (Upload + View)
 // ─────────────────────────────────────────────────────────────────
 function PlatformTab({ weeks }) {
+    const { t } = useTranslation();
     return (
         <Tabs defaultActiveKey="upload" type="card" items={[
-            { key: 'upload', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />Upload</span>, children: <UploadTab weeks={weeks} /> },
-            { key: 'view',   label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined />View</span>, children: <DataViewerTab /> },
+            { key: 'upload', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />{t('productPerf.subTabUpload')}</span>, children: <UploadTab weeks={weeks} /> },
+            { key: 'view',   label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined />{t('productPerf.subTabView')}</span>, children: <DataViewerTab /> },
         ]} />
     );
 }
@@ -721,6 +726,7 @@ function PlatformTab({ weeks }) {
 // Brand Tab (Compute + View + Comparison)
 // ─────────────────────────────────────────────────────────────────
 function BrandTab({ weeks }) {
+    const { t } = useTranslation();
     const [availability, setAvailability]   = useState({ weeks: [], stores: [], store_week: {} });
     const [skuAvail, setSkuAvail]           = useState({ weeks: [], stores: [], store_week: {} });
     const [loadingAvail, setLoadingAvail]   = useState(false);
@@ -744,7 +750,7 @@ function BrandTab({ weeks }) {
             (statsRes.data.rows || []).forEach(r => { if (r.store_code) nameMap[r.store_code] = r.store_name || r.store_code; });
             setStoreNameMap(nameMap);
         } catch {
-            message.error('Failed to load availability');
+            message.error(t('productPerf.msgLoadAvailabilityFailed'));
         } finally {
             setLoadingAvail(false);
         }
@@ -753,33 +759,33 @@ function BrandTab({ weeks }) {
     useEffect(() => { fetchAvailability(); }, []);
 
     const handleCompute = async () => {
-        if (!computeWeek) { message.warning('Select a week to compute'); return; }
+        if (!computeWeek) { message.warning(t('productPerf.msgSelectWeekCompute')); return; }
         setComputing(true);
         try {
             const res = await api.post('/product-performance/sku/compute', null, {
                 params: { week: computeWeek, platform: computePlat },
             });
-            const lbl = computePlat === 'All' ? 'All Platforms' : computePlat;
-            message.success(`Computed ${res.data.computed} SKU rows for ${computeWeek} / ${lbl}`);
+            const lbl = computePlat === 'All' ? t('productPerf.platformAll') : computePlat;
+            message.success(t('productPerf.msgComputedRows', { n: res.data.computed, week: computeWeek, label: lbl }));
             fetchAvailability();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Compute failed');
+            message.error(err.response?.data?.detail || t('productPerf.msgComputeFailed'));
         } finally {
             setComputing(false);
         }
     };
 
     const handleDelete = async () => {
-        if (!computeWeek) { message.warning('Select a week to delete'); return; }
+        if (!computeWeek) { message.warning(t('productPerf.msgSelectWeekDelete')); return; }
         setDeleting(true);
         try {
             const res = await api.delete('/product-performance/sku/data', {
                 params: { week: computeWeek, platform: computePlat },
             });
-            message.success(`Deleted ${res.data.deleted} SKU rows for ${computeWeek} / ${computePlat}`);
+            message.success(t('productPerf.msgDeletedSkuRows', { n: res.data.deleted, week: computeWeek, platform: computePlat }));
             fetchAvailability();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Delete failed');
+            message.error(err.response?.data?.detail || t('productPerf.msgDeleteFailed'));
         } finally {
             setDeleting(false);
         }
@@ -794,8 +800,8 @@ function BrandTab({ weeks }) {
     });
 
     const availabilityColumns = [
-        { title: '#', dataIndex: '_no', fixed: 'left', width: 46, align: 'center' },
-        { title: 'Store', dataIndex: '_storeName', fixed: 'left', width: 230,
+        { title: t('productPerf.colHash'), dataIndex: '_no', fixed: 'left', width: 46, align: 'center' },
+        { title: t('productPerf.colStore'), dataIndex: '_storeName', fixed: 'left', width: 230,
             render: name => <Text style={{ color: 'var(--text-main)' }}>{name}</Text> },
         ...allWeeks.map(week => ({
             title: week, width: 120, align: 'center',
@@ -803,8 +809,8 @@ function BrandTab({ weeks }) {
                 const uploaded = r._uploadWeeks?.has(week);
                 const computed = r._skuWeeks?.has(week);
                 if (!uploaded && !computed) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
-                if (computed) return <CheckOutlined title="Computed" style={{ color: '#22c55e', fontSize: 13 }} />;
-                return <span style={{ color: '#f59e0b', fontSize: 12 }} title="Not yet computed">○</span>;
+                if (computed) return <CheckOutlined title={t('productPerf.titleComputed')} style={{ color: '#22c55e', fontSize: 13 }} />;
+                return <span style={{ color: '#f59e0b', fontSize: 12 }} title={t('productPerf.titleNotComputed')}>○</span>;
             },
         })),
     ];
@@ -824,25 +830,25 @@ function BrandTab({ weeks }) {
         <Tabs defaultActiveKey="compute" type="card" items={[
             {
                 key: 'compute',
-                label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><ThunderboltOutlined />Compute</span>,
+                label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><ThunderboltOutlined />{t('productPerf.subTabCompute')}</span>,
                 children: (
                     <Space direction="vertical" style={{ width: '100%' }} size={16}>
                         <div style={sectionCard}>
                             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                <SectionHeading icon={<ThunderboltOutlined />} color="#6366f1">Compute SKU Performance</SectionHeading>
+                                <SectionHeading icon={<ThunderboltOutlined />} color="#6366f1">{t('productPerf.computeSectionTitle')}</SectionHeading>
                             </div>
                             <div style={{ padding: '16px 20px' }}>
                                 <Space wrap align="end">
                                     <div>
-                                        <Label>Week</Label>
-                                        <Select allowClear showSearch placeholder="Select Week" style={{ width: 280 }}
+                                        <Label>{t('productPerf.labelWeek')}</Label>
+                                        <Select allowClear showSearch placeholder={t('productPerf.phSelectWeek')} style={{ width: 280 }}
                                             value={computeWeek} onChange={setComputeWeek} options={weekOpts} />
                                     </div>
                                     <div>
-                                        <Label>Platform</Label>
+                                        <Label>{t('productPerf.labelPlatform')}</Label>
                                         <Select style={{ width: 160 }} value={computePlat} onChange={setComputePlat}
                                             options={[
-                                                { value: 'All',    label: 'All Platforms' },
+                                                { value: 'All',    label: t('productPerf.platformAll') },
                                                 { value: 'Shopee', label: 'Shopee' },
                                                 { value: 'TikTok', label: 'TikTok' },
                                             ]}
@@ -852,33 +858,33 @@ function BrandTab({ weeks }) {
                                         disabled={!computeWeek}
                                         icon={<ThunderboltOutlined />}
                                         style={{ height: 36, borderRadius: 8, fontWeight: 700, background: '#6366f1', color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>
-                                        Compute SKU
+                                        {t('productPerf.btnComputeSku')}
                                     </Button>
                                     <Popconfirm
-                                        title={`Delete SKU data for ${computeWeek || '...'} / ${computePlat}?`}
-                                        description="Ini akan menghapus semua baris sku_performance untuk week + platform yang dipilih."
+                                        title={t('productPerf.confirmDeleteSkuCompute', { week: computeWeek || '...', platform: computePlat })}
+                                        description={t('productPerf.confirmDeleteSkuData')}
                                         onConfirm={handleDelete}
-                                        okText="Delete" cancelText="Cancel"
+                                        okText={t('productPerf.popOkDelete')} cancelText={t('productPerf.popCancel')}
                                         okButtonProps={{ danger: true }}
                                     >
                                         <Button danger loading={deleting} disabled={!computeWeek}
                                             icon={<DeleteOutlined />} style={{ height: 36, borderRadius: 8, fontWeight: 600 }}>
-                                            Delete
+                                            {t('productPerf.btnDelete')}
                                         </Button>
                                     </Popconfirm>
                                     <Button icon={<ReloadOutlined />} onClick={fetchAvailability} loading={loadingAvail}
                                         style={{ height: 36, borderRadius: 8 }}>
-                                        Refresh
+                                        {t('productPerf.btnRefresh')}
                                     </Button>
                                 </Space>
                             </div>
                         </div>
                         <div style={sectionCard}>
                             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                                <SectionHeading icon={<CheckOutlined />} color="#22c55e">Store × Week Availability — {storeCount} stores</SectionHeading>
+                                <SectionHeading icon={<CheckOutlined />} color="#22c55e">{t('productPerf.availabilityTitle', { count: storeCount })}</SectionHeading>
                                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    <CheckOutlined style={{ color: '#22c55e' }} /> computed &nbsp;
-                                    <span style={{ color: '#f59e0b' }}>○</span> not yet computed
+                                    <CheckOutlined style={{ color: '#22c55e' }} /> {t('productPerf.legendComputed')} &nbsp;
+                                    <span style={{ color: '#f59e0b' }}>○</span> {t('productPerf.legendNotComputed')}
                                 </span>
                             </div>
                             <div style={{ padding: '0 4px 4px' }}>
@@ -895,8 +901,8 @@ function BrandTab({ weeks }) {
                     </Space>
                 ),
             },
-            { key: 'view',       label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartOutlined />View</span>,       children: <SkuBrandTab weeks={weeks} /> },
-            { key: 'comparison', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><SwapOutlined />Comparison</span>, children: <ComparisonTab weeks={weeks} /> },
+            { key: 'view',       label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartOutlined />{t('productPerf.subTabView')}</span>,       children: <SkuBrandTab weeks={weeks} /> },
+            { key: 'comparison', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><SwapOutlined />{t('productPerf.subTabComparison')}</span>, children: <ComparisonTab weeks={weeks} /> },
         ]} />
     );
 }
@@ -905,6 +911,7 @@ function BrandTab({ weeks }) {
 // SKU Brand Tab
 // ─────────────────────────────────────────────────────────────────
 function SkuBrandTab({ weeks }) {
+    const { t } = useTranslation();
     const [skuSummary, setSkuSummary]   = useState({ weeks: [], platforms: [], stores: [] });
     const [filters, setFilters]         = useState({ week: null, platform: null, store: null, sku: '' });
     const [data, setData]               = useState([]);
@@ -912,8 +919,12 @@ function SkuBrandTab({ weeks }) {
     const [deleting, setDeleting]       = useState(false);
 
     const handleDownload = () => {
-        if (!data.length) { message.warning('No data to download'); return; }
-        const headers = ['Week', 'Platform', 'Store', 'SKU', 'Product Name', 'PIDs', 'Impression', 'Visitor', 'Click', 'Unit', 'GMV', 'CTR (%)', 'CO (%)'];
+        if (!data.length) { message.warning(t('productPerf.msgNoDataDownload')); return; }
+        const headers = [
+            t('productPerf.excelHdrWeek'), t('productPerf.excelHdrPlatform'), t('productPerf.excelHdrStore'), t('productPerf.excelHdrSku'),
+            t('productPerf.excelHdrProductName'), t('productPerf.excelHdrPids'), t('productPerf.excelHdrImpression'), t('productPerf.excelHdrVisitor'),
+            t('productPerf.excelHdrClick'), t('productPerf.excelHdrUnit'), t('productPerf.excelHdrGmv'), t('productPerf.excelHdrCtr'), t('productPerf.excelHdrCo'),
+        ];
         const rows = data.map(r => [
             r.week, r.platform, r.store, r.sku, r.product_name || '', r.pid_count,
             r.impression ?? 0, r.visitor ?? 0, r.click ?? 0, r.unit ?? 0, r.gmv ?? 0,
@@ -947,17 +958,18 @@ function SkuBrandTab({ weeks }) {
             const res = await api.get('/product-performance/sku/data', { params });
             setData(res.data);
         } catch {
-            message.error('Failed to load brand data');
+            message.error(t('productPerf.msgLoadBrandFailed'));
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => { fetchSkuSummary(); }, []);
+    useEffect(() => { fetchData(); }, [filters]);
 
     const handleDelete = async () => {
         if (!filters.week || !filters.platform) {
-            message.warning('Select a week and platform to delete');
+            message.warning(t('productPerf.msgSelectWeekPlatformDelete'));
             return;
         }
         setDeleting(true);
@@ -965,22 +977,22 @@ function SkuBrandTab({ weeks }) {
             const res = await api.delete('/product-performance/sku/data', {
                 params: { week: filters.week, platform: filters.platform },
             });
-            message.success(`Deleted ${res.data.deleted} SKU rows`);
+            message.success(t('productPerf.msgDeletedSkuRowsShort', { n: res.data.deleted }));
             fetchSkuSummary();
             fetchData();
         } catch {
-            message.error('Delete failed');
+            message.error(t('productPerf.msgDeleteFailed'));
         } finally {
             setDeleting(false);
         }
     };
 
     const columns = [
-        { title: 'Photo', dataIndex: 'photo', width: 64, fixed: 'left',
+        { title: t('productPerf.colPhoto'), dataIndex: 'photo', width: 64, fixed: 'left',
             render: (url) => url
                 ? <img src={url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} />
                 : <div style={{ width: 44, height: 44, background: 'var(--border)', borderRadius: 4 }} /> },
-        { title: 'SKU / Name',  dataIndex: 'sku', width: 210, fixed: 'left', ellipsis: true,
+        { title: t('productPerf.colSkuName'),  dataIndex: 'sku', width: 210, fixed: 'left', ellipsis: true,
             render: (v, r) => (
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -990,7 +1002,7 @@ function SkuBrandTab({ weeks }) {
                         <MarkTag mark={r.mark} />
                         {r.product_link && (
                             <a href={r.product_link} target="_blank" rel="noopener noreferrer"
-                                style={{ color: '#3b82f6', lineHeight: 1 }} title="Open product page">
+                                style={{ color: '#3b82f6', lineHeight: 1 }} title={t('productPerf.titleOpenProduct')}>
                                 ↗
                             </a>
                         )}
@@ -998,34 +1010,31 @@ function SkuBrandTab({ weeks }) {
                     {r.product_name && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, marginTop: 1 }}>{r.product_name}</div>}
                 </div>
             ) },
-        { title: 'Week',       dataIndex: 'week',      width: 90 },
-        { title: 'Platform',   dataIndex: 'platform',  width: 90 },
-        { title: 'Store',      dataIndex: 'store',     width: 110 },
-        { title: 'PIDs',       dataIndex: 'pid_count', width: 70,  align: 'right' },
-        { title: 'Impression', dataIndex: 'impression', width: 110, align: 'right', render: fmt },
-        { title: 'Visitor',    dataIndex: 'visitor',   width: 100, align: 'right', render: fmt },
-        { title: 'Click',      dataIndex: 'click',     width: 80,  align: 'right', render: fmt },
-        { title: 'Unit',       dataIndex: 'unit',      width: 80,  align: 'right', render: fmt },
-        { title: 'GMV',        dataIndex: 'gmv',       width: 120, align: 'right', render: fmt },
-        { title: 'CTR',        dataIndex: 'ctr',       width: 80,  align: 'right', render: fmtPct },
-        { title: 'CO',         dataIndex: 'co',        width: 80,  align: 'right', render: fmtPct },
+        { title: t('productPerf.colWeek'),       dataIndex: 'week',      width: 90 },
+        { title: t('productPerf.colPlatform'),   dataIndex: 'platform',  width: 90 },
+        { title: t('productPerf.colStore'),      dataIndex: 'store',     width: 110 },
+        { title: t('productPerf.colPids'),       dataIndex: 'pid_count', width: 70,  align: 'right' },
+        { title: t('productPerf.colImpression'), dataIndex: 'impression', width: 110, align: 'right', render: fmt },
+        { title: t('productPerf.colVisitor'),    dataIndex: 'visitor',   width: 100, align: 'right', render: fmt },
+        { title: t('productPerf.colClick'),      dataIndex: 'click',     width: 80,  align: 'right', render: fmt },
+        { title: t('productPerf.colUnit'),       dataIndex: 'unit',      width: 80,  align: 'right', render: fmt },
+        { title: t('productPerf.colGmv'),        dataIndex: 'gmv',       width: 120, align: 'right', render: fmt },
+        { title: t('productPerf.colCtr'),        dataIndex: 'ctr',       width: 80,  align: 'right', render: fmtPct },
+        { title: t('productPerf.colCo'),         dataIndex: 'co',        width: 80,  align: 'right', render: fmtPct },
     ];
-
-    // Week options: union of performance weeks + already-computed sku weeks
-    const weekOptions = weeks.map(w => ({ value: w.label?.split('  ')[0] || `Week ${w.value}`, label: w.label }));
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size={16}>
             <div style={sectionCard}>
                 <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                    <SectionHeading icon={<BarChartOutlined />} color="#10b981">SKU Performance Data</SectionHeading>
+                    <SectionHeading icon={<BarChartOutlined />} color="#10b981">{t('productPerf.skuPerfTitle')}</SectionHeading>
                 </div>
                 <div style={{ padding: '14px 20px' }}>
                     <Space wrap align="end">
                         <div>
-                            <Label>Week</Label>
+                            <Label>{t('productPerf.labelWeek')}</Label>
                             <Select
-                                allowClear placeholder="Select Week" style={{ width: 240 }}
+                                allowClear placeholder={t('productPerf.phSelectWeek')} style={{ width: 240 }}
                                 value={filters.week}
                                 onChange={v => setFilters(f => ({ ...f, week: v }))}
                                 options={weeks.map(w => {
@@ -1037,31 +1046,31 @@ function SkuBrandTab({ weeks }) {
                             />
                         </div>
                         <div>
-                            <Label>Platform</Label>
+                            <Label>{t('productPerf.labelPlatform')}</Label>
                             <Select
-                                allowClear placeholder="Platform" style={{ width: 150 }}
+                                allowClear placeholder={t('productPerf.phPlatform')} style={{ width: 150 }}
                                 value={filters.platform}
                                 onChange={v => setFilters(f => ({ ...f, platform: v }))}
                                 options={[
-                                    { value: 'All', label: 'All Platforms' },
+                                    { value: 'All', label: t('productPerf.platformAll') },
                                     { value: 'Shopee', label: 'Shopee' },
                                     { value: 'TikTok', label: 'TikTok' },
                                 ]}
                             />
                         </div>
                         <div>
-                            <Label>Store</Label>
+                            <Label>{t('productPerf.labelStore')}</Label>
                             <Select
-                                allowClear placeholder="All Stores" style={{ width: 160 }}
+                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 160 }}
                                 value={filters.store}
                                 onChange={v => setFilters(f => ({ ...f, store: v }))}
                                 options={skuSummary.stores.map(s => ({ value: s, label: s }))}
                             />
                         </div>
                         <div>
-                            <Label>Search SKU</Label>
+                            <Label>{t('productPerf.labelSearchSku')}</Label>
                             <input
-                                placeholder="Search SKU..."
+                                placeholder={t('productPerf.phSearchSku')}
                                 value={filters.sku}
                                 onChange={e => setFilters(f => ({ ...f, sku: e.target.value }))}
                                 style={{
@@ -1073,9 +1082,9 @@ function SkuBrandTab({ weeks }) {
                             />
                         </div>
                         <Space>
-                            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading} style={{ height: 32, borderRadius: 6 }}>Load</Button>
+                            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading} style={{ height: 32, borderRadius: 6 }}>{t('productPerf.btnLoad')}</Button>
                             <Popconfirm
-                                title={`Delete SKU data for ${filters.week || '?'} / ${filters.platform || '?'}?`}
+                                title={t('productPerf.confirmDeleteSkuFilters', { week: filters.week || '?', platform: filters.platform || '?' })}
                                 onConfirm={handleDelete}
                                 disabled={!filters.week || !filters.platform}
                             >
@@ -1085,11 +1094,11 @@ function SkuBrandTab({ weeks }) {
                                     disabled={!filters.week || !filters.platform}
                                     style={{ height: 32, borderRadius: 6 }}
                                 >
-                                    Delete
+                                    {t('productPerf.btnDelete')}
                                 </Button>
                             </Popconfirm>
                             <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!data.length} style={{ height: 32, borderRadius: 6 }}>
-                                Download Excel
+                                {t('productPerf.btnDownloadExcel')}
                             </Button>
                         </Space>
                     </Space>
@@ -1103,7 +1112,7 @@ function SkuBrandTab({ weeks }) {
                 loading={loading}
                 size="small"
                 scroll={{ x: 'max-content' }}
-                pagination={{ pageSize: 50, showTotal: t => `${t} rows` }}
+                pagination={{ pageSize: 50, showTotal: (tot) => t('productPerf.paginationRows', { total: tot }) }}
             />
         </Space>
     );
@@ -1113,6 +1122,7 @@ function SkuBrandTab({ weeks }) {
 // Comparison Tab
 // ─────────────────────────────────────────────────────────────────
 function ComparisonTab({ weeks }) {
+    const { t } = useTranslation();
     const [weekA, setWeekA]           = useState(null);
     const [weekB, setWeekB]           = useState(null);
     const [platform, setPlatform]     = useState('All');
@@ -1123,7 +1133,7 @@ function ComparisonTab({ weeks }) {
     const weekOpts = weeks.map(w => ({ value: `Week ${w.value}`, label: `Week ${w.value}  (${w.start} \u2013 ${w.end})` }));
 
     const handleLoad = async () => {
-        if (!weekA || !weekB) { message.warning('Select both Period A and Period B'); return; }
+        if (!weekA || !weekB) { message.warning(t('productPerf.msgSelectBothPeriods')); return; }
         setLoading(true);
         try {
             const res = await api.get('/product-performance/sku/comparison', {
@@ -1132,14 +1142,14 @@ function ComparisonTab({ weeks }) {
             setData(res.data);
             setSectionIdx(0);
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to load comparison');
+            message.error(err.response?.data?.detail || t('productPerf.msgLoadComparisonFailed'));
         } finally {
             setLoading(false);
         }
     };
 
     const handleDownload = () => {
-        if (!data?.sections?.length) { message.warning('No data to download'); return; }
+        if (!data?.sections?.length) { message.warning(t('productPerf.msgNoDataDownload')); return; }
         const wb = XLSX.utils.book_new();
 
         // ── colour palettes (ARGB hex) ──────────────────────────────
@@ -1512,9 +1522,10 @@ function ComparisonTab({ weeks }) {
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
         });
         const summaryWs = writeSummary();
-        XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+        XLSX.utils.book_append_sheet(wb, summaryWs, t('productPerf.excelSummarySheet'));
         // Move Summary to first position
-        wb.SheetNames = ['Summary', ...wb.SheetNames.filter(n => n !== 'Summary')];
+        const sumName = t('productPerf.excelSummarySheet');
+        wb.SheetNames = [sumName, ...wb.SheetNames.filter(n => n !== sumName)];
 
         XLSX.writeFile(wb, `Comparison_${(weekA||'A').replace(/\s/g,'_')}_vs_${(weekB||'B').replace(/\s/g,'_')}.xlsx`);
     };
@@ -1527,7 +1538,7 @@ function ComparisonTab({ weeks }) {
     const mkCell = (bg, content) => <div style={{ background: bg, margin: '-4px -8px', padding: '4px 8px', height: '100%' }}>{content}</div>;
 
     const cmpCols = [
-        { title: 'Product', width: 270, fixed: 'left',
+        { title: t('productPerf.colProduct'), width: 270, fixed: 'left',
             render: (_, r) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {r.photo
@@ -1541,47 +1552,47 @@ function ComparisonTab({ weeks }) {
                             <MarkTag mark={r.mark} />
                             {r.product_link && (
                                 <a href={r.product_link} target="_blank" rel="noopener noreferrer"
-                                    style={{ color: '#3b82f6', lineHeight: 1, flexShrink: 0 }} title="Open product page">↗</a>
+                                    style={{ color: '#3b82f6', lineHeight: 1, flexShrink: 0 }} title={t('productPerf.titleOpenProduct')}>↗</a>
                             )}
                         </div>
                         {r.product_name && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.3 }}>{r.product_name}</div>}
                     </div>
                 </div>
             ) },
-        { title: <span style={{ color: '#3b82f6' }}>{weekA || 'Period A'}</span>, children: [
-            { title: 'PIDs',    width: 70,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.pid_a) },
-            { title: 'Imp',     width: 110, align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.impression) },
-            { title: 'Click',   width: 90,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.click) },
-            { title: 'Visitor', width: 90,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.visitor) },
-            { title: 'Unit',    width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.unit) },
-            { title: 'GMV',     width: 130, align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.gmv) },
-            { title: 'CTR',     width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmtPct(r.a?.ctr) },
-            { title: 'CO',      width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmtPct(r.a?.co) },
+        { title: <span style={{ color: '#3b82f6' }}>{weekA || t('productPerf.periodAFallback')}</span>, children: [
+            { title: t('productPerf.colPids'),    width: 70,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.pid_a) },
+            { title: t('productPerf.colImp'),     width: 110, align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.impression) },
+            { title: t('productPerf.colClick'),   width: 90,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.click) },
+            { title: t('productPerf.colVisitor'), width: 90,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.visitor) },
+            { title: t('productPerf.colUnit'),    width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.unit) },
+            { title: t('productPerf.colGmv'),     width: 130, align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmt(r.a?.gmv) },
+            { title: t('productPerf.colCtr'),     width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmtPct(r.a?.ctr) },
+            { title: t('productPerf.colCo'),      width: 80,  align: 'right', onCell: () => ({ style: { background: bgA } }), render: (_, r) => fmtPct(r.a?.co) },
         ]},
-        { title: <span style={{ color: '#22c55e' }}>{weekB || 'Period B'}</span>, children: [
-            { title: 'PIDs',    width: 70,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.pid_b) },
-            { title: 'Imp',     width: 110, align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.impression) },
-            { title: 'Click',   width: 90,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.click) },
-            { title: 'Visitor', width: 90,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.visitor) },
-            { title: 'Unit',    width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.unit) },
-            { title: 'GMV',     width: 130, align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.gmv) },
-            { title: 'CTR',     width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmtPct(r.b?.ctr) },
-            { title: 'CO',      width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmtPct(r.b?.co) },
+        { title: <span style={{ color: '#22c55e' }}>{weekB || t('productPerf.periodBFallback')}</span>, children: [
+            { title: t('productPerf.colPids'),    width: 70,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.pid_b) },
+            { title: t('productPerf.colImp'),     width: 110, align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.impression) },
+            { title: t('productPerf.colClick'),   width: 90,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.click) },
+            { title: t('productPerf.colVisitor'), width: 90,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.visitor) },
+            { title: t('productPerf.colUnit'),    width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.unit) },
+            { title: t('productPerf.colGmv'),     width: 130, align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmt(r.b?.gmv) },
+            { title: t('productPerf.colCtr'),     width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmtPct(r.b?.ctr) },
+            { title: t('productPerf.colCo'),      width: 80,  align: 'right', onCell: () => ({ style: { background: bgB } }), render: (_, r) => fmtPct(r.b?.co) },
         ]},
-        { title: 'Growth', children: [
-            { title: 'Imp%',     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.impression) },
-            { title: 'Click%',   width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.click) },
-            { title: 'Visitor%', width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.visitor) },
-            { title: 'Unit%',    width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.unit) },
-            { title: 'GMV Gap',  width: 130, align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGap(r.growth?.gmv_gap) },
-            { title: 'GMV%',     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.gmv) },
-            { title: 'CTR%',     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.ctr) },
-            { title: 'CO%',      width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.co) },
+        { title: t('productPerf.colGrowth'), children: [
+            { title: t('productPerf.colImpPct'),     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.impression) },
+            { title: t('productPerf.colClickPct'),   width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.click) },
+            { title: t('productPerf.colVisitorPct'), width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.visitor) },
+            { title: t('productPerf.colUnitPct'),    width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.unit) },
+            { title: t('productPerf.colGmvGap'),  width: 130, align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGap(r.growth?.gmv_gap) },
+            { title: t('productPerf.colGmvPct'),     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.gmv) },
+            { title: t('productPerf.colCtrPct'),     width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.ctr) },
+            { title: t('productPerf.colCoPct'),      width: 90,  align: 'right', onCell: () => ({ style: { background: bgG } }), render: (_, r) => fmtGrowth(r.growth?.co) },
         ]},
     ];
 
     const tableData = section ? [
-        { sku: '— TOTAL —', a: section.total_a, b: section.total_b, growth: section.growth, pid_a: section.total_pid_a, pid_b: section.total_pid_b, _isTotal: true, key: '__total' },
+        { sku: t('productPerf.colTotalRow'), a: section.total_a, b: section.total_b, growth: section.growth, pid_a: section.total_pid_a, pid_b: section.total_pid_b, _isTotal: true, key: '__total' },
         ...section.rows.map((r, i) => ({ ...r, key: `${r.sku}_${i}` })),
     ] : [];
 
@@ -1589,25 +1600,25 @@ function ComparisonTab({ weeks }) {
         <Space direction="vertical" style={{ width: '100%' }} size={16}>
             <div style={sectionCard}>
                 <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                    <SectionHeading icon={<SwapOutlined />} color="#f59e0b">Period Comparison</SectionHeading>
+                    <SectionHeading icon={<SwapOutlined />} color="#f59e0b">{t('productPerf.comparisonTitle')}</SectionHeading>
                 </div>
                 <div style={{ padding: '16px 20px' }}>
                     <Row gutter={[16, 12]} align="bottom">
                         <Col>
-                            <Label>Period A</Label>
-                            <Select allowClear showSearch placeholder="Period A (Week)" style={{ width: 260 }}
+                            <Label>{t('productPerf.labelPeriodA')}</Label>
+                            <Select allowClear showSearch placeholder={t('productPerf.phPeriodA')} style={{ width: 260 }}
                                 value={weekA} onChange={setWeekA} options={weekOpts} />
                         </Col>
                         <Col>
-                            <Label>Period B</Label>
-                            <Select allowClear showSearch placeholder="Period B (Week)" style={{ width: 260 }}
+                            <Label>{t('productPerf.labelPeriodB')}</Label>
+                            <Select allowClear showSearch placeholder={t('productPerf.phPeriodB')} style={{ width: 260 }}
                                 value={weekB} onChange={setWeekB} options={weekOpts} />
                         </Col>
                         <Col>
-                            <Label>Platform</Label>
+                            <Label>{t('productPerf.labelPlatform')}</Label>
                             <Select style={{ width: 160 }} value={platform} onChange={setPlatform}
                                 options={[
-                                    { value: 'All',    label: 'All Platforms' },
+                                    { value: 'All',    label: t('productPerf.platformAll') },
                                     { value: 'Shopee', label: 'Shopee' },
                                     { value: 'TikTok', label: 'TikTok' },
                                 ]}
@@ -1618,11 +1629,11 @@ function ComparisonTab({ weeks }) {
                                 <Button loading={loading} disabled={!weekA || !weekB} onClick={handleLoad}
                                     icon={<SwapOutlined />}
                                     style={{ height: 36, borderRadius: 8, fontWeight: 700, background: '#f59e0b', color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(245,158,11,0.28)' }}>
-                                    Load Comparison
+                                    {t('productPerf.btnLoadComparison')}
                                 </Button>
                                 <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!data}
                                     style={{ height: 36, borderRadius: 8, fontWeight: 600 }}>
-                                    Download Excel
+                                    {t('productPerf.btnDownloadExcel')}
                                 </Button>
                             </Space>
                         </Col>
@@ -1633,7 +1644,7 @@ function ComparisonTab({ weeks }) {
             {data && (
                 <>
                     <Space align="center">
-                        <Text style={{ color: 'var(--text-muted)', fontSize: 13 }}>Section:</Text>
+                        <Text style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t('productPerf.sectionLabel')}</Text>
                         <Select value={sectionIdx} onChange={v => setSectionIdx(v)} style={{ width: 300 }}
                             options={data.sections.map((s, i) => ({ value: i, label: s.store_name || s.section }))} />
                     </Space>
@@ -1641,10 +1652,10 @@ function ComparisonTab({ weeks }) {
                     {section && (
                         <Row gutter={[16, 12]}>
                             {[
-                                { label: `${weekA} — GMV`, val: section.total_a.gmv, accent: '#3b82f6', prec: 0 },
-                                { label: `${weekB} — GMV`, val: section.total_b.gmv, accent: '#10b981', prec: 0 },
-                                { label: 'GMV Growth %', val: section.growth.gmv ?? 0, accent: (section.growth.gmv ?? 0) >= 0 ? '#22c55e' : '#ef4444', prec: 2, suffix: '%' },
-                                { label: 'GMV Gap', val: section.growth.gmv_gap ?? 0, accent: (section.growth.gmv_gap ?? 0) >= 0 ? '#22c55e' : '#ef4444', prec: 0 },
+                                { label: t('productPerf.statGmvA', { week: weekA }), val: section.total_a.gmv, accent: '#3b82f6', prec: 0 },
+                                { label: t('productPerf.statGmvA', { week: weekB }), val: section.total_b.gmv, accent: '#10b981', prec: 0 },
+                                { label: t('productPerf.statGmvGrowthPct'), val: section.growth.gmv ?? 0, accent: (section.growth.gmv ?? 0) >= 0 ? '#22c55e' : '#ef4444', prec: 2, suffix: '%' },
+                                { label: t('productPerf.colGmvGap'), val: section.growth.gmv_gap ?? 0, accent: (section.growth.gmv_gap ?? 0) >= 0 ? '#22c55e' : '#ef4444', prec: 0 },
                             ].map(({ label, val, accent, prec, suffix }) => (
                                 <Col key={label}>
                                     <div style={statCard(accent)}>
@@ -1664,7 +1675,7 @@ function ComparisonTab({ weeks }) {
                         rowKey="key"
                         size="small"
                         scroll={{ x: 'max-content' }}
-                        pagination={{ pageSize: 50, showTotal: t => `${t} rows` }}
+                        pagination={{ pageSize: 50, showTotal: (tot) => t('productPerf.paginationRows', { total: tot }) }}
                         rowClassName={r => r._isTotal ? 'cmp-total-row' : ''}
                     />
                 </>
@@ -1675,6 +1686,7 @@ function ComparisonTab({ weeks }) {
 
 // ─────────────────────────────────────────────────────────────────
 export default function ProductPerformanceCleaner() {
+    const { t } = useTranslation();
     const [weeks, setWeeks] = useState([]);
 
     useEffect(() => {
@@ -1684,8 +1696,8 @@ export default function ProductPerformanceCleaner() {
     return (
         <div style={{ padding: '24px 32px' }}>
             <PageHeader
-                title="Product Performance"
-                subtitle="Upload, clean, and store product performance data by week"
+                title={t('productPerfPage.title')}
+                subtitle={t('productPerfPage.subtitle')}
                 accent="#10b981"
             />
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
@@ -1693,9 +1705,9 @@ export default function ProductPerformanceCleaner() {
                     defaultActiveKey="converter"
                     type="card"
                     items={[
-                        { key: 'converter', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><AppstoreOutlined />Converter</span>, children: <ConverterTab /> },
-                        { key: 'platform',  label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />Platform</span>, children: <PlatformTab weeks={weeks} /> },
-                        { key: 'brand',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartOutlined />Brand</span>, children: <BrandTab weeks={weeks} /> },
+                        { key: 'converter', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><AppstoreOutlined />{t('productPerfPage.tabConverter')}</span>, children: <ConverterTab /> },
+                        { key: 'platform',  label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CloudUploadOutlined />{t('productPerfPage.tabPlatform')}</span>, children: <PlatformTab weeks={weeks} /> },
+                        { key: 'brand',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartOutlined />{t('productPerfPage.tabBrand')}</span>, children: <BrandTab weeks={weeks} /> },
                     ]}
                 />
             </div>

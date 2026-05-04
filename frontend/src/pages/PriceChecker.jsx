@@ -12,7 +12,9 @@ import {
     UnorderedListOutlined, BarcodeOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
 
@@ -26,12 +28,16 @@ const Label = ({ children }) => (
     </div>
 );
 
-const SectionHeading = ({ icon, children, color = '#6366f1' }) => (
-    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ width: 28, height: 28, borderRadius: 6, background: `${color}20`, border: `1px solid ${color}35`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color, fontSize: 14, flexShrink: 0 }}>{icon}</span>
-        {children}
-    </div>
-);
+const SectionHeading = ({ icon, children, color }) => {
+    const { isDark } = useTheme();
+    const accent = color ?? (isDark ? '#6366f1' : '#0284c7');
+    return (
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ width: 28, height: 28, borderRadius: 6, background: `${accent}22`, border: `1px solid ${accent}40`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: accent, fontSize: 14, flexShrink: 0 }}>{icon}</span>
+            {children}
+        </div>
+    );
+};
 
 /* ─── Card style helpers ─── */
 const stepCardStyle = {
@@ -52,6 +58,7 @@ const statCardStyle = (accentColor) => ({
 
 /* ─── Main Component ─── */
 const PriceChecker = () => {
+    const { t } = useTranslation();
     const [method, setMethod] = useState('Listing');
     const [loadingDb, setLoadingDb] = useState(false);
     const [calcLoading, setCalcLoading] = useState(false);
@@ -107,9 +114,9 @@ const PriceChecker = () => {
         setLoadingDb(true);
         try {
             const res = await api.get('/price-checker/refresh');
-            message.success(`Database loaded! ${res.data.records} SKU pricing records available.`);
+            message.success(t('priceChecker.msgDbLoaded', { count: res.data.records }));
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to connect to database');
+            message.error(err.response?.data?.detail || t('priceChecker.msgDbFail'));
         } finally { setLoadingDb(false); }
     };
 
@@ -121,7 +128,7 @@ const PriceChecker = () => {
             fetchReferenceData(); // refresh the loaded cache
             logActivity('Price Checker (Sync DB)');
         } catch (error) {
-            message.error(error.response?.data?.detail || 'Failed to sync Google Sheets to Database');
+            message.error(error.response?.data?.detail || t('priceChecker.msgSyncFail'));
         } finally { setLoadingDb(false); }
     };
 
@@ -131,7 +138,7 @@ const PriceChecker = () => {
             const formData = new FormData();
             formData.append('file', file);
             const res = await api.post('/price-checker/upload-stock-data', formData);
-            message.success(res.data.message || 'Stock data uploaded.');
+            message.success(res.data.message || t('priceChecker.msgStockOk'));
             setLastStockUploadAt(res.data?.last_uploaded_at || null);
             onSuccess?.(res.data);
             logActivity('Price Checker (Upload Stock Data)');
@@ -149,11 +156,11 @@ const PriceChecker = () => {
             const res = await api.get(`/price-checker/template/${tplMethod}`, { responseType: 'blob' });
             const url = URL.createObjectURL(new Blob([res.data]));
             Object.assign(document.createElement('a'), { href: url, download: `PC_${tplMethod}_Template.xlsx` }).click();
-        } catch (err) { message.error(err.response?.data?.detail || 'Failed to download template'); }
+        } catch (err) { message.error(err.response?.data?.detail || t('priceChecker.msgDownloadTplFail')); }
     };
 
     const doCalculateDirect = async () => {
-        if (!skuInput) { message.warning('Please enter a SKU first'); return; }
+        if (!skuInput) { message.warning(t('priceChecker.msgEnterSku')); return; }
         setCalcLoading(true); setDirectResult(null);
         try {
             const res = await api.post('/price-checker/calculate-direct', {
@@ -163,12 +170,12 @@ const PriceChecker = () => {
             });
             setDirectResult(res.data);
             logActivity('Price Checker (Direct)');
-        } catch (err) { message.error(err.response?.data?.detail || 'Calculation failed');
+        } catch (err) { message.error(err.response?.data?.detail || t('priceChecker.msgCalcFail'));
         } finally { setCalcLoading(false); }
     };
 
     const handleUpload = async () => {
-        if (!fileList.length) { message.warning('Please upload a file first'); return; }
+        if (!fileList.length) { message.warning(t('priceChecker.msgUploadFirst')); return; }
         const formData = new FormData();
         formData.append('file', fileList[0]);
         formData.append('method', method);
@@ -176,9 +183,9 @@ const PriceChecker = () => {
         try {
             const res = await api.post('/price-checker/calculate-batch', formData);
             setBatchOverview(res.data);
-            message.success('Batch calculation complete! See overview below.');
+            message.success(t('priceChecker.msgBatchDone'));
             logActivity('Price Checker (Batch)');
-        } catch (err) { message.error(err.response?.data?.detail || 'Batch calculation failed');
+        } catch (err) { message.error(err.response?.data?.detail || t('priceChecker.msgBatchFail'));
         } finally { setCalcLoading(false); }
     };
 
@@ -192,7 +199,7 @@ const PriceChecker = () => {
 
     const handleDownloadWithPicture = async () => {
         if (!fileList.length) {
-            message.warning('Please upload a file first');
+            message.warning(t('priceChecker.msgUploadFirst'));
             return;
         }
         setDownloadingWithPicture(true);
@@ -209,9 +216,9 @@ const PriceChecker = () => {
             const buf = new Uint8Array(bytes.length).map((_, i) => bytes.charCodeAt(i));
             const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `PC_${method}_Result_With_Picture.xlsx` }).click();
-            message.success('Download with picture is ready.');
+            message.success(t('priceChecker.msgPicReady'));
         } catch (err) {
-            message.error(err.response?.data?.detail || err.message || 'Failed to generate file with pictures');
+            message.error(err.response?.data?.detail || err.message || t('priceChecker.msgPicFail'));
         } finally {
             setDownloadingWithPicture(false);
         }
@@ -222,7 +229,7 @@ const PriceChecker = () => {
         style: { userSelect: 'text', cursor: 'copy' },
         onClick: () => {
             const v = value === null || value === undefined ? '' : String(value);
-            navigator.clipboard.writeText(v).then(() => message.success(`Copied: ${v}`, 1));
+            navigator.clipboard.writeText(v).then(() => message.success(t('priceChecker.copyOk', { val: v }), 1));
         },
     });
 
@@ -240,8 +247,8 @@ const PriceChecker = () => {
             }).join('\t')
         ).join('\n');
         navigator.clipboard.writeText(headers + '\n' + rows)
-            .then(() => message.success('Table copied! Paste into Excel.'))
-            .catch(() => message.error('Copy failed.'));
+            .then(() => message.success(t('priceChecker.copyTableOk')))
+            .catch(() => message.error(t('priceChecker.copyFail')));
     };
 
     const evalColumns = [
@@ -292,7 +299,8 @@ const PriceChecker = () => {
             width: 130,
             render: v => {
                 const n = Number(v || 0);
-                return <span style={{ fontWeight: 700, color: n >= 0 ? '#10b981' : '#ef4444' }}>{n.toLocaleString()}</span>;
+                const color = n > 0 ? '#10b981' : n === 0 ? '#faad14' : '#ef4444';
+                return <span style={{ fontWeight: 700, color }}>{n.toLocaleString()}</span>;
             },
         },
         {
@@ -346,11 +354,11 @@ const PriceChecker = () => {
     return (
         <div>
             <PageHeader
-                title={<Bi e="Price Checker & Comparator" c="价格检查与比较器" />}
-                subtitle={<Bi e="Supports Listing Method, SKU Method, and Direct Input" c="支持列表法、SKU法和直接输入法" />}
-                accent="#6366f1"
+                title={<Bi i18nKey="priceChecker.title" />}
+                subtitle={<Bi i18nKey="priceChecker.subtitle" />}
+                accent="var(--indigo)"
                 actions={
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <Upload
                                 accept=".xlsx,.xls"
@@ -362,7 +370,7 @@ const PriceChecker = () => {
                                     loading={loadingDb}
                                     style={{ height: 36, borderRadius: 8, fontWeight: 600, fontSize: 13 }}
                                 >
-                                    <Bi e="Upload Stock Data" c="上传库存数据" />
+                                    <Bi i18nKey="priceChecker.uploadStock" />
                                 </Button>
                             </Upload>
                             <Button
@@ -375,15 +383,14 @@ const PriceChecker = () => {
                                     boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                                 }}
                             >
-                                <Bi e="Sync Price Data" c="同步价格数据" />
+                                <Bi i18nKey="priceChecker.syncPrice" />
                             </Button>
                         </div>
-                        <Text style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                            <Bi
-                                e={`Last stock upload: ${formatWibDateTime(lastStockUploadAt)}`}
-                                c={`最后库存上传: ${formatWibDateTime(lastStockUploadAt)}`}
-                            />
-                        </Text>
+                        <div style={{ textAlign: 'right', maxWidth: 420 }}>
+                            <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block' }}>
+                                {t('priceChecker.lastStockUpload', { time: formatWibDateTime(lastStockUploadAt) })}
+                            </Text>
+                        </div>
                     </div>
                 }
             />
@@ -395,9 +402,9 @@ const PriceChecker = () => {
                 type="card"
                 className="tabs-nav-only"
                 items={[
-                    { key: 'Listing', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined /><Bi e="Listing Method" c="列表法" /></span> },
-                    { key: 'SKU',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarcodeOutlined /><Bi e="SKU Method" c="SKU法" /></span> },
-                    { key: 'Direct',  label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><ThunderboltOutlined /><Bi e="Direct Input" c="直接输入" /></span> },
+                    { key: 'Listing', label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><UnorderedListOutlined /><Bi i18nKey="priceChecker.listingMethod" /></span> },
+                    { key: 'SKU',     label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><BarcodeOutlined /><Bi i18nKey="priceChecker.skuMethod" /></span> },
+                    { key: 'Direct',  label: <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><ThunderboltOutlined /><Bi i18nKey="priceChecker.directInput" /></span> },
                 ]}
             />
 
@@ -409,11 +416,11 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading icon={<DownloadOutlined />}><Bi e="Download Template" c="下载模板" /></SectionHeading>
+                                    <SectionHeading icon={<DownloadOutlined />}><Bi i18nKey="priceChecker.downloadTemplate" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
-                                        <Bi e="Download the Excel template, fill in your data, then upload it in the next step." c="下载 Excel 模板，填写数据，然后在下一步中上传。" />
+                                        <Bi i18nKey="priceChecker.downloadTemplateHint" />
                                     </Text>
                                     <Button
                                         icon={<CloudDownloadOutlined />}
@@ -425,7 +432,7 @@ const PriceChecker = () => {
                                             border: '1.5px dashed var(--indigo)',
                                         }}
                                     >
-                                        Download {method} Template
+                                        {t('priceChecker.downloadMethodTemplate', { method })}
                                     </Button>
                                 </div>
                             </div>
@@ -435,7 +442,7 @@ const PriceChecker = () => {
                         <Col xs={24} md={12}>
                             <div style={stepCardStyle}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-                                    <SectionHeading icon={<UploadOutlined />}><Bi e="Upload & Process" c="上传并处理" /></SectionHeading>
+                                    <SectionHeading icon={<UploadOutlined />}><Bi i18nKey="priceChecker.uploadProcess" /></SectionHeading>
                                 </div>
                                 <div style={{ padding: '18px 20px' }}>
                                     <Dragger
@@ -467,7 +474,7 @@ const PriceChecker = () => {
                                         )}
                                     >
                                         <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                        <p className="ant-upload-text"><Bi e="Click or drag an Excel file here to upload" c="点击或拖拽 Excel 文件到此处上传" /></p>
+                                        <p className="ant-upload-text"><Bi i18nKey="priceChecker.uploadExcelHint" /></p>
                                     </Dragger>
                                     <Button
                                         block
@@ -479,7 +486,7 @@ const PriceChecker = () => {
                                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                                         }}
                                     >
-                                        {calcLoading ? <Bi e="Processing..." c="处理中..." /> : <Bi e="Start Batch Calculation" c="开始批量计算" />}
+                                        {calcLoading ? <Bi i18nKey="priceChecker.processing" /> : <Bi i18nKey="priceChecker.startBatch" />}
                                     </Button>
                                 </div>
                             </div>
@@ -490,7 +497,7 @@ const PriceChecker = () => {
                     {batchOverview && (
                         <div style={{ marginTop: 32 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading icon={<FileTextOutlined />}><Bi e="Processing Overview" c="处理概览" /></SectionHeading>
+                            <SectionHeading icon={<FileTextOutlined />}><Bi i18nKey="priceChecker.processingOverview" /></SectionHeading>
 
                             {/* Stats */}
                             <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -499,7 +506,7 @@ const PriceChecker = () => {
                                         <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--indigo)', fontFamily: "'Outfit', sans-serif" }}>
                                             {batchOverview.summary.total}
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Total Rows Processed" c="处理的总行数" /></Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi i18nKey="priceChecker.totalRows" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
@@ -510,7 +517,7 @@ const PriceChecker = () => {
                                                 {batchOverview.summary.valid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Valid Items" c="有效项目" /></Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi i18nKey="priceChecker.validItems" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
@@ -521,7 +528,7 @@ const PriceChecker = () => {
                                                 {batchOverview.summary.invalid}
                                             </span>
                                         </div>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi e="Invalid / Flagged Items" c="无效 / 标记项目" /></Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}><Bi i18nKey="priceChecker.invalidItems" /></Text>
                                     </div>
                                 </Col>
                             </Row>
@@ -529,7 +536,7 @@ const PriceChecker = () => {
                             {/* Preview Table (scrollable) */}
                             <div style={{ marginBottom: 6 }}>
                                 <Text style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    <Bi e="Data Preview — Top 10 Rows" c="数据预览 — 前 10 行" />
+                                    <Bi i18nKey="priceChecker.dataPreview" />
                                 </Text>
                             </div>
                             <div style={{ marginBottom: 20, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -556,7 +563,7 @@ const PriceChecker = () => {
                                         boxShadow: '0 2px 10px rgba(16,185,129,0.3)', paddingInline: 28,
                                     }}
                                 >
-                                    <Bi e="Download Full Result (Excel)" c="下载完整结果 (Excel)" />
+                                    <Bi i18nKey="priceChecker.downloadFull" />
                                 </Button>
                                 <Button
                                     size="large"
@@ -569,7 +576,7 @@ const PriceChecker = () => {
                                         boxShadow: '0 2px 10px rgba(245,158,11,0.35)', paddingInline: 28,
                                     }}
                                 >
-                                    <Bi e="Download with Picture" c="下载带图片结果" />
+                                    <Bi i18nKey="priceChecker.downloadWithPic" />
                                 </Button>
                             </div>
                         </div>
@@ -582,7 +589,7 @@ const PriceChecker = () => {
                 <div style={{ background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '24px' }}>
                     <Row gutter={[20, 20]}>
                         <Col xs={24} md={16}>
-                            <Label><Bi e="Bundle SKU — separate with + or comma" c="捆绑 SKU — 用 + 或逗号分隔" /></Label>
+                            <Label><Bi i18nKey="priceChecker.bundleSku" /></Label>
                             <Input
                                 size="large"
                                 placeholder="e.g. SKU_A + SKU_B + SKU_C"
@@ -593,7 +600,7 @@ const PriceChecker = () => {
                             />
                         </Col>
                         <Col xs={24} md={4}>
-                            <Label><Bi e="Target Price (IDR)" c="目标价格 (IDR)" /></Label>
+                            <Label><Bi i18nKey="priceChecker.targetPrice" /></Label>
                             <InputNumber
                                 size="large"
                                 style={{ width: '100%', borderRadius: 8, height: 46 }}
@@ -608,7 +615,7 @@ const PriceChecker = () => {
                             />
                         </Col>
                         <Col xs={24} md={4}>
-                            <Label><Bi e="Target Stock" c="目标库存" /></Label>
+                            <Label><Bi i18nKey="priceChecker.targetStock" /></Label>
                             <InputNumber
                                 size="large"
                                 style={{ width: '100%', borderRadius: 8, height: 46 }}
@@ -632,7 +639,7 @@ const PriceChecker = () => {
                             boxShadow: '0 2px 8px rgba(99,102,241,0.25)', paddingInline: 32,
                         }}
                     >
-                        <Bi e="Calculate Real-time" c="实时计算" />
+                        <Bi i18nKey="priceChecker.calcRealtime" />
                     </Button>
 
                     {calcLoading && (
@@ -649,7 +656,7 @@ const PriceChecker = () => {
                             {/* SKU Preview */}
                             {directResult.items?.length > 0 && (
                                 <div style={{ marginBottom: 28 }}>
-                                    <SectionHeading icon={<AppstoreOutlined />}><Bi e="Item Preview" c="商品预览" /></SectionHeading>
+                                    <SectionHeading icon={<AppstoreOutlined />}><Bi i18nKey="priceChecker.itemPreview" /></SectionHeading>
                                     <div style={{ display: 'grid', gridTemplateColumns: directResult.items.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
                                         {directResult.items.map((item, idx) => (
                                             <div key={`${item.sku}-${idx}`} style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', minHeight: 220, display: 'flex', flexDirection: 'column' }}>
@@ -687,7 +694,7 @@ const PriceChecker = () => {
                             )}
 
                             {/* Summary */}
-                            <SectionHeading icon={<BarChartOutlined />}><Bi e="Bundle Summary" c="捆绑摘要" /></SectionHeading>
+                            <SectionHeading icon={<BarChartOutlined />}><Bi i18nKey="priceChecker.bundleSummary" /></SectionHeading>
                             <Row gutter={16} style={{ marginBottom: 24 }}>
                                 {[
                                     { label: 'Bundle Discount', value: `${Number(directResult.summary.bundle_discount) * 100}%`, color: 'var(--indigo)' },
@@ -706,7 +713,7 @@ const PriceChecker = () => {
 
                             {/* Breakdown Table */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <SectionHeading icon={<AppstoreOutlined />}><Bi e="Price Composition Breakdown" c="价格构成明细" /></SectionHeading>
+                                <SectionHeading icon={<AppstoreOutlined />}><Bi i18nKey="priceChecker.priceBreakdown" /></SectionHeading>
                                 <Button size="small" icon={<FileTextOutlined />} onClick={() => copyTable(directResult.breakdown, breakdownColumns)} style={{ fontSize: 12 }}>Copy Table</Button>
                             </div>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
@@ -723,7 +730,7 @@ const PriceChecker = () => {
 
                             {/* Evaluation Table */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <SectionHeading icon={<RiseOutlined />}><Bi e="Price Evaluation by Tier" c="按层级进行价格评估" /></SectionHeading>
+                                <SectionHeading icon={<RiseOutlined />}><Bi i18nKey="priceChecker.priceEvalTier" /></SectionHeading>
                                 <Button size="small" icon={<FileTextOutlined />} onClick={() => copyTable(directResult.evaluation, evalColumns)} style={{ fontSize: 12 }}>Copy Table</Button>
                             </div>
                             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -740,7 +747,7 @@ const PriceChecker = () => {
 
                             {/* Stock Evaluation Table */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
-                                <SectionHeading icon={<BarChartOutlined />}><Bi e="Stock Evaluation by Type" c="按库存类型进行评估" /></SectionHeading>
+                                <SectionHeading icon={<BarChartOutlined />}><Bi i18nKey="priceChecker.stockEvalType" /></SectionHeading>
                                 <Button
                                     size="small"
                                     icon={<FileTextOutlined />}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from services.auth_logic import signup_user, login_user_optimized, verify_token, log_activity, sync_users_from_sheet, reset_password, change_password, normalize_permissions
+from services.auth_logic import signup_user, login_user_optimized, verify_token, get_user_auth_claims_from_db, log_activity, sync_users_from_sheet, reset_password, change_password, normalize_permissions
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -93,12 +93,15 @@ def verify(request: Request):
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
-    payload_permissions = normalize_permissions(payload.get("permissions", {}))
+    fresh = get_user_auth_claims_from_db(payload.get("username", ""))
+    if not fresh:
+        raise HTTPException(status_code=401, detail="User not found")
+    payload_permissions = normalize_permissions(fresh.get("permissions", {}))
     return {
         "valid": True,
-        "username": payload["username"],
-        "name": payload.get("name", payload["username"]),
-        "email": payload.get("email", ""),
+        "username": fresh["username"],
+        "name": fresh.get("name") or fresh["username"],
+        "email": fresh.get("email", ""),
         "permissions": payload_permissions,
     }
 

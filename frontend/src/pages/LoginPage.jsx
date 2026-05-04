@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, message, Typography } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, SyncOutlined, ArrowLeftOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
+import LanguageSelect from '../components/LanguageSelect';
 import api, { syncUsers, forgotPassword } from '../api';
 
 const { Title, Text } = Typography;
 
 const LoginPage = () => {
+    const { t } = useTranslation();
     const { login, signup } = useAuth();
     const [loadingLogin, setLoadingLogin] = useState(false);
     const [loadingSignup, setLoadingSignup] = useState(false);
@@ -28,9 +31,9 @@ const LoginPage = () => {
         setLoadingSync(true);
         try {
             const res = await syncUsers();
-            message.success(res.data?.message || 'Users synced successfully!');
+            message.success(res.data?.message || t('login.usersSynced'));
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to sync users.');
+            message.error(err.response?.data?.detail || t('login.syncFailed'));
         } finally {
             setLoadingSync(false);
         }
@@ -42,9 +45,9 @@ const LoginPage = () => {
         warmingTimerRef.current = setTimeout(() => setWarmingUp(true), 5000);
         try {
             await login(values.username, values.password);
-            message.success('Welcome back! 欢迎回来！');
+            message.success(t('login.welcomeToast'));
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Login failed.');
+            message.error(err.response?.data?.detail || t('login.loginFailed'));
         } finally {
             clearTimeout(warmingTimerRef.current);
             setLoadingLogin(false);
@@ -57,9 +60,9 @@ const LoginPage = () => {
         try {
             const res = await forgotPassword(values.username, values.email);
             setResetDone(true);
-            message.success(res.data?.message || 'Password reset successful.');
+            message.success(res.data?.message || t('login.resetOk'));
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Reset failed. Check your username and email.');
+            message.error(err.response?.data?.detail || t('login.resetFail'));
         } finally {
             setLoadingReset(false);
         }
@@ -67,7 +70,7 @@ const LoginPage = () => {
 
     const onSignup = async (values) => {
         if (values.password !== values.confirm) {
-            message.error('Passwords do not match!');
+            message.error(t('login.pwdMismatchForm'));
             return;
         }
         setLoadingSignup(true);
@@ -76,7 +79,7 @@ const LoginPage = () => {
             setSignupDone(true);
             message.success(msg);
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Registration failed.');
+            message.error(err.response?.data?.detail || t('login.registrationFailed'));
         } finally {
             setLoadingSignup(false);
         }
@@ -119,6 +122,9 @@ const LoginPage = () => {
                 position: 'relative',
                 zIndex: 1,
             }}>
+                <div style={{ position: 'absolute', top: 16, right: 16 }}>
+                    <LanguageSelect size="small" />
+                </div>
 
                 {/* Logo + branding */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -128,7 +134,7 @@ const LoginPage = () => {
                         style={{ height: 34, filter: 'brightness(0) invert(1) opacity(0.9)', marginBottom: 16 }}
                     />
                     <div style={{ color: '#94a3b8', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500 }}>
-                        Internal Operations Platform
+                        {t('login.internalPlatform')}
                     </div>
                 </div>
 
@@ -143,7 +149,7 @@ const LoginPage = () => {
                                     color: activeTab === tab ? '#38bdf8' : '#64748b',
                                     boxShadow: activeTab === tab ? 'inset 0 0 0 1px rgba(56,189,248,0.25)' : 'none',
                                 }}>
-                                {tab === 'login' ? <Bi e="Sign In" c="登录" /> : <Bi e="Create Account" c="注册" />}
+                                {tab === 'login' ? <Bi i18nKey="login.signIn" /> : <Bi i18nKey="login.createAccount" />}
                             </button>
                         ))}
                     </div>
@@ -152,12 +158,12 @@ const LoginPage = () => {
                     {!signupDone && (
                         <div style={{ marginBottom: 28 }}>
                             <div style={{ color: '#f1f5f9', margin: '0 0 4px', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18 }}>
-                                {activeTab === 'login' ? 'Welcome back' : 'Request access'}
+                                {activeTab === 'login' ? t('login.welcomeBack') : t('login.requestAccessTitle')}
                             </div>
                             <Text style={{ color: '#94a3b8', fontSize: 13 }}>
                                 {activeTab === 'login'
-                                    ? <Bi e="Sign in to your account to continue" c="登录你的账户以继续" />
-                                    : <Bi e="Fill in your details — admin will approve your request" c="填写信息后等待管理员审核" />
+                                    ? <Bi i18nKey="login.signInContinue" />
+                                    : <Bi i18nKey="login.requestAccessBlurb" />
                                 }
                             </Text>
                         </div>
@@ -166,17 +172,17 @@ const LoginPage = () => {
                     {/* LOGIN FORM */}
                     {activeTab === 'login' && (
                         <Form onFinish={onLogin} layout="vertical" requiredMark={false}>
-                            <Form.Item name="username" rules={[{ required: true, message: 'Enter your username' }]} style={{ marginBottom: 16 }}>
+                            <Form.Item name="username" rules={[{ required: true, message: t('login.enterUsername') }]} style={{ marginBottom: 16 }}>
                                 <Input
                                     prefix={<UserOutlined style={{ color: '#475569' }} />}
-                                    placeholder="Username"
+                                    placeholder={t('login.username')}
                                     style={inputStyle}
                                 />
                             </Form.Item>
-                            <Form.Item name="password" rules={[{ required: true, message: 'Enter your password' }]} style={{ marginBottom: 24 }}>
+                            <Form.Item name="password" rules={[{ required: true, message: t('login.enterPassword') }]} style={{ marginBottom: 24 }}>
                                 <Input.Password
                                     prefix={<LockOutlined style={{ color: '#475569' }} />}
-                                    placeholder="Password"
+                                    placeholder={t('login.password')}
                                     style={inputStyle}
                                 />
                             </Form.Item>
@@ -188,7 +194,7 @@ const LoginPage = () => {
                                         color: '#fff', border: 'none',
                                         boxShadow: '0 4px 20px rgba(14,165,233,0.25)',
                                     }}>
-                                    {loadingLogin ? 'Signing in...' : 'Sign In'}
+                                    {loadingLogin ? t('login.signingIn') : t('login.signInBtn')}
                                 </Button>
                             </Form.Item>
                             {warmingUp && (
@@ -199,7 +205,7 @@ const LoginPage = () => {
                                 }}>
                                     <ThunderboltOutlined style={{ color: '#fbbf24', fontSize: 14 }} />
                                     <span style={{ color: '#fbbf24', fontSize: 12 }}>
-                                        Server is waking up — this may take up to 60 seconds on first load. Please wait...
+                                        {t('login.serverWaking')}
                                     </span>
                                 </div>
                             )}
@@ -211,7 +217,7 @@ const LoginPage = () => {
                         <div style={{ textAlign: 'center', marginTop: 16 }}>
                             <button onClick={() => { setActiveTab('forgot'); setResetDone(false); }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 12, padding: 0 }}>
-                                Forgot password?
+                                {t('login.forgotPassword')}
                             </button>
                         </div>
                     )}
@@ -220,13 +226,13 @@ const LoginPage = () => {
                     {activeTab === 'forgot' && !resetDone && (
                         <Form onFinish={onForgotPassword} layout="vertical" requiredMark={false}>
                             <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 20 }}>
-                                Enter your username and email address. We'll send a new password to your inbox.
+                                {t('login.forgotIntro')}
                             </div>
-                            <Form.Item name="username" rules={[{ required: true, message: 'Enter your username' }]} style={{ marginBottom: 14 }}>
-                                <Input prefix={<UserOutlined style={{ color: '#475569' }} />} placeholder="Username" style={inputStyle} />
+                            <Form.Item name="username" rules={[{ required: true, message: t('login.enterUsername') }]} style={{ marginBottom: 14 }}>
+                                <Input prefix={<UserOutlined style={{ color: '#475569' }} />} placeholder={t('login.username')} style={inputStyle} />
                             </Form.Item>
-                            <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Enter a valid email' }]} style={{ marginBottom: 24 }}>
-                                <Input prefix={<MailOutlined style={{ color: '#475569' }} />} placeholder="Email Address" style={inputStyle} />
+                            <Form.Item name="email" rules={[{ required: true, type: 'email', message: t('login.emailValid') }]} style={{ marginBottom: 24 }}>
+                                <Input prefix={<MailOutlined style={{ color: '#475569' }} />} placeholder={t('login.email')} style={inputStyle} />
                             </Form.Item>
                             <Form.Item style={{ marginBottom: 12 }}>
                                 <Button htmlType="submit" loading={loadingReset} block
@@ -236,13 +242,13 @@ const LoginPage = () => {
                                         color: '#fff', border: 'none',
                                         boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
                                     }}>
-                                    {loadingReset ? 'Sending...' : 'Reset Password'}
+                                    {loadingReset ? t('login.sending') : t('login.resetPassword')}
                                 </Button>
                             </Form.Item>
                             <div style={{ textAlign: 'center' }}>
                                 <button onClick={() => setActiveTab('login')}
                                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 12, padding: 0 }}>
-                                    Back to Sign In
+                                    {t('login.backToSignIn')}
                                 </button>
                             </div>
                         </Form>
@@ -254,14 +260,14 @@ const LoginPage = () => {
                             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                                 <CheckCircleOutlined style={{ fontSize: 28, color: '#818cf8' }} />
                             </div>
-                            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 18, marginBottom: 8, fontFamily: "'Outfit', sans-serif" }}>Check your email</div>
+                            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 18, marginBottom: 8, fontFamily: "'Outfit', sans-serif" }}>{t('login.checkEmail')}</div>
                             <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.6, display: 'block' }}>
-                                A new password has been sent to your email address.
+                                {t('login.newPasswordSent')}
                             </Text>
                             <Button type="text" icon={<ArrowLeftOutlined />}
                                 style={{ color: '#38bdf8', marginTop: 24, fontSize: 13 }}
                                 onClick={() => { setActiveTab('login'); setResetDone(false); }}>
-                                Back to Sign In
+                                {t('login.backToSignIn')}
                             </Button>
                         </div>
                     )}
@@ -269,17 +275,17 @@ const LoginPage = () => {
                     {/* SIGN UP FORM */}
                     {activeTab === 'signup' && !signupDone && (
                         <Form onFinish={onSignup} layout="vertical" requiredMark={false}>
-                            <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Enter a valid email' }]} style={{ marginBottom: 14 }}>
-                                <Input prefix={<MailOutlined style={{ color: '#475569' }} />} placeholder="Email Address" style={inputStyle} />
+                            <Form.Item name="email" rules={[{ required: true, type: 'email', message: t('login.emailValid') }]} style={{ marginBottom: 14 }}>
+                                <Input prefix={<MailOutlined style={{ color: '#475569' }} />} placeholder={t('login.registerEmail')} style={inputStyle} />
                             </Form.Item>
-                            <Form.Item name="username" rules={[{ required: true, message: 'Choose a username' }]} style={{ marginBottom: 14 }}>
-                                <Input prefix={<UserOutlined style={{ color: '#475569' }} />} placeholder="Username" style={inputStyle} />
+                            <Form.Item name="username" rules={[{ required: true, message: t('login.chooseUsername') }]} style={{ marginBottom: 14 }}>
+                                <Input prefix={<UserOutlined style={{ color: '#475569' }} />} placeholder={t('login.username')} style={inputStyle} />
                             </Form.Item>
-                            <Form.Item name="password" rules={[{ required: true, min: 6, message: 'Min. 6 characters' }]} style={{ marginBottom: 14 }}>
-                                <Input.Password prefix={<LockOutlined style={{ color: '#475569' }} />} placeholder="Password" style={inputStyle} />
+                            <Form.Item name="password" rules={[{ required: true, min: 6, message: t('login.pwdMin6') }]} style={{ marginBottom: 14 }}>
+                                <Input.Password prefix={<LockOutlined style={{ color: '#475569' }} />} placeholder={t('login.password')} style={inputStyle} />
                             </Form.Item>
-                            <Form.Item name="confirm" rules={[{ required: true, message: 'Confirm your password' }]} style={{ marginBottom: 24 }}>
-                                <Input.Password prefix={<LockOutlined style={{ color: '#475569' }} />} placeholder="Confirm Password" style={inputStyle} />
+                            <Form.Item name="confirm" rules={[{ required: true, message: t('login.confirmPwdRequired') }]} style={{ marginBottom: 24 }}>
+                                <Input.Password prefix={<LockOutlined style={{ color: '#475569' }} />} placeholder={t('login.confirmPwd')} style={inputStyle} />
                             </Form.Item>
                             <Form.Item style={{ marginBottom: 0 }}>
                                 <Button htmlType="submit" loading={loadingSignup} block
@@ -289,7 +295,7 @@ const LoginPage = () => {
                                         color: '#fff', border: 'none',
                                         boxShadow: '0 4px 20px rgba(16,185,129,0.2)',
                                     }}>
-                                    {loadingSignup ? 'Submitting...' : 'Request Access'}
+                                    {loadingSignup ? t('login.submitting') : t('login.requestAccessBtn')}
                                 </Button>
                             </Form.Item>
                         </Form>
@@ -301,14 +307,14 @@ const LoginPage = () => {
                             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                                 <CheckCircleOutlined style={{ fontSize: 28, color: '#10b981' }} />
                             </div>
-                            <div style={{ color: '#f1f5f9', margin: '0 0 8px', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18 }}>Awaiting Approval</div>
+                            <div style={{ color: '#f1f5f9', margin: '0 0 8px', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18 }}>{t('login.awaitingApproval')}</div>
                             <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.6, display: 'block' }}>
-                                Your account has been registered. An admin will review and approve your access shortly.
+                                {t('login.awaitingApprovalBlurb')}
                             </Text>
                             <Button type="text" icon={<ArrowLeftOutlined />}
                                 style={{ color: '#38bdf8', marginTop: 24, fontSize: 13 }}
                                 onClick={() => { setActiveTab('login'); setSignupDone(false); }}>
-                                Back to Sign In
+                                {t('login.backToSignIn')}
                             </Button>
                         </div>
                     )}
@@ -317,9 +323,9 @@ const LoginPage = () => {
                     <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid rgba(148,163,184,0.08)', textAlign: 'center' }}>
                         <Button icon={<SyncOutlined spin={loadingSync} />} loading={loadingSync} onClick={onSyncUsers} size="small"
                             style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#64748b', borderRadius: 8, fontSize: 11, height: 30, paddingInline: 12 }}>
-                            Refresh Users
+                            {t('login.refreshUsers')}
                         </Button>
-                        <div style={{ color: '#64748b', fontSize: 10, marginTop: 6 }}>Admin: sync user data from Google Sheets</div>
+                        <div style={{ color: '#64748b', fontSize: 10, marginTop: 6 }}>{t('login.adminSyncHint')}</div>
                     </div>
                 </div>
             </div>

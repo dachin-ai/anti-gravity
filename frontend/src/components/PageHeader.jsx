@@ -3,7 +3,7 @@ import { Typography } from 'antd';
 
 const { Title, Text } = Typography;
 
-const PageHeader = ({ title, subtitle, accent = '#6366f1', actions }) => (
+const PageHeader = ({ title, subtitle, accent = 'var(--indigo)', actions }) => (
     <div style={{
         display: 'flex', alignItems: 'flex-start',
         justifyContent: 'space-between', marginBottom: 28,

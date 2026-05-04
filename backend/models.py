@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, PrimaryKeyConstraint
+from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, PrimaryKeyConstraint, Text
 from sqlalchemy.sql import func
 from database import Base
 
@@ -76,6 +76,15 @@ class ActivityLog(Base):
     username = Column(String, index=True)
     tools = Column(String)
     tools_general = Column(String, index=True)
+
+
+class ToolUpdateInfo(Base):
+    """Per-tool metadata (e.g. last stock upload time + optional note). Upsert by tool_key."""
+    __tablename__ = "tool_update_info"
+
+    tool_key = Column(String(64), primary_key=True)
+    keterangan = Column(Text, nullable=True)
+    waktu = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 class AccountUser(Base):
     __tablename__ = "account_users"

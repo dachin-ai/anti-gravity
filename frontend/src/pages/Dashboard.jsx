@@ -2,35 +2,38 @@ import React, { useEffect } from 'react';
 import { Typography, Row, Col, Card, Tag, Tooltip, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightOutlined, LockOutlined, TagOutlined, InboxOutlined, FileSearchOutlined, BarChartOutlined, FundProjectionScreenOutlined, RiseOutlined, PieChartOutlined, VideoCameraOutlined, UnlockOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 const { Title, Text } = Typography;
 
-const TOOLS_CATALOG = [
-    { name: "Price Checker", desc: "Competitor price monitoring across multiple platforms.", main_user: "Account Responsible", platform: "Multiplatform", icon: <TagOutlined />, path: "/price-checker", active: true, category: "freemir", toolKey: "price_checker" },
-    { name: "Order Planner", desc: "Estimate daily order volume per warehouse based on monthly targets.", main_user: "Warehouse / Ops", platform: "Internal", icon: <InboxOutlined />, path: "/warehouse-order", active: true, category: "freemir", toolKey: "order_planner" },
-    { name: "Product Performance", desc: "Upload, clean, and store product performance data by week.", main_user: "Account Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/product-performance", active: true, category: "freemir", toolKey: "product_performance" },
-    { name: "Order Review", desc: "Analysis of lost orders and cancellation reasons.", main_user: "Platform Responsible", platform: "Qianyi ERP", icon: <FileSearchOutlined />, path: "/order-loss", active: true, category: "shopee", toolKey: "order_review" },
-    { name: "Affiliate Performance", desc: "Shopee Affiliate performance data tracking.", main_user: "Affiliate Responsible", platform: "Shopee", icon: <BarChartOutlined />, path: "/shopee-affiliate", active: true, category: "shopee", toolKey: "affiliate_performance" },
-    { name: "LS Display", desc: "Real-time livestream display and monitoring dashboard.", main_user: "Livestream Team", platform: "Shopee", icon: <VideoCameraOutlined />, path: "/livestream-display", active: true, category: "shopee", toolKey: "livestream_display" },
-    { name: "Pre-Sales Checker", desc: "Volume estimation and forecasting for pre-sales events.", main_user: "Account Responsible", platform: "TikTok", icon: <FundProjectionScreenOutlined />, path: "/pre-sales", active: true, category: "tiktok", toolKey: "pre_sales" },
-    { name: "Affiliate Analyzer", desc: "Comprehensive TikTok affiliate data analytics.", main_user: "Affiliate Responsible", platform: "TikTok", icon: <RiseOutlined />, path: "/affiliate-analyzer", active: true, category: "tiktok", toolKey: "affiliate_analyzer" },
-    { name: "Ads Analyzer", desc: "Analyze and consolidate TikTok Ads performance data.", main_user: "Ads Specialist", platform: "TikTok", icon: <PieChartOutlined />, path: "/tiktok-ads", active: true, category: "tiktok", toolKey: "ads_analyzer" },
-];
-
-const CATEGORY_META = {
-    "freemir": { title: "Freemir Suite", accent: "#6366f1" },
-    "shopee":  { title: "Shopee Suite",  accent: "#f97316" },
-    "tiktok":  { title: "TikTok Suite",  accent: "#ec4899" },
+const SUITE_ACCENTS = {
+    freemir: '#6366f1',
+    shopee: '#f97316',
+    tiktok: '#ec4899',
 };
 
+const CATEGORY_ORDER = ['freemir', 'shopee', 'tiktok'];
+
+const TOOL_ITEMS = [
+    { toolKey: 'price_checker', icon: <TagOutlined />, path: '/price-checker', active: true, category: 'freemir' },
+    { toolKey: 'order_planner', icon: <InboxOutlined />, path: '/warehouse-order', active: true, category: 'freemir' },
+    { toolKey: 'product_performance', icon: <BarChartOutlined />, path: '/product-performance', active: true, category: 'freemir' },
+    { toolKey: 'order_review', icon: <FileSearchOutlined />, path: '/order-loss', active: true, category: 'shopee' },
+    { toolKey: 'affiliate_performance', icon: <BarChartOutlined />, path: '/shopee-affiliate', active: true, category: 'shopee' },
+    { toolKey: 'livestream_display', icon: <VideoCameraOutlined />, path: '/livestream-display', active: true, category: 'shopee' },
+    { toolKey: 'pre_sales', icon: <FundProjectionScreenOutlined />, path: '/pre-sales', active: true, category: 'tiktok' },
+    { toolKey: 'affiliate_analyzer', icon: <RiseOutlined />, path: '/affiliate-analyzer', active: true, category: 'tiktok' },
+    { toolKey: 'ads_analyzer', icon: <PieChartOutlined />, path: '/tiktok-ads', active: true, category: 'tiktok' },
+];
+
 const Dashboard = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { hasAccess } = useAuth();
     const { isDark } = useTheme();
 
-    // Add CSS animation for floating orbs
     useEffect(() => {
         const style = document.createElement('style');
         style.textContent = `
@@ -47,35 +50,33 @@ const Dashboard = () => {
 
     return (
         <div>
-            {/* HERO */}
             <div style={{
                 position: 'relative', overflow: 'hidden',
-                background: isDark 
+                background: isDark
                     ? 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 50%, rgba(236,72,153,0.03) 100%)'
                     : 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.02) 50%, transparent 100%)',
                 border: `1px solid ${isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)'}`,
                 borderRadius: 20, padding: '48px 56px', marginBottom: 64,
-                boxShadow: isDark 
+                boxShadow: isDark
                     ? '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
                     : '0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
             }}>
-                {/* Enhanced floating orbs with animation */}
-                <div style={{ 
-                    position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', 
-                    background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)', 
-                    pointerEvents: 'none', animation: 'float 6s ease-in-out infinite' 
+                <div style={{
+                    position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)',
+                    pointerEvents: 'none', animation: 'float 6s ease-in-out infinite'
                 }} />
-                <div style={{ 
-                    position: 'absolute', bottom: -40, right: 200, width: 180, height: 180, borderRadius: '50%', 
-                    background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)', 
-                    pointerEvents: 'none', animation: 'float 8s ease-in-out infinite reverse' 
+                <div style={{
+                    position: 'absolute', bottom: -40, right: 200, width: 180, height: 180, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)',
+                    pointerEvents: 'none', animation: 'float 8s ease-in-out infinite reverse'
                 }} />
-                <div style={{ 
-                    position: 'absolute', top: 30, right: 320, width: 100, height: 100, borderRadius: '50%', 
-                    background: 'radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%)', 
-                    pointerEvents: 'none', animation: 'float 4s ease-in-out infinite' 
+                <div style={{
+                    position: 'absolute', top: 30, right: 320, width: 100, height: 100, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%)',
+                    pointerEvents: 'none', animation: 'float 4s ease-in-out infinite'
                 }} />
-                
+
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
                         <div style={{ flex: 1 }}>
@@ -85,14 +86,14 @@ const Dashboard = () => {
                                 letterSpacing: '-1px',
                                 lineHeight: 1.2,
                             }}>
-                                Business Intelligence Hub
+                                {t('lobbyPage.heroTitle')}
                             </Title>
-                            <Text style={{ 
-                                fontSize: 16, color: isDark ? '#cbd5e1' : '#475569', 
+                            <Text style={{
+                                fontSize: 16, color: isDark ? '#cbd5e1' : '#475569',
                                 fontWeight: 400, lineHeight: 1.6,
                                 display: 'block', maxWidth: 600
                             }}>
-                                Unified analytics &amp; operations platform — select a module to launch your workflow.
+                                {t('lobbyPage.heroSubtitle')}
                             </Text>
                         </div>
                         <Button
@@ -112,50 +113,50 @@ const Dashboard = () => {
                                 color: isDark ? '#a5b4fc' : '#ffffff',
                             }}
                         >
-                            Request Access
+                            {t('lobbyPage.requestAccessTop')}
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* CATEGORIES */}
-            {Object.entries(CATEGORY_META).map(([catKey, meta]) => {
-                const catTools = TOOLS_CATALOG.filter(t => t.category === catKey);
+            {CATEGORY_ORDER.map((catKey) => {
+                const accent = SUITE_ACCENTS[catKey];
+                const catTools = TOOL_ITEMS.filter((x) => x.category === catKey);
                 if (catTools.length === 0) return null;
 
                 return (
                     <div key={catKey} style={{ marginBottom: 52 }}>
-                        {/* Category header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                            <div style={{ width: 4, height: 20, borderRadius: 2, background: meta.accent, flexShrink: 0, boxShadow: `0 0 8px ${meta.accent}80` }} />
-                            <Text style={{ fontSize: 13, fontWeight: 700, color: meta.accent, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                                {meta.title}
+                            <div style={{ width: 4, height: 20, borderRadius: 2, background: accent, flexShrink: 0, boxShadow: `0 0 8px ${accent}80` }} />
+                            <Text style={{ fontSize: 13, fontWeight: 700, color: accent, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                                {t(`lobbyPage.suites.${catKey}`)}
                             </Text>
-                            <div style={{ flexGrow: 1, height: 1, background: `linear-gradient(90deg, ${meta.accent}40 0%, transparent 100%)` }} />
+                            <div style={{ flexGrow: 1, height: 1, background: `linear-gradient(90deg, ${accent}40 0%, transparent 100%)` }} />
                         </div>
 
                         <Row gutter={[20, 20]}>
                             {catTools.map((tool, idx) => {
                                 const accessible = !tool.toolKey || hasAccess(tool.toolKey);
                                 const isClickable = tool.active && accessible;
+                                const tk = `lobbyPage.tools.${tool.toolKey}`;
 
                                 return (
                                     <Col xs={24} md={12} lg={8} key={idx}>
-                                        <Tooltip title={!accessible ? 'Contact admin to request access' : ''} placement="top">
+                                        <Tooltip title={!accessible ? t('lobbyPage.lockedTooltip') : ''} placement="top">
                                             <Card
                                                 hoverable={isClickable}
                                                 onClick={() => isClickable && navigate(tool.path)}
                                                 className={`lobby-card card-${catKey}`}
                                                 style={{
                                                     background: isDark ? '#0f172a' : '#ffffff',
-                                                    border: `1px solid ${accessible ? `${meta.accent}20` : 'rgba(239,68,68,0.2)'}`,
-                                                    borderTop: accessible ? `4px solid ${meta.accent}` : '4px solid rgba(239,68,68,0.5)',
+                                                    border: `1px solid ${accessible ? `${accent}20` : 'rgba(239,68,68,0.2)'}`,
+                                                    borderTop: accessible ? `4px solid ${accent}` : '4px solid rgba(239,68,68,0.5)',
                                                     borderRadius: 16,
                                                     height: '100%',
                                                     cursor: isClickable ? 'pointer' : 'default',
                                                     opacity: accessible ? 1 : 0.82,
                                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    boxShadow: isDark 
+                                                    boxShadow: isDark
                                                         ? '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
                                                         : '0 4px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)',
                                                     position: 'relative',
@@ -165,100 +166,98 @@ const Dashboard = () => {
                                                 onMouseEnter={(e) => {
                                                     if (isClickable) {
                                                         e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
-                                                        e.currentTarget.style.boxShadow = isDark 
-                                                            ? `0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px ${meta.accent}30`
-                                                            : `0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px ${meta.accent}20`;
+                                                        e.currentTarget.style.boxShadow = isDark
+                                                            ? `0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px ${accent}30`
+                                                            : `0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px ${accent}20`;
                                                     }
                                                 }}
                                                 onMouseLeave={(e) => {
                                                     e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                                                    e.currentTarget.style.boxShadow = isDark 
+                                                    e.currentTarget.style.boxShadow = isDark
                                                         ? '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
                                                         : '0 4px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)';
                                                 }}
                                             >
-                                                {/* Icon + title row */}
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
                                                     <div style={{
                                                         width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                                                        background: accessible 
-                                                            ? `linear-gradient(135deg, ${meta.accent}25, ${meta.accent}15)`
+                                                        background: accessible
+                                                            ? `linear-gradient(135deg, ${accent}25, ${accent}15)`
                                                             : 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.08))',
-                                                        border: accessible ? `2px solid ${meta.accent}40` : '2px solid rgba(239,68,68,0.3)',
+                                                        border: accessible ? `2px solid ${accent}40` : '2px solid rgba(239,68,68,0.3)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 20, color: accessible ? meta.accent : '#f87171',
-                                                        boxShadow: accessible 
-                                                            ? `0 4px 16px ${meta.accent}30, inset 0 1px 0 rgba(255,255,255,0.2)`
+                                                        fontSize: 20, color: accessible ? accent : '#f87171',
+                                                        boxShadow: accessible
+                                                            ? `0 4px 16px ${accent}30, inset 0 1px 0 rgba(255,255,255,0.2)`
                                                             : '0 4px 16px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
                                                         position: 'relative',
                                                     }}>
                                                         {tool.icon}
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <Text style={{ 
-                                                            fontSize: 16, fontWeight: 800, 
-                                                            color: accessible ? (isDark ? '#f1f5f9' : '#1e293b') : '#64748b', 
+                                                        <Text style={{
+                                                            fontSize: 16, fontWeight: 800,
+                                                            color: accessible ? (isDark ? '#f1f5f9' : '#1e293b') : '#64748b',
                                                             display: 'block', lineHeight: 1.3, marginBottom: 8
                                                         }}>
-                                                            {tool.name}
+                                                            {t(`${tk}.name`)}
                                                         </Text>
                                                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                                            <Tag style={{ 
-                                                                background: `${meta.accent}15`, 
-                                                                border: `1px solid ${meta.accent}35`, 
-                                                                color: meta.accent, fontSize: 11, borderRadius: 6, 
+                                                            <Tag style={{
+                                                                background: `${accent}15`,
+                                                                border: `1px solid ${accent}35`,
+                                                                color: accent, fontSize: 11, borderRadius: 6,
                                                                 lineHeight: '18px', padding: '0 8px', margin: 0,
                                                                 fontWeight: 600
                                                             }}>
-                                                                {tool.platform}
+                                                                {t(`${tk}.platform`)}
                                                             </Tag>
-                                                            <Tag style={{ 
-                                                                background: isDark ? 'rgba(51,65,85,0.3)' : 'rgba(241,245,249,0.8)', 
-                                                                border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, 
-                                                                color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, 
+                                                            <Tag style={{
+                                                                background: isDark ? 'rgba(51,65,85,0.3)' : 'rgba(241,245,249,0.8)',
+                                                                border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                                                                color: isDark ? '#94a3b8' : '#64748b', fontSize: 11,
                                                                 borderRadius: 6, lineHeight: '18px', padding: '0 8px', margin: 0,
                                                                 fontWeight: 500
                                                             }}>
-                                                                {tool.main_user}
+                                                                {t(`${tk}.mainUser`)}
                                                             </Tag>
                                                         </div>
                                                     </div>
                                                     {!accessible && <LockOutlined style={{ color: '#f87171', fontSize: 16, flexShrink: 0, marginTop: 4 }} />}
                                                 </div>
 
-                                                <Text style={{ 
-                                                    color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, 
+                                                <Text style={{
+                                                    color: isDark ? '#94a3b8' : '#64748b', fontSize: 13,
                                                     lineHeight: 1.7, flexGrow: 1, marginBottom: 16, display: 'block',
                                                     fontWeight: 400
                                                 }}>
-                                                    {tool.desc}
+                                                    {t(`${tk}.desc`)}
                                                 </Text>
 
-                                                {/* CTA */}
                                                 {accessible ? (
                                                     <Button
                                                         type="primary"
                                                         size="middle"
                                                         style={{
-                                                            background: `linear-gradient(135deg, ${meta.accent}, ${meta.accent}dd)`,
+                                                            background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
                                                             border: 'none',
                                                             borderRadius: 8,
                                                             fontSize: 13,
                                                             fontWeight: 700,
                                                             height: 36,
-                                                            boxShadow: `0 4px 12px ${meta.accent}40`,
+                                                            boxShadow: `0 4px 12px ${accent}40`,
                                                             transition: 'all 0.3s ease',
                                                         }}
                                                         onMouseEnter={(e) => {
                                                             e.currentTarget.style.transform = 'translateY(-1px)';
-                                                            e.currentTarget.style.boxShadow = `0 6px 20px ${meta.accent}60`;
+                                                            e.currentTarget.style.boxShadow = `0 6px 20px ${accent}60`;
                                                         }}
                                                         onMouseLeave={(e) => {
                                                             e.currentTarget.style.transform = 'translateY(0)';
-                                                            e.currentTarget.style.boxShadow = `0 4px 12px ${meta.accent}40`;
+                                                            e.currentTarget.style.boxShadow = `0 4px 12px ${accent}40`;
                                                         }}
                                                     >
-                                                        Launch <ArrowRightOutlined style={{ fontSize: 12, marginLeft: 6 }} />
+                                                        {t('lobbyPage.launch')} <ArrowRightOutlined style={{ fontSize: 12, marginLeft: 6 }} />
                                                     </Button>
                                                 ) : (
                                                     <Button
@@ -275,7 +274,7 @@ const Dashboard = () => {
                                                             color: isDark ? '#fca5a5' : '#dc2626',
                                                         }}
                                                     >
-                                                        Request Access
+                                                        {t('lobbyPage.requestAccessCta')}
                                                     </Button>
                                                 )}
                                             </Card>

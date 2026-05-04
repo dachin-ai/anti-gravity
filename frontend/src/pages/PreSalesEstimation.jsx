@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
 
@@ -23,6 +24,7 @@ const SectionHeading = ({ icon, children, color = '#ec4899' }) => (
 );
 
 const PreSalesEstimation = () => {
+    const { t } = useTranslation();
     const [fileList, setFileList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -30,7 +32,7 @@ const PreSalesEstimation = () => {
 
     const handleUpload = async () => {
         if (!fileList.length) {
-            message.warning('Please upload a TikTok Order Export file (.csv or .xlsx)');
+            message.warning(t('preSales.uploadWarn'));
             return;
         }
 
@@ -74,30 +76,30 @@ const PreSalesEstimation = () => {
     return (
         <div>
             <PageHeader
-                title={<Bi e="Pre-Sales Dashboard" c="预售看板" />}
-                subtitle={<Bi e="Automated Logistics Intelligence & SKU Orchestration" c="自动化物流智能与 SKU 协同" />}
+                title={<Bi i18nKey="preSales.title" />}
+                subtitle={<Bi i18nKey="preSales.subtitle" />}
                 accent="#ec4899"
             />
 
             <Row gutter={24}>
                 <Col xs={24} md={8}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-                         <SectionHeading icon={<SettingOutlined />}><Bi e="Engine Processing" c="处理引擎" /></SectionHeading>
+                         <SectionHeading icon={<SettingOutlined />}><Bi i18nKey="preSales.engine" /></SectionHeading>
                          <Text style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 16 }}>
-                            <Bi e="Extract raw data from TikTok Shop Seller Center. Ensure you include Column AM (Warehouse)." c="从 TikTok 卖家中心提取原始数据，请确保报表包含 AM 列（发货仓）。" />
+                            <Bi i18nKey="preSales.engineIntro" />
                          </Text>
                          <ul style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 20, margin: 0 }}>
-                            <li style={{ marginBottom: 6 }}><Bi e="Finds 'To Ship' orders" c="自动过滤并查找“待出货”订单" /></li>
-                            <li style={{ marginBottom: 6 }}><Bi e="Reads QTY & Warehouses" c="读取商品数量与发货仓信息" /></li>
-                            <li style={{ marginBottom: 6 }}><Bi e="Validates SKU length (≥11)" c="验证 SKU 格式与长度 (≥11)" /></li>
-                            <li style={{ marginBottom: 0 }}><Bi e="Syncs with Master Data Google Sheet" c="与核心主数据 (Google Sheet) 实时同步" /></li>
+                            <li style={{ marginBottom: 6 }}><Bi i18nKey="preSales.li1" /></li>
+                            <li style={{ marginBottom: 6 }}><Bi i18nKey="preSales.li2" /></li>
+                            <li style={{ marginBottom: 6 }}><Bi i18nKey="preSales.li3" /></li>
+                            <li style={{ marginBottom: 0 }}><Bi i18nKey="preSales.li4" /></li>
                          </ul>
                     </div>
                 </Col>
 
                 <Col xs={24} md={16}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px' }}>
-                        <SectionHeading icon={<FolderOpenOutlined />}><Bi e="Upload Target File" c="上传目标文件" /></SectionHeading>
+                        <SectionHeading icon={<FolderOpenOutlined />}><Bi i18nKey="preSales.uploadFile" /></SectionHeading>
                         <Dragger
                             maxCount={1}
                             beforeUpload={(file) => { setFileList([file]); return false; }}
@@ -116,12 +118,12 @@ const PreSalesEstimation = () => {
                                             {file.size ? '(' + (file.size / 1024 / 1024 > 1 ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : (file.size / 1024).toFixed(2) + ' KB') + ')' : ''}
                                         </span>
                                     </Text>
-                                    <Button type="text" size="small" danger onClick={remove} style={{ fontSize: 12, color: '#ef4444' }}><Bi e="Remove" c="移除" /></Button>
+                                    <Button type="text" size="small" danger onClick={remove} style={{ fontSize: 12, color: '#ef4444' }}><Bi i18nKey="preSales.remove" /></Button>
                                 </div>
                             )}
                         >
                             <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#001F3F' }} /></p>
-                            <p className="ant-upload-text" style={{ color: 'var(--text-main)', fontSize: 16 }}><Bi e="Click or drag TikTok Raw Data here" c="点击或拖拽 TikTok原始数据到此处" /></p>
+                            <p className="ant-upload-text" style={{ color: 'var(--text-main)', fontSize: 16 }}><Bi i18nKey="preSales.uploadHint" /></p>
                         </Dragger>
 
                         <Button
@@ -135,37 +137,37 @@ const PreSalesEstimation = () => {
                                 boxShadow: '0 4px 14px rgba(0,31,63,0.3)',
                             }}
                         >
-                            {loading ? <Bi e="Initializing Robust Pipeline..." c="正在初始化数据管道..." /> : <Bi e="Generate Distribution" c="生成发货分布" />}
+                            {loading ? <Bi i18nKey="preSales.initPipeline" /> : <Bi i18nKey="preSales.generateDist" />}
                         </Button>
                     </div>
 
                     {result && !loading && (
                         <div style={{ marginTop: 32 }}>
                             <Divider style={{ borderColor: 'var(--border)' }} />
-                            <SectionHeading icon={<FileTextOutlined />}><Bi e="Executive Summary" c="执行摘要" /></SectionHeading>
+                            <SectionHeading icon={<FileTextOutlined />}><Bi i18nKey="preSales.execSummary" /></SectionHeading>
 
                             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                                 <Col xs={24} md={8}>
                                     <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><ShoppingCartOutlined/> <Bi e="Orders Found" c="找到订单" /></div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><ShoppingCartOutlined/> <Bi i18nKey="preSales.ordersFound" /></div>
                                         <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--text-main)' }}>{result.summary.orders_found.toLocaleString()}</div>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
                                     <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><CheckCircleOutlined/> <Bi e="Valid SKUs (≥11)" c="有效 SKU (≥11)" /></div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><CheckCircleOutlined/> <Bi i18nKey="preSales.validSkus" /></div>
                                         <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--text-main)' }}>{result.summary.valid_skus.toLocaleString()}</div>
                                     </div>
                                 </Col>
                                 <Col xs={24} md={8}>
                                     <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><CodeSandboxOutlined/> <Bi e="Total Item Volume" c="总出货量" /></div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}><CodeSandboxOutlined/> <Bi i18nKey="preSales.totalVolume" /></div>
                                         <div style={{ fontSize: 32, fontWeight: 800, color: '#3b82f6' }}>{result.summary.total_volume.toLocaleString()}</div>
                                     </div>
                                 </Col>
                             </Row>
 
-                            <SectionHeading icon={<TableOutlined />}><Bi e="Analysis Matrix (Preview)" c="分析矩阵（预览）" /></SectionHeading>
+                            <SectionHeading icon={<TableOutlined />}><Bi i18nKey="preSales.matrixPreview" /></SectionHeading>
                             <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 24 }}>
                                 <Table 
                                     columns={topColumns} 
@@ -187,7 +189,7 @@ const PreSalesEstimation = () => {
                                     boxShadow: '0 4px 14px rgba(0,31,63,0.3)', width: '100%',
                                 }}
                             >
-                                <Bi e="Export Full Report" c="导出完整报告" />
+                                <Bi i18nKey="preSales.exportReport" />
                             </Button>
                         </div>
                     )}

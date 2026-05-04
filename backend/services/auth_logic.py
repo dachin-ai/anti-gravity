@@ -238,14 +238,13 @@ def sync_users_from_sheet() -> Tuple[bool, str]:
                 ).first()
                 
                 if existing:
-                    # Update existing user
+                    # Update existing user (email, password, approval, permissions from sheet).
+                    # Do NOT overwrite `name`: admin-assigned display names are edited in Access Management
+                    # and stored in PostgreSQL; sheet sync should not revert them.
                     existing.email = str(user.get("Email", "")).strip()
                     existing.password = str(user.get("Password", "")).strip()
                     existing.approval = str(user.get("Approval", "")).strip()
                     existing.permissions = perms
-                    sheet_name = str(user.get("Name", "")).strip()
-                    if sheet_name:
-                        existing.name = sheet_name
                 else:
                     # Insert new user
                     sheet_name = str(user.get("Name", "")).strip()
@@ -447,6 +446,31 @@ def verify_token(token: str) -> Optional[Dict]:
         return None
     except jwt.InvalidTokenError:
         return None
+
+
+def get_user_auth_claims_from_db(username: str) -> Optional[Dict]:
+    """
+    Current display name, email, and permissions for a user (canonical casing from DB).
+    Used after JWT validation so the UI shows admin-maintained name, not only claims
+    frozen at login time.
+    """
+    if not username or not str(username).strip():
+        return None
+    db = SessionLocal()
+    try:
+        user = db.query(AccountUser).filter(
+            AccountUser.username.ilike(username.strip().lower())
+        ).first()
+        if not user:
+            return None
+        return {
+            "username": user.username,
+            "name": user.name or user.username,
+            "email": user.email or "",
+            "permissions": normalize_permissions(user.permissions),
+        }
+    finally:
+        db.close()
 
 
 def log_activity(username: str, tool_name: str, ip_address: str = ""):

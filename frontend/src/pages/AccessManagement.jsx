@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Table, Button, Tag, Checkbox, message, Typography, Space, Badge, Input } from 'antd';
 import {
-    CheckOutlined, CloseOutlined, ReloadOutlined,
+    CheckOutlined, CloseOutlined, ReloadOutlined, SaveOutlined,
     ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import {
     getAccessRequests, approveAccessRequest, rejectAccessRequest,
     getAllUsersWithPermissions, updateUserPermissions,
@@ -13,18 +14,17 @@ import UserActivity from './UserActivity';
 
 const { Text } = Typography;
 
-// group: 'admin' | 'freemir' | 'shopee' | 'tiktok'
-const ALL_TOOLS = [
-    { key: 'admin',                 label: 'Admin',              group: 'admin'   },
-    { key: 'price_checker',         label: 'Price Checker',      group: 'freemir' },
-    { key: 'order_planner',         label: 'Order Planner',      group: 'freemir' },
-    { key: 'product_performance',   label: 'Product Perf.',      group: 'freemir' },
-    { key: 'order_review',          label: 'Order Review',       group: 'shopee'  },
-    { key: 'affiliate_performance', label: 'Shopee Affiliate',   group: 'shopee'  },
-    { key: 'livestream_display',    label: 'LS Display',         group: 'shopee'  },
-    { key: 'pre_sales',             label: 'Pre-Sales',          group: 'tiktok'  },
-    { key: 'affiliate_analyzer',    label: 'Affiliate Analyzer', group: 'tiktok'  },
-    { key: 'ads_analyzer',          label: 'TikTok Ads',         group: 'tiktok'  },
+const PERM_TOOLS = [
+    { key: 'admin',                 group: 'admin'   },
+    { key: 'price_checker',         group: 'freemir' },
+    { key: 'order_planner',         group: 'freemir' },
+    { key: 'product_performance',   group: 'freemir' },
+    { key: 'order_review',          group: 'shopee'  },
+    { key: 'affiliate_performance', group: 'shopee'  },
+    { key: 'livestream_display',    group: 'shopee'  },
+    { key: 'pre_sales',             group: 'tiktok'  },
+    { key: 'affiliate_analyzer',    group: 'tiktok'  },
+    { key: 'ads_analyzer',          group: 'tiktok'  },
 ];
 
 const GROUP_STYLE = {
@@ -34,17 +34,23 @@ const GROUP_STYLE = {
     tiktok:  { color: '#ec4899', bg: 'rgba(236,72,153,0.10)',  border: 'rgba(236,72,153,0.25)' },
 };
 
-const statusTag = (status) => {
-    if (status === 'pending')  return <Tag icon={<ClockCircleOutlined />}  color="gold">Pending</Tag>;
-    if (status === 'approved') return <Tag icon={<CheckCircleOutlined />}  color="success">Approved</Tag>;
-    return                            <Tag icon={<CloseCircleOutlined />}  color="error">Rejected</Tag>;
-};
+function StatusTag({ status }) {
+    const { t } = useTranslation();
+    if (status === 'pending') {
+        return <Tag icon={<ClockCircleOutlined />} color="gold">{t('accessMgmt.statusPending')}</Tag>;
+    }
+    if (status === 'approved') {
+        return <Tag icon={<CheckCircleOutlined />} color="success">{t('accessMgmt.statusApproved')}</Tag>;
+    }
+    return <Tag icon={<CloseCircleOutlined />} color="error">{t('accessMgmt.statusRejected')}</Tag>;
+}
 
 /* ─────────────── Tab 1: Access Requests ─────────────── */
 function AccessRequestsTab() {
+    const { t } = useTranslation();
     const [data, setData]       = useState([]);
     const [loading, setLoading] = useState(true);
-    const [acting, setActing]   = useState(null); // id being processed
+    const [acting, setActing]   = useState(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -52,25 +58,25 @@ function AccessRequestsTab() {
             const res = await getAccessRequests();
             setData(res.data);
         } catch {
-            message.error('Failed to load requests');
+            message.error(t('accessMgmt.msgLoadRequestsFail'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleApprove = async (id) => {
-        const nameInput = window.prompt('Enter display name for this user (required if empty):');
+        const nameInput = window.prompt(t('accessMgmt.promptDisplayName'));
         if (nameInput === null) return;
 
         setActing(id);
         try {
             await approveAccessRequest(id, nameInput.trim());
-            message.success('Request approved');
+            message.success(t('accessMgmt.msgApproved'));
             fetchData();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to approve');
+            message.error(err.response?.data?.detail || t('accessMgmt.msgApproveFail'));
         } finally {
             setActing(null);
         }
@@ -80,10 +86,10 @@ function AccessRequestsTab() {
         setActing(id);
         try {
             await rejectAccessRequest(id);
-            message.success('Request rejected');
+            message.success(t('accessMgmt.msgRejected'));
             fetchData();
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to reject');
+            message.error(err.response?.data?.detail || t('accessMgmt.msgRejectFail'));
         } finally {
             setActing(null);
         }
@@ -92,23 +98,23 @@ function AccessRequestsTab() {
     const pendingCount = data.filter(r => r.status === 'pending').length;
 
     const columns = [
-        { title: 'Username',    dataIndex: 'username',  key: 'username', width: 160 },
+        { title: t('accessMgmt.colUsername'), dataIndex: 'username', key: 'username', width: 160 },
         {
-            title: 'Tool',
+            title: t('accessMgmt.colTool'),
             dataIndex: 'tool_key',
             key: 'tool',
-            render: v => ALL_TOOLS.find(t => t.key === v)?.label || v,
+            render: (v) => t(`accessMgmt.toolLabels.${v}`, { defaultValue: v }),
         },
-        { title: 'Status', dataIndex: 'status', key: 'status', width: 120, render: statusTag },
+        { title: t('accessMgmt.colStatus'), dataIndex: 'status', key: 'status', width: 120, render: (s) => <StatusTag status={s} /> },
         {
-            title: 'Requested At',
+            title: t('accessMgmt.colRequestedAt'),
             dataIndex: 'created_at',
             key: 'time',
             width: 180,
             render: v => v ? new Date(v).toLocaleString() : '—',
         },
         {
-            title: 'Actions',
+            title: t('accessMgmt.colActions'),
             key: 'actions',
             width: 180,
             render: (_, row) => row.status !== 'pending' ? null : (
@@ -121,7 +127,7 @@ function AccessRequestsTab() {
                         onClick={() => handleApprove(row.id)}
                         style={{ background: '#10b981', border: 'none', borderRadius: 6 }}
                     >
-                        Approve
+                        {t('accessMgmt.approve')}
                     </Button>
                     <Button
                         size="small"
@@ -131,7 +137,7 @@ function AccessRequestsTab() {
                         onClick={() => handleReject(row.id)}
                         style={{ borderRadius: 6 }}
                     >
-                        Reject
+                        {t('accessMgmt.reject')}
                     </Button>
                 </Space>
             ),
@@ -144,11 +150,11 @@ function AccessRequestsTab() {
                 <Space>
                     <Text style={{ color: 'var(--text-muted)' }}>
                         {pendingCount > 0
-                            ? <><Badge color="gold" /><span style={{ marginLeft: 6 }}>{pendingCount} pending review</span></>
-                            : 'No pending requests'}
+                            ? <><Badge color="gold" /><span style={{ marginLeft: 6 }}>{t('accessMgmt.pendingReview', { count: pendingCount })}</span></>
+                            : t('accessMgmt.noPending')}
                     </Text>
                 </Space>
-                <Button icon={<ReloadOutlined />} onClick={fetchData} size="small">Refresh</Button>
+                <Button icon={<ReloadOutlined />} onClick={fetchData} size="small">{t('accessMgmt.refresh')}</Button>
             </div>
             <Table
                 dataSource={data}
@@ -164,10 +170,16 @@ function AccessRequestsTab() {
 
 /* ─────────────── Tab 2: User Permissions Matrix ─────────────── */
 function UserPermissionsTab() {
+    const { t } = useTranslation();
     const [users, setUsers]     = useState([]);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving]   = useState(null); // username being saved
+    const [saving, setSaving]   = useState(null);
     const [editingNames, setEditingNames] = useState({});
+    /** Latest display names for API calls (permission toggles run before React re-renders). */
+    const editingNamesRef = useRef({});
+    useEffect(() => {
+        editingNamesRef.current = editingNames;
+    }, [editingNames]);
 
     const normalizePermissions = (permissions) => {
         if (!permissions) return {};
@@ -201,18 +213,17 @@ function UserPermissionsTab() {
             setUsers(normalized);
             setEditingNames(Object.fromEntries(normalized.map((u) => [u.username, u.name || u.username])));
         } catch {
-            message.error('Failed to load users');
+            message.error(t('accessMgmt.msgLoadUsersFail'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
     const togglePermission = async (username, toolKey, currentValue) => {
         const currentInt = toPermissionInt(currentValue);
         const newValue = currentInt === 1 ? 0 : 1;
-        // Optimistic update
         setUsers(prev => prev.map(u =>
             u.username === username
                 ? { ...u, permissions: { ...u.permissions, [toolKey]: newValue } }
@@ -222,10 +233,11 @@ function UserPermissionsTab() {
         try {
             const user = users.find(u => u.username === username);
             const updatedPerms = { ...normalizePermissions(user?.permissions), [toolKey]: newValue };
-            await updateUserPermissions(username, updatedPerms, editingNames[username] ?? user?.name ?? username);
+            const displayName =
+                editingNamesRef.current[username] ?? user?.name ?? user?.username ?? username;
+            await updateUserPermissions(username, updatedPerms, displayName);
         } catch (err) {
-            message.error('Failed to update permission');
-            // Revert on failure
+            message.error(t('accessMgmt.msgPermFail'));
             setUsers(prev => prev.map(u =>
                 u.username === username
                     ? { ...u, permissions: { ...u.permissions, [toolKey]: currentInt } }
@@ -241,7 +253,7 @@ function UserPermissionsTab() {
         if (!user) return;
         const nextName = (editingNames[username] || '').trim();
         if (!nextName) {
-            message.warning('Name cannot be empty.');
+            message.warning(t('accessMgmt.msgNameEmpty'));
             setEditingNames((prev) => ({ ...prev, [username]: user.name || user.username }));
             return;
         }
@@ -251,16 +263,41 @@ function UserPermissionsTab() {
         try {
             await updateUserPermissions(username, normalizePermissions(user.permissions), nextName);
             setUsers((prev) => prev.map((u) => (u.username === username ? { ...u, name: nextName } : u)));
-            message.success(`Name updated for ${username}`);
+            message.success(t('accessMgmt.msgNameUpdated', { username }));
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Failed to update name');
+            message.error(err.response?.data?.detail || t('accessMgmt.msgNameFail'));
             setEditingNames((prev) => ({ ...prev, [username]: user.name || user.username }));
         } finally {
             setSaving(null);
         }
     };
 
-    const toolColumns = ALL_TOOLS.map(tool => {
+    /** Selalu tulis semua baris: nama dari UI + permission saat ini → database (tanpa cek diff). */
+    const saveAllDisplayNames = async () => {
+        if (!users.length) return;
+        setSaving('__bulk_names__');
+        try {
+            let ok = 0;
+            for (const u of users) {
+                let nextName = (editingNames[u.username] ?? u.name ?? u.username ?? '').trim();
+                if (!nextName) nextName = String(u.username || '').trim() || u.username;
+                await updateUserPermissions(u.username, normalizePermissions(u.permissions), nextName);
+                ok += 1;
+                setUsers((prev) =>
+                    prev.map((x) => (x.username === u.username ? { ...x, name: nextName } : x)),
+                );
+                setEditingNames((prev) => ({ ...prev, [u.username]: nextName }));
+            }
+            message.success(t('accessMgmt.msgAllNamesSaved', { count: ok }));
+        } catch (err) {
+            message.error(err.response?.data?.detail || t('accessMgmt.msgSaveAllFail'));
+            await fetchUsers();
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    const toolColumns = PERM_TOOLS.map(tool => {
         const gs = GROUP_STYLE[tool.group] || GROUP_STYLE.freemir;
         return {
             title: (
@@ -275,7 +312,7 @@ function UserPermissionsTab() {
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
                 }}>
-                    {tool.label}
+                    {t(`accessMgmt.toolLabels.${tool.key}`)}
                 </div>
             ),
             key: tool.key,
@@ -284,7 +321,7 @@ function UserPermissionsTab() {
             render: (_, row) => (
                 <Checkbox
                     checked={toPermissionInt(row.permissions?.[tool.key]) === 1}
-                    disabled={saving === row.username}
+                    disabled={saving === row.username || saving === '__bulk_names__'}
                     onChange={() => togglePermission(row.username, tool.key, row.permissions?.[tool.key] ?? 0)}
                 />
             ),
@@ -293,7 +330,7 @@ function UserPermissionsTab() {
 
     const columns = [
         {
-            title: 'Username',
+            title: t('accessMgmt.colUsername'),
             dataIndex: 'username',
             key: 'username',
             fixed: 'left',
@@ -301,7 +338,7 @@ function UserPermissionsTab() {
             render: v => <Text strong style={{ color: 'var(--text-main)' }}>{v}</Text>,
         },
         {
-            title: 'Name',
+            title: t('accessMgmt.colName'),
             dataIndex: 'name',
             key: 'name',
             width: 180,
@@ -309,7 +346,7 @@ function UserPermissionsTab() {
                 <Input
                     size="small"
                     value={editingNames[row.username] ?? row.name ?? row.username}
-                    disabled={saving === row.username}
+                    disabled={saving === row.username || saving === '__bulk_names__'}
                     onChange={(e) =>
                         setEditingNames((prev) => ({ ...prev, [row.username]: e.target.value }))
                     }
@@ -319,7 +356,7 @@ function UserPermissionsTab() {
             ),
         },
         {
-            title: 'Email',
+            title: t('accessMgmt.colEmail'),
             dataIndex: 'email',
             key: 'email',
             width: 220,
@@ -330,8 +367,30 @@ function UserPermissionsTab() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                <Button icon={<ReloadOutlined />} onClick={fetchUsers} size="small">Refresh</Button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12, maxWidth: 560, lineHeight: 1.5 }}>
+                    {t('accessMgmt.permissionsHint')}
+                </Text>
+                <Space wrap>
+                    <Button
+                        icon={<SaveOutlined />}
+                        type="primary"
+                        size="small"
+                        loading={saving === '__bulk_names__'}
+                        disabled={loading || saving === '__bulk_names__'}
+                        onClick={saveAllDisplayNames}
+                    >
+                        {t('accessMgmt.saveNames')}
+                    </Button>
+                    <Button
+                        icon={<ReloadOutlined />}
+                        size="small"
+                        loading={loading}
+                        onClick={fetchUsers}
+                    >
+                        {t('accessMgmt.reloadFromDb')}
+                    </Button>
+                </Space>
             </div>
             <Table
                 dataSource={users}
@@ -348,32 +407,32 @@ function UserPermissionsTab() {
 
 /* ─────────────── Main Page ─────────────── */
 export default function AccessManagement() {
-    // TODO: Ganti dengan pengecekan permission admin dari context/auth jika sudah ada
+    const { t } = useTranslation();
     const isAdmin = true;
     const tabItems = [
         {
             key: 'requests',
-            label: 'Access Requests',
+            label: t('accessMgmt.tabRequests'),
             children: <AccessRequestsTab />,
         },
         {
             key: 'permissions',
-            label: 'User Permissions',
+            label: t('accessMgmt.tabPermissions'),
             children: <UserPermissionsTab />,
         },
     ];
     if (isAdmin) {
         tabItems.push({
             key: 'user-activity',
-            label: 'User Activity',
+            label: t('accessMgmt.tabActivity'),
             children: <UserActivity />,
         });
     }
     return (
         <div style={{ padding: '24px 32px' }}>
             <PageHeader
-                title="Access Management"
-                subtitle="Review access requests and manage user permissions"
+                title={t('accessMgmt.title')}
+                subtitle={t('accessMgmt.subtitle')}
                 accent="#f59e0b"
             />
             <div style={{

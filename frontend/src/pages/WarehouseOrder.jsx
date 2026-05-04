@@ -10,6 +10,7 @@ import {
     CalendarOutlined, BarChartOutlined, TableOutlined
 } from '@ant-design/icons';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import Bi from '../components/Bi';
 import PageHeader from '../components/PageHeader';
@@ -95,6 +96,7 @@ const EditableGrid = ({ rows, setRows, columns, addLabel }) => {
 
 /* ─── Main Component ─── */
 const WarehouseOrder = () => {
+    const { t } = useTranslation();
     const { logActivity } = useAuth();
 
     const [aov, setAov] = useState(null);
@@ -120,7 +122,7 @@ const WarehouseOrder = () => {
     const [result, setResult] = useState(null);
 
     const handleCalculate = async () => {
-        if (!aov || aov <= 0) { message.warning('Please set a valid Average Order Value (AOV)'); return; }
+        if (!aov || aov <= 0) { message.warning(t('warehouse.msgAovRequired')); return; }
         setLoading(true);
         setResult(null);
         try {
@@ -132,10 +134,10 @@ const WarehouseOrder = () => {
                 events,
             });
             setResult(res.data);
-            message.success('Estimation generated!');
+            message.success(t('warehouse.msgGenerated'));
             logActivity('Warehouse Order Estimator');
         } catch (err) {
-            message.error(err.response?.data?.detail || 'Calculation failed.');
+            message.error(err.response?.data?.detail || t('warehouse.msgCalcFail'));
         } finally {
             setLoading(false);
         }
@@ -156,7 +158,7 @@ const WarehouseOrder = () => {
 
         const cols = [
             {
-                title: <Bi e="Warehouse" c="发货仓" />,
+                title: <Bi i18nKey="warehouse.colWarehouse" />,
                 dataIndex: 'Warehouse',
                 key: 'Warehouse',
                 fixed: 'left',
@@ -164,17 +166,17 @@ const WarehouseOrder = () => {
                 render: v => <Text strong style={{ color: 'var(--text-main)', fontSize: 12 }}>{v}</Text>
             },
             ...days.map(d => ({
-                title: <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, color: '#94a3b8' }}><Bi e={`Day ${d}`} c={`第 ${d} 天`} /></div>,
+                title: <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, color: 'var(--text-muted)' }}>{t('warehouse.dayHeader', { n: d })}</div>,
                 key: `day_${d}`,
                 children: platform_names.map(p => ({
-                    title: <div style={{ fontSize: 10, color: '#64748b', textAlign: 'center' }}>{p}</div>,
+                    title: <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center' }}>{p}</div>,
                     dataIndex: `D${d}|${p}`,
                     key: `D${d}|${p}`,
                     width: 72,
                     align: 'right',
                     render: val => val != null
-                        ? <span style={{ fontSize: 12, fontWeight: 600, color: val > 0 ? '#38bdf8' : 'var(--text-muted)' }}>{val.toLocaleString()}</span>
-                        : <span style={{ color: '#334155', fontSize: 11 }}>—</span>
+                        ? <span style={{ fontSize: 12, fontWeight: 600, color: val > 0 ? 'var(--indigo)' : 'var(--text-muted)' }}>{val.toLocaleString()}</span>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>
                 }))
             }))
         ];
@@ -193,11 +195,11 @@ const WarehouseOrder = () => {
     };
 
     const platCols = [
-        { key: 'name', label: <Bi e="Platform" c="平台" />, type: 'text', placeholder: 'e.g. Shopee', width: '2fr' },
+        { key: 'name', label: <Bi i18nKey="warehouse.platform" />, type: 'text', placeholder: 'e.g. Shopee', width: '2fr' },
         { key: 'number', label: '#', type: 'number', placeholder: '1', min: 1, width: '0.7fr' },
         { 
             key: 'target', 
-            label: <Bi e="Monthly Target (Rp)" c="月度目标 (Rp)" />, 
+            label: <Bi i18nKey="warehouse.monthlyTarget" />, 
             type: 'number', 
             placeholder: 'e.g. 10000000', 
             width: '2fr',
@@ -206,21 +208,21 @@ const WarehouseOrder = () => {
         },
     ];
     const whCols = [
-        { key: 'name', label: <Bi e="Warehouse" c="发货仓" />, type: 'text', placeholder: 'e.g. Cikarang', width: '2fr' },
+        { key: 'name', label: <Bi i18nKey="warehouse.whName" />, type: 'text', placeholder: 'e.g. Cikarang', width: '2fr' },
         { key: 'number', label: '#', type: 'number', placeholder: '1', min: 1, width: '0.7fr' },
-        { key: 'proportion', label: <Bi e="Proportion (%)" c="占比 (%)" />, type: 'number', placeholder: '85', min: 0, width: '1.5fr' },
+        { key: 'proportion', label: <Bi i18nKey="warehouse.proportion" />, type: 'number', placeholder: '85', min: 0, width: '1.5fr' },
     ];
     const evCols = [
-        { key: 'name', label: <Bi e="Event Name" c="活动节点" />, type: 'text', placeholder: 'Pay Day', width: '1.5fr' },
-        { key: 'dates_str', label: <Bi e="Dates (e.g. 25 or 5+6+7)" c="日期 (例: 25 或 5+6+7)" />, type: 'text', placeholder: '25', width: '2fr' },
-        { key: 'proportion', label: <Bi e="Total Proportion (%)" c="总销售占比 (%)" />, type: 'number', placeholder: '20', min: 0, width: '1.5fr' },
+        { key: 'name', label: <Bi i18nKey="warehouse.eventName" />, type: 'text', placeholder: 'Pay Day', width: '1.5fr' },
+        { key: 'dates_str', label: <Bi i18nKey="warehouse.datesHint" />, type: 'text', placeholder: '25', width: '2fr' },
+        { key: 'proportion', label: <Bi i18nKey="warehouse.totalProportion" />, type: 'number', placeholder: '20', min: 0, width: '1.5fr' },
     ];
 
     return (
         <div>
             <PageHeader
-                title={<Bi e="Order Planner" c="订单规划器" />}
-                subtitle={<Bi e="Calculate daily order estimations per warehouse & platform based on monthly targets" c="基于月度金额目标，计算每日对应各发货平台与仓库的预估分单量" />}
+                title={<Bi i18nKey="warehouse.title" />}
+                subtitle={<Bi i18nKey="warehouse.subtitle" />}
                 accent="#6366f1"
             />
 
@@ -229,10 +231,10 @@ const WarehouseOrder = () => {
                 <Col xs={24} lg={9}>
                     {/* General Params */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading icon={<SettingOutlined />}><Bi e="General Parameters" c="通用参数" /></SectionHeading>
+                        <SectionHeading icon={<SettingOutlined />}><Bi i18nKey="warehouse.generalParams" /></SectionHeading>
                         <Row gutter={12} align="bottom">
                             <Col span={14}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi e="Average Order Value (AOV)" c="客单价均值" /></div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi i18nKey="warehouse.aov" /></div>
                                 <InputNumber
                                     value={aov}
                                     onChange={setAov}
@@ -245,7 +247,7 @@ const WarehouseOrder = () => {
                                 />
                             </Col>
                             <Col span={10}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi e="Days in Month" c="当月天数" /></div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, minHeight: 32, display: 'flex', alignItems: 'flex-end' }}><Bi i18nKey="warehouse.daysInMonth" /></div>
                                 <InputNumber
                                     value={totalDays}
                                     onChange={v => setTotalDays(v || 31)}
@@ -259,24 +261,24 @@ const WarehouseOrder = () => {
 
                     {/* Platform Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading icon={<ShoppingOutlined />}><Bi e="Platform Configuration" c="平台配置" /></SectionHeading>
+                        <SectionHeading icon={<ShoppingOutlined />}><Bi i18nKey="warehouse.platformConfig" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                            <Bi e="Leave Target empty to exclude platform from estimation" c="将目标值留空即可把该平台排除出整体预算外" />
+                            <Bi i18nKey="warehouse.platformExcludeHint" />
                         </Text>
-                        <EditableGrid rows={platforms} setRows={setPlatforms} columns={platCols} addLabel={<Bi e="Add Platform" c="添加平台" />} />
+                        <EditableGrid rows={platforms} setRows={setPlatforms} columns={platCols} addLabel={<Bi i18nKey="warehouse.addPlatform" />} />
                     </div>
 
                     {/* Warehouse Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading icon={<InboxOutlined />}><Bi e="Warehouse Configuration" c="发货仓配置" /></SectionHeading>
-                        <EditableGrid rows={warehouses} setRows={setWarehouses} columns={whCols} addLabel={<Bi e="Add Warehouse" c="添加发货仓" />} />
+                        <SectionHeading icon={<InboxOutlined />}><Bi i18nKey="warehouse.warehouseConfig" /></SectionHeading>
+                        <EditableGrid rows={warehouses} setRows={setWarehouses} columns={whCols} addLabel={<Bi i18nKey="warehouse.addWarehouse" />} />
                         <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
-                            <Text style={{ fontSize: 12, color: '#94a3b8' }}>
-                                <Bi e="Total proportion:" c="总占比:" /> <strong style={{ color: warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) === 100 ? '#10b981' : '#f59e0b' }}>
+                            <Text style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                <Bi i18nKey="warehouse.totalProp" /> <strong style={{ color: warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) === 100 ? '#10b981' : '#f59e0b' }}>
                                     {warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0)}%
                                 </strong>
                                 {warehouses.reduce((s, w) => s + (Number(w.proportion) || 0), 0) !== 100 && (
-                                    <Tooltip title="Total should be 100% for accurate results"><WarningOutlined style={{ color: '#f59e0b', marginLeft: 6 }} /></Tooltip>
+                                    <Tooltip title={t('warehouse.tooltipProp100')}><WarningOutlined style={{ color: '#f59e0b', marginLeft: 6 }} /></Tooltip>
                                 )}
                             </Text>
                         </div>
@@ -284,11 +286,11 @@ const WarehouseOrder = () => {
 
                     {/* Event Config */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                        <SectionHeading icon={<CalendarOutlined />}><Bi e="Event Configuration" c="活动节点配置" /></SectionHeading>
+                        <SectionHeading icon={<CalendarOutlined />}><Bi i18nKey="warehouse.eventConfig" /></SectionHeading>
                         <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                            <Bi e="Use '+' to specify multiple dates (e.g. 5+6+7+8). Remaining days become Regular Day." c="使用 '+' 指定多个大促日期（例如：5+6+7+8）。未指定的日期将自动成为平销期。" />
+                            <Bi i18nKey="warehouse.eventDatesHint" />
                         </Text>
-                        <EditableGrid rows={events} setRows={setEvents} columns={evCols} addLabel={<Bi e="Add Event" c="添加活动" />} />
+                        <EditableGrid rows={events} setRows={setEvents} columns={evCols} addLabel={<Bi i18nKey="warehouse.addEvent" />} />
                     </div>
 
                     {/* Generate Button */}
@@ -302,7 +304,7 @@ const WarehouseOrder = () => {
                             boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
                         }}
                     >
-                        {loading ? <Bi e="Generating Estimation..." c="正在生成订单数量..." /> : <Bi e="Generate Estimation Output" c="生成订单分配估算" />}
+                        {loading ? <Bi i18nKey="warehouse.generating" /> : <Bi i18nKey="warehouse.generateOutput" />}
                     </Button>
                 </Col>
 
@@ -316,9 +318,9 @@ const WarehouseOrder = () => {
                         }}>
                             <BarChartOutlined style={{ fontSize: 44, color: 'var(--text-muted)', opacity: 0.35 }} />
                             <Text style={{ fontSize: 16, color: 'var(--text-muted)' }}>
-                                <Bi e="Configure parameters on the left and click" c="在左侧设置好参数后点击" /> <strong><Bi e="Generate" c="生成" /></strong>
+                                <Bi i18nKey="warehouse.emptyHint1" /> <strong><Bi i18nKey="warehouse.generate" /></strong>
                             </Text>
-                            <Text style={{ fontSize: 13, color: '#475569' }}><Bi e="The estimation matrix will appear here" c="订单推演分配矩阵将显示于此" /></Text>
+                            <Text style={{ fontSize: 13, color: '#475569' }}><Bi i18nKey="warehouse.emptyHint2" /></Text>
                         </div>
                     )}
 
@@ -339,7 +341,7 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.warehouse_names?.length}
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="Warehouses" c="发货仓数" /></Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi i18nKey="warehouse.whCount" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={12} md={6}>
@@ -347,7 +349,7 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#38bdf8', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.platform_names?.filter(p => result.platforms?.find(pl => pl.name === p && pl.target)).length}
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="Active Platforms" c="计入平台" /></Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi i18nKey="warehouse.activePlatforms" /></Text>
                                     </div>
                                 </Col>
                                 <Col xs={12} md={6}>
@@ -355,14 +357,14 @@ const WarehouseOrder = () => {
                                         <div style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b', fontFamily: "'Outfit', sans-serif" }}>
                                             {result.total_wh_prop?.toFixed(0)}%
                                         </div>
-                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi e="WH Coverage" c="发货仓占比" /></Text>
+                                        <Text style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}><Bi i18nKey="warehouse.whCoverage" /></Text>
                                     </div>
                                 </Col>
                             </Row>
 
                             {/* Proportion Summary */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                                     <SectionHeading icon={<BarChartOutlined />}><Bi e="Proportion Distribution Summary" c="占比分布摘要" /></SectionHeading>
+                                     <SectionHeading icon={<BarChartOutlined />}><Bi i18nKey="warehouse.propSummary" /></SectionHeading>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {result.summary?.map((s, i) => (
                                         <div key={i} style={{
@@ -370,7 +372,7 @@ const WarehouseOrder = () => {
                                             borderRadius: 8, padding: '10px 14px', minWidth: 140
                                         }}>
                                             <Text style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>{s.Event}</Text>
-                                            <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s['Days Count']} <Bi e="days" c="天" /> · {s['Each Day (%)']}% /<Bi e="day" c="天" /></Text>
+                                            <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s['Days Count']} <Bi i18nKey="warehouse.daysUnit" /> · {s['Each Day (%)']}% /<Bi i18nKey="warehouse.dayUnit" /></Text>
                                             <div style={{ marginTop: 4 }}>
                                                 <Tag color="blue" style={{ fontSize: 10 }}>{s['Total Prop (%)']}%</Tag>
                                             </div>
@@ -381,9 +383,9 @@ const WarehouseOrder = () => {
 
                             {/* Matrix */}
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16, overflow: 'hidden' }}>
-                                     <SectionHeading icon={<TableOutlined />}><Bi e="Order Estimation Matrix" c="日均订单分配矩阵" /></SectionHeading>
+                                     <SectionHeading icon={<TableOutlined />}><Bi i18nKey="warehouse.matrixTitle" /></SectionHeading>
                                 <Text style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
-                                    <Bi e="Scroll horizontally to see all days. Values = estimated order count per warehouse per day." c="水平滚动查看整月日期流。数字 = 每个仓在当天针对对应平台需要发出的预估单量。" />
+                                    <Bi i18nKey="warehouse.matrixHint" />
                                 </Text>
                                 {renderMatrix()}
                             </div>
@@ -397,7 +399,7 @@ const WarehouseOrder = () => {
                                     boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
                                 }}
                             >
-                                <Bi e="Download Estimation Report (.xlsx)" c="下载最终规划表 (.xlsx)" />
+                                <Bi i18nKey="warehouse.downloadXlsx" />
                             </Button>
                         </div>
                     )}
