@@ -131,33 +131,43 @@ def get_store_pid_to_sku_map(db: Session) -> dict:
     return result
 
 
+# Admin Base spreadsheet — worksheet "Store_Info" (gid=1046982230):
+#   Column C → store code, Column E → full display name (1-based A=0 index below).
+_STORE_INFO_COL_CODE = 2  # C
+_STORE_INFO_COL_NAME = 4  # E
+_STORE_INFO_HEADER_TOKENS = frozenset({"code", "store code", "kode"})
+
+
 def get_store_name_map() -> dict:
+    """code (col C) → full name (col E) from Store_Info. Cached 5 min."""
     cached = _cache_get("store_name_map")
     if cached is not None:
         return cached
-    store_name_map = {}
+    store_name_map: dict[str, str] = {}
     try:
         from services.auth_logic import get_sheet_client
         sh = get_sheet_client()
         ws = sh.worksheet("Store_Info")
         rows = ws.get_all_values()
-        if rows:
-            headers = [str(h).strip().lower() for h in rows[0]]
-            code_idx = next((i for i, h in enumerate(headers) if h in ("code", "store code")), None)
-            name_idx = next((i for i, h in enumerate(headers) if h in ("full name", "store name", "name")), None)
-            if code_idx is not None and name_idx is not None:
-                for row in rows[1:]:
-                    code = row[code_idx].strip() if len(row) > code_idx else ""
-                    name = row[name_idx].strip() if len(row) > name_idx else ""
-                    if code and name:
-                        store_name_map[code] = name
+        for row in rows[1:]:
+            if len(row) <= _STORE_INFO_COL_CODE:
+                continue
+            code = str(row[_STORE_INFO_COL_CODE]).strip()
+            if not code or code.lower() in _STORE_INFO_HEADER_TOKENS:
+                continue
+            name = (
+                str(row[_STORE_INFO_COL_NAME]).strip()
+                if len(row) > _STORE_INFO_COL_NAME
+                else ""
+            )
+            store_name_map[code] = name or code
     except Exception:
         store_name_map = {}
     return _cache_set("store_name_map", store_name_map)
 
 
 def get_at1_store_codes() -> list[str]:
-    """Return store codes from Store_Info. Cached for 5 min."""
+    """Return store codes from Store_Info column C (same sheet as name map). Cached 5 min."""
     cached = _cache_get("at1_store_codes")
     if cached is not None:
         return cached
@@ -168,11 +178,15 @@ def get_at1_store_codes() -> list[str]:
         rows = ws.get_all_values()
         if not rows:
             return _cache_set("at1_store_codes", [])
-        headers = [str(h).strip().lower() for h in rows[0]]
-        code_idx = next((i for i, h in enumerate(headers) if h in ("code", "store code")), None)
-        if code_idx is None:
-            return _cache_set("at1_store_codes", [])
-        stores = sorted(set(r[code_idx].strip() for r in rows[1:] if len(r) > code_idx and r[code_idx].strip()))
+        seen: set[str] = set()
+        for row in rows[1:]:
+            if len(row) <= _STORE_INFO_COL_CODE:
+                continue
+            code = str(row[_STORE_INFO_COL_CODE]).strip()
+            if not code or code.lower() in _STORE_INFO_HEADER_TOKENS:
+                continue
+            seen.add(code)
+        stores = sorted(seen)
         return _cache_set("at1_store_codes", stores)
     except Exception:
         return _cache_set("at1_store_codes", [])
@@ -334,6 +348,26 @@ def process_shopee_upload(db: Session, file_bytes: bytes, week_num: int) -> dict
     }
 
 
+def _excel_identifier_str(val: object) -> str:
+    """Normalize store / PID / MID from Excel without float/scientific corruption for large integers."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return ""
+    if isinstance(val, str):
+        s = val.strip()
+        if s.lower() in ("nan", "none", ""):
+            return ""
+        if s.endswith(".0") and s[:-2].isdigit():
+            s = s[:-2]
+        return s
+    if isinstance(val, int):
+        return str(val)
+    if isinstance(val, float):
+        if val.is_integer() and abs(val) < 2**53:
+            return str(int(val))
+        return str(val).strip()
+    return str(val).strip()
+
+
 def _metric_key(header: object) -> str | None:
     text = str(header).strip().lower() if header is not None else ""
     if "gmv" in text or "销售额" in text:
@@ -375,26 +409,34 @@ def process_tiktok_upload(db: Session, file_bytes: bytes, week_num: int) -> dict
     header_row = 0
     for i in range(min(10, len(raw_df))):
         row_vals = [str(v).strip().lower() for v in raw_df.iloc[i].tolist() if v is not None]
-        if any("store" in v or "店" in v for v in row_vals) and any("pid" in v or "product" in v for v in row_vals):
+        if any("store" in v or "店" in v for v in row_vals) and any(
+            "pid" in v or "product" in v or "产品id" in v or "商品id" in v for v in row_vals
+        ):
             header_row = i
             break
-
-    df = pd.read_excel(io.BytesIO(file_bytes), header=header_row)
 
     def _norm(val: object) -> str:
         return "".join(ch for ch in str(val).lower() if ch.isalnum()) if val is not None else ""
 
+    header_only = pd.read_excel(io.BytesIO(file_bytes), header=header_row, nrows=0)
     store_col = None
     pid_col = None
     picture_col = None
-    for col in df.columns:
+    for col in header_only.columns:
         n = _norm(col)
+        col_l = str(col).lower()
         if store_col is None and ("store" in n or "店" in str(col)):
             store_col = col
-        if pid_col is None and ("pid" in n or "productid" in n or "商品id" in str(col)):
+        if pid_col is None and (
+            "pid" in n or "productid" in n or "商品id" in col_l or "产品id" in col_l
+        ):
             pid_col = col
         if picture_col is None and ("picture" in n or "image" in n or "图片" in str(col)):
             picture_col = col
+
+    str_cols = {c for c in (store_col, pid_col, picture_col) if c is not None}
+    dtype_arg = {c: str for c in str_cols} if str_cols else None
+    df = pd.read_excel(io.BytesIO(file_bytes), header=header_row, dtype=dtype_arg)
     metric_cols = {"gmv": [], "unit": [], "impression": [], "pv": [], "uv": []}
     for idx, col in enumerate(df.columns):
         if idx in (3, 4, 5):
@@ -410,9 +452,9 @@ def process_tiktok_upload(db: Session, file_bytes: bytes, week_num: int) -> dict
         pid_val = row[pid_col] if pid_col in row else (row.iloc[1] if len(row) > 1 else None)
         pic_val = row[picture_col] if picture_col in row else (row.iloc[2] if len(row) > 2 else None)
 
-        store = str(store_val).strip() if pd.notna(store_val) else ""
-        pid = str(pid_val).strip() if pd.notna(pid_val) else ""
-        picture = str(pic_val).strip() if pd.notna(pic_val) else ""
+        store = _excel_identifier_str(store_val)
+        pid = _excel_identifier_str(pid_val)
+        picture = _excel_identifier_str(pic_val)
         if not store or not pid or store == "nan" or pid == "nan":
             skipped += 1
             continue

@@ -97,9 +97,12 @@ def get_summary(db: Session = Depends(get_db)):
 
 
 @router.get("/availability")
-def get_availability(db: Session = Depends(get_db)):
+def get_availability(platform: str = None, db: Session = Depends(get_db)):
     from sqlalchemy import distinct
-    pairs = db.query(distinct(ProductPerformance.week), ProductPerformance.store).all()
+    q = db.query(distinct(ProductPerformance.week), ProductPerformance.store)
+    if platform:
+        q = q.filter(ProductPerformance.platform == platform)
+    pairs = q.all()
     weeks = sorted({p[0] for p in pairs if p[0]})
     stores = sorted({p[1] for p in pairs if p[1]})
     store_week = {}
@@ -167,7 +170,7 @@ def converter_data(store: str = None, db: Session = Depends(get_db)):
 
 @router.get("/converter/stores")
 def converter_stores():
-    """Return store codes from Google Sheet AT1 tab, column C (Code). Cached 5 min."""
+    """Return store codes from Google Sheet Store_Info tab, column C. Cached 5 min."""
     try:
         stores = get_at1_store_codes()
         return {"stores": stores}

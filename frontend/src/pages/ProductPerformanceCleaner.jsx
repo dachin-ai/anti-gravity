@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Tabs, Select, Button, Upload, Table, Tag, message,
     Card, Space, Typography, Statistic, Row, Col, Popconfirm, Tooltip, Image,
@@ -94,6 +94,33 @@ const MarkTag = ({ mark }) => {
     return <span style={{ ...s, fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, letterSpacing: '0.3px', flexShrink: 0 }}>{mark}</span>;
 };
 
+/** Prefer Store_Info full name (col E); otherwise store code. No extra “(code)” — the sheet name is already enough. */
+function formatStoreLabel(storeCode, fullNameFromSheet) {
+    const code = String(storeCode ?? '').trim();
+    if (!code || code === '—' || code === '-') {
+        const fb = String(fullNameFromSheet ?? '').trim();
+        return fb || code || '—';
+    }
+    const name = String(fullNameFromSheet ?? '').trim();
+    if (name && name !== code) return name;
+    return code;
+}
+
+/** Stores with at least one filled week first; unknown / placeholder last; then A→Z. */
+function sortStoresMatrixOrder(storeCodes, hasAnyWeek) {
+    return [...new Set(storeCodes)].sort((a, b) => {
+        const aD = a === '-' || a === '—';
+        const bD = b === '-' || b === '—';
+        if (aD && !bD) return 1;
+        if (!aD && bD) return -1;
+        const aOn = hasAnyWeek(a);
+        const bOn = hasAnyWeek(b);
+        if (aOn && !bOn) return -1;
+        if (!aOn && bOn) return 1;
+        return a.localeCompare(b);
+    });
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Tab 1 — Upload
 // ─────────────────────────────────────────────────────────────────
@@ -104,6 +131,36 @@ function UploadTab({ weeks }) {
     const [fileList, setFileList]     = useState([]);
     const [uploading, setUploading]   = useState(false);
     const [preview, setPreview]       = useState(null);
+    const [availability, setAvailability] = useState({ weeks: [], stores: [], store_week: {} });
+    const [loadingAvail, setLoadingAvail] = useState(false);
+    const [storeNameMap, setStoreNameMap] = useState({});
+    const [masterStores, setMasterStores] = useState([]);
+
+    const fetchUploadAvailability = useCallback(async () => {
+        setLoadingAvail(true);
+        try {
+            const [availRes, statsRes, storesRes] = await Promise.all([
+                api.get('/product-performance/availability'),
+                api.get('/product-performance/converter/stats').catch(() => ({ data: { rows: [] } })),
+                api.get('/product-performance/converter/stores').catch(() => ({ data: { stores: [] } })),
+            ]);
+            setAvailability(availRes.data || { weeks: [], stores: [], store_week: {} });
+            const nameMap = {};
+            (statsRes.data.rows || []).forEach((r) => {
+                if (r.store_code) nameMap[r.store_code] = r.store_name || r.store_code;
+            });
+            setStoreNameMap(nameMap);
+            setMasterStores(storesRes.data?.stores || []);
+        } catch {
+            message.error(t('productPerf.msgLoadAvailabilityFailed'));
+        } finally {
+            setLoadingAvail(false);
+        }
+    }, [t]);
+
+    useEffect(() => {
+        fetchUploadAvailability();
+    }, [fetchUploadAvailability]);
 
     const handleUpload = async () => {
         if (!weekNum && weekNum !== 0) { message.error(t('productPerf.msgSelectWeek')); return; }
@@ -130,6 +187,7 @@ function UploadTab({ weeks }) {
             setPreview(res.data);
             message.success(t('productPerf.msgSavedRecords', { n: res.data.saved, week: res.data.week }));
             setFileList([]);
+            fetchUploadAvailability();
         } catch (err) {
             message.error(err.response?.data?.detail || t('productPerf.msgUploadFailed'));
         } finally {
@@ -138,7 +196,13 @@ function UploadTab({ weeks }) {
     };
 
     const previewCols = [
-        { title: t('productPerf.colStore'),        dataIndex: 'store',        width: 110 },
+        {
+            title: t('productPerf.colStore'),
+            dataIndex: 'store',
+            width: 260,
+            ellipsis: true,
+            render: (v) => <Text ellipsis title={formatStoreLabel(v, storeNameMap[v])}>{formatStoreLabel(v, storeNameMap[v])}</Text>,
+        },
         { title: t('productPerf.colPid'),          dataIndex: 'pid',          width: 140 },
         {
             title: t('productPerf.colPicture'),
@@ -153,6 +217,54 @@ function UploadTab({ weeks }) {
         { title: t('productPerf.colClick'),        dataIndex: 'click',        width: 80,  render: fmt },
         { title: t('productPerf.colCtr'),          dataIndex: 'ctr',          width: 80,  render: fmtPct },
         { title: t('productPerf.colCo'),           dataIndex: 'co',           width: 80,  render: fmtPct },
+    ];
+
+    const weekNumFromLabel = (w) => {
+        const m = /^Week\s+(\d+)$/i.exec(String(w ?? '').trim());
+        return m ? parseInt(m[1], 10) : 999999;
+    };
+    const dataWeeks = availability.weeks || [];
+    const selectedWeekLabel = weekNum != null && weekNum !== '' ? `Week ${weekNum}` : null;
+    const allWeeks = [...new Set([...dataWeeks, ...(selectedWeekLabel ? [selectedWeekLabel] : [])])].sort(
+        (a, b) => weekNumFromLabel(a) - weekNumFromLabel(b),
+    );
+    const baseStores = sortStoresMatrixOrder(
+        [...masterStores, ...(availability.stores || [])],
+        (store) => (availability.store_week?.[store]?.length ?? 0) > 0,
+    );
+    const platformAvailRows = baseStores.map((store, idx) => ({
+        key: store,
+        store,
+        _no: idx + 1,
+        _storeName: formatStoreLabel(store, storeNameMap[store]),
+        _weeks: new Set(availability.store_week?.[store] || []),
+    }));
+    const storeCount = platformAvailRows.filter((r) => r.store !== '-' && r.store !== '—').length;
+
+    const platformAvailColumns = [
+        { title: t('productPerf.colHash'), dataIndex: '_no', fixed: 'left', width: 46, align: 'center' },
+        {
+            title: t('productPerf.colStore'),
+            dataIndex: '_storeName',
+            fixed: 'left',
+            width: 300,
+            ellipsis: true,
+            render: (name, row) => (
+                <Text ellipsis title={name} style={{ color: 'var(--text-main)', fontWeight: selectedWeekLabel && !row._weeks?.has(selectedWeekLabel) ? 600 : undefined }}>
+                    {name}
+                </Text>
+            ),
+        },
+        ...allWeeks.map((week) => ({
+            title: week,
+            width: 100,
+            align: 'center',
+            render: (_, row) => {
+                const has = row._weeks?.has(week);
+                if (has) return <CheckOutlined title={t('productPerf.titlePlatformUploaded')} style={{ color: '#22c55e', fontSize: 13 }} />;
+                return <span style={{ color: 'var(--text-muted)' }} title={t('productPerf.titlePlatformMissing')}>—</span>;
+            },
+        })),
     ];
 
     return (
@@ -185,6 +297,18 @@ function UploadTab({ weeks }) {
                                     value={weekNum}
                                     onChange={setWeekNum}
                                     size="large"
+                                    showSearch
+                                    allowClear
+                                    optionFilterProp="label"
+                                    filterOption={(input, option) => {
+                                        const q = String(input ?? '').trim().toLowerCase();
+                                        if (!q) return true;
+                                        const label = String(option?.label ?? '').toLowerCase();
+                                        const v = option?.value;
+                                        if (label.includes(q)) return true;
+                                        if (v !== undefined && v !== null && String(v) === q) return true;
+                                        return String(v).includes(q);
+                                    }}
                                     options={weeks.map(w => ({ value: w.value, label: w.label }))}
                                 />
                             </Col>
@@ -222,6 +346,34 @@ function UploadTab({ weeks }) {
                             {t('productPerf.btnProcessSave')}
                         </Button>
                     </Space>
+                </div>
+            </div>
+
+            <div style={sectionCard}>
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <SectionHeading icon={<AppstoreOutlined />} color="#6366f1">{t('productPerf.platformAvailabilityTitle', { count: storeCount })}</SectionHeading>
+                    <Space wrap align="center">
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            <CheckOutlined style={{ color: '#22c55e' }} /> {t('productPerf.legendPlatformUploaded')} &nbsp;
+                            <span style={{ color: 'var(--text-muted)' }}>—</span> {t('productPerf.legendPlatformMissing')}
+                        </span>
+                        <Button icon={<ReloadOutlined />} size="small" onClick={fetchUploadAvailability} loading={loadingAvail} style={{ borderRadius: 6 }}>
+                            {t('productPerf.btnRefresh')}
+                        </Button>
+                    </Space>
+                </div>
+                <div style={{ padding: '8px 16px 12px', fontSize: 12, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                    {t('productPerf.platformAvailabilityHint')}
+                </div>
+                <div style={{ padding: '0 4px 4px' }}>
+                    <Table
+                        dataSource={platformAvailRows}
+                        columns={platformAvailColumns}
+                        loading={loadingAvail}
+                        size="small"
+                        pagination={{ pageSize: 30 }}
+                        scroll={{ x: 'max-content' }}
+                    />
                 </div>
             </div>
 
@@ -275,6 +427,18 @@ function DataViewerTab() {
     const [loading, setLoading]   = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deletingWeek, setDeletingWeek] = useState(false);
+    const [storeNameMap, setStoreNameMap] = useState({});
+
+    const fetchStoreNames = async () => {
+        try {
+            const res = await api.get('/product-performance/converter/stats');
+            const m = {};
+            (res.data.rows || []).forEach((r) => {
+                if (r.store_code) m[r.store_code] = r.store_name || r.store_code;
+            });
+            setStoreNameMap(m);
+        } catch { /* ignore */ }
+    };
 
     const fetchSummary = async () => {
         try {
@@ -299,7 +463,7 @@ function DataViewerTab() {
         }
     };
 
-    useEffect(() => { fetchSummary(); }, []);
+    useEffect(() => { fetchSummary(); fetchStoreNames(); }, []);
     useEffect(() => {
         if (!filters.week && summary.weeks.length === 1) {
             setFilters(f => ({ ...f, week: summary.weeks[0] }));
@@ -309,6 +473,7 @@ function DataViewerTab() {
 
     const handleRefresh = () => {
         fetchSummary();
+        fetchStoreNames();
         fetchData();
     };
 
@@ -355,7 +520,13 @@ function DataViewerTab() {
     const columns = [
         { title: t('productPerf.colWeek'),    dataIndex: 'week',    width: 90,  fixed: 'left' },
         { title: t('productPerf.colPlatform'),dataIndex: 'platform', width: 90 },
-        { title: t('productPerf.colStore'),   dataIndex: 'store',   width: 110 },
+        {
+            title: t('productPerf.colStore'),
+            dataIndex: 'store',
+            width: 260,
+            ellipsis: true,
+            render: (v) => <Text ellipsis title={formatStoreLabel(v, storeNameMap[v])}>{formatStoreLabel(v, storeNameMap[v])}</Text>,
+        },
         { title: t('productPerf.colPid'),     dataIndex: 'pid',     width: 140, ellipsis: true },
         {
             title: t('productPerf.colPicture'),
@@ -401,10 +572,12 @@ function DataViewerTab() {
                         <div>
                             <Label>{t('productPerf.labelStore')}</Label>
                             <Select
-                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 160 }}
+                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 280 }}
                                 value={filters.store}
                                 onChange={v => setFilters(f => ({ ...f, store: v }))}
-                                options={summary.stores.map(s => ({ value: s, label: s }))}
+                                options={summary.stores.map(s => ({ value: s, label: formatStoreLabel(s, storeNameMap[s]) }))}
+                                showSearch
+                                optionFilterProp="label"
                             />
                         </div>
                         <Space>
@@ -494,6 +667,14 @@ function ConverterTab() {
 
     useEffect(() => { fetchStats(); fetchStoreOptions(); }, []);
 
+    const statNameByCode = useMemo(() => {
+        const m = {};
+        (stats || []).forEach((r) => {
+            if (r.store_code) m[r.store_code] = r.store_name;
+        });
+        return m;
+    }, [stats]);
+
     const fetchConverterRows = async () => {
         setLoadingRows(true);
         try {
@@ -547,7 +728,17 @@ function ConverterTab() {
     };
 
     const statsColumns = [
-        { title: t('productPerf.colStore'),        dataIndex: 'store_name',  width: 220 },
+        {
+            title: t('productPerf.colStore'),
+            key: 'store_display',
+            width: 300,
+            ellipsis: true,
+            render: (_, row) => (
+                <Text ellipsis title={formatStoreLabel(row.store_code, row.store_name)}>
+                    {formatStoreLabel(row.store_code, row.store_name)}
+                </Text>
+            ),
+        },
         { title: t('productPerf.colUniquePids'),  dataIndex: 'pid_count',   width: 120, align: 'center', render: v => <Tag color="blue">{v}</Tag> },
         { title: t('productPerf.colUniqueMids'),  dataIndex: 'mid_count',   width: 120, align: 'center', render: v => <Tag color="cyan">{v}</Tag> },
         {
@@ -572,7 +763,17 @@ function ConverterTab() {
     ];
 
     const converterColumns = [
-        { title: t('productPerf.colStore'), dataIndex: 'store_name', width: 220 },
+        {
+            title: t('productPerf.colStore'),
+            key: 'store_display',
+            width: 300,
+            ellipsis: true,
+            render: (_, row) => (
+                <Text ellipsis title={formatStoreLabel(row.store_code, row.store_name)}>
+                    {formatStoreLabel(row.store_code, row.store_name)}
+                </Text>
+            ),
+        },
         { title: t('productPerf.colPid'), dataIndex: 'pid', width: 150 },
         { title: t('productPerf.colMid'), dataIndex: 'mid', width: 150 },
         { title: t('productPerf.colSku'), dataIndex: 'sku', width: 180 },
@@ -614,8 +815,11 @@ function ConverterTab() {
                                                 showSearch
                                                 allowClear
                                                 size="large"
-                                                options={storeOptions.map(s => ({ value: s, label: s }))}
-                                                filterOption={(input, opt) => opt.label.toLowerCase().includes(input.toLowerCase())}
+                                                options={storeOptions.map((s) => ({
+                                                    value: s,
+                                                    label: formatStoreLabel(s, statNameByCode[s]),
+                                                }))}
+                                                filterOption={(input, opt) => (opt?.label ?? '').toLowerCase().includes(input.toLowerCase())}
                                                 notFoundContent={t('productPerf.noStoresFound')}
                                             />
                                         </div>
@@ -703,10 +907,15 @@ function ConverterTab() {
                                     <Select
                                         allowClear
                                         placeholder={t('productPerf.phFilterStore')}
-                                        style={{ width: 220 }}
+                                        style={{ width: 300 }}
                                         value={filterStore || undefined}
                                         onChange={setFilterStore}
-                                        options={storeOptions.map(s => ({ value: s, label: s }))}
+                                        showSearch
+                                        optionFilterProp="label"
+                                        options={storeOptions.map((s) => ({
+                                            value: s,
+                                            label: formatStoreLabel(s, statNameByCode[s]),
+                                        }))}
                                     />
                                     <Button icon={<ReloadOutlined />} size="small" onClick={fetchConverterRows} style={{ borderRadius: 6 }}>{t('productPerf.btnLoad')}</Button>
                                 </Space>
@@ -814,16 +1023,23 @@ function BrandTab({ weeks }) {
 
     // Merge weeks from both upload + computed
     const allWeeks = [...new Set([...availability.weeks, ...skuAvail.weeks])].sort();
-    const allStores = [...new Set([...availability.stores, ...skuAvail.stores])].sort((a, b) => {
-        const aD = a === '-' || a === '—'; const bD = b === '-' || b === '—';
-        if (aD && !bD) return 1; if (!aD && bD) return -1;
-        return a.localeCompare(b);
-    });
+    const allStores = sortStoresMatrixOrder(
+        [...availability.stores, ...skuAvail.stores],
+        (store) =>
+            (availability.store_week?.[store]?.length ?? 0) > 0
+            || (skuAvail.store_week?.[store]?.length ?? 0) > 0,
+    );
 
     const availabilityColumns = [
         { title: t('productPerf.colHash'), dataIndex: '_no', fixed: 'left', width: 46, align: 'center' },
-        { title: t('productPerf.colStore'), dataIndex: '_storeName', fixed: 'left', width: 230,
-            render: name => <Text style={{ color: 'var(--text-main)' }}>{name}</Text> },
+        {
+            title: t('productPerf.colStore'),
+            dataIndex: '_storeName',
+            fixed: 'left',
+            width: 300,
+            ellipsis: true,
+            render: (name) => <Text ellipsis title={name} style={{ color: 'var(--text-main)' }}>{name}</Text>,
+        },
         ...allWeeks.map(week => ({
             title: week, width: 120, align: 'center',
             render: (_, r) => {
@@ -838,7 +1054,7 @@ function BrandTab({ weeks }) {
 
     const availabilityData = allStores.map((store, idx) => ({
         key: store, store, _no: idx + 1,
-        _storeName: storeNameMap[store] || store,
+        _storeName: formatStoreLabel(store, storeNameMap[store]),
         _uploadWeeks: new Set(availability.store_week?.[store] || []),
         _skuWeeks:    new Set(skuAvail.store_week?.[store]    || []),
     }));
@@ -938,6 +1154,18 @@ function SkuBrandTab({ weeks }) {
     const [data, setData]               = useState([]);
     const [loading, setLoading]         = useState(false);
     const [deleting, setDeleting]       = useState(false);
+    const [storeNameMap, setStoreNameMap] = useState({});
+
+    const fetchStoreNames = async () => {
+        try {
+            const res = await api.get('/product-performance/converter/stats');
+            const m = {};
+            (res.data.rows || []).forEach((r) => {
+                if (r.store_code) m[r.store_code] = r.store_name || r.store_code;
+            });
+            setStoreNameMap(m);
+        } catch { /* ignore */ }
+    };
 
     const handleDownload = () => {
         if (!data.length) { message.warning(t('productPerf.msgNoDataDownload')); return; }
@@ -948,13 +1176,13 @@ function SkuBrandTab({ weeks }) {
             t('productPerf.excelHdrClick'), t('productPerf.excelHdrUnit'), t('productPerf.excelHdrGmv'), t('productPerf.excelHdrCtr'), t('productPerf.excelHdrCo'),
         ];
         const rows = data.map(r => [
-            r.week, r.platform, r.store, r.sku, r.product_name || '', r.pid_count,
+            r.week, r.platform, formatStoreLabel(r.store, storeNameMap[r.store]), r.sku, r.product_name || '', r.pid_count,
             r.impression ?? 0, r.visitor ?? 0, r.click ?? 0, r.unit ?? 0, r.gmv ?? 0,
             r.ctr != null ? parseFloat((r.ctr * 100).toFixed(4)) : 0,
             r.co  != null ? parseFloat((r.co  * 100).toFixed(4)) : 0,
         ]);
         const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-        ws['!cols'] = [12,10,14,40,40,8,14,12,10,10,14,10,10].map(w => ({ wch: w }));
+        ws['!cols'] = [12,10,36,40,40,8,14,12,10,10,14,10,10].map(w => ({ wch: w }));
         ws['!freeze'] = { xSplit: 0, ySplit: 1 };
         const wb = XLSX.utils.book_new();
         const tag = `${filters.week || 'All'} ${filters.platform || 'All'}`;
@@ -991,7 +1219,7 @@ function SkuBrandTab({ weeks }) {
         }
     };
 
-    useEffect(() => { fetchSkuSummary(); }, []);
+    useEffect(() => { fetchSkuSummary(); fetchStoreNames(); }, []);
     useEffect(() => { fetchData(); }, [filters]);
 
     const handleDelete = async () => {
@@ -1039,7 +1267,13 @@ function SkuBrandTab({ weeks }) {
             ) },
         { title: t('productPerf.colWeek'),       dataIndex: 'week',      width: 90 },
         { title: t('productPerf.colPlatform'),   dataIndex: 'platform',  width: 90 },
-        { title: t('productPerf.colStore'),      dataIndex: 'store',     width: 110 },
+        {
+            title: t('productPerf.colStore'),
+            dataIndex: 'store',
+            width: 260,
+            ellipsis: true,
+            render: (v) => <Text ellipsis title={formatStoreLabel(v, storeNameMap[v])}>{formatStoreLabel(v, storeNameMap[v])}</Text>,
+        },
         { title: t('productPerf.colPids'),       dataIndex: 'pid_count', width: 70,  align: 'right' },
         { title: t('productPerf.colImpression'), dataIndex: 'impression', width: 110, align: 'right', render: fmt },
         { title: t('productPerf.colVisitor'),    dataIndex: 'visitor',   width: 100, align: 'right', render: fmt },
@@ -1088,10 +1322,12 @@ function SkuBrandTab({ weeks }) {
                         <div>
                             <Label>{t('productPerf.labelStore')}</Label>
                             <Select
-                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 160 }}
+                                allowClear placeholder={t('productPerf.phAllStores')} style={{ width: 280 }}
                                 value={filters.store}
                                 onChange={v => setFilters(f => ({ ...f, store: v }))}
-                                options={skuSummary.stores.map(s => ({ value: s, label: s }))}
+                                options={skuSummary.stores.map(s => ({ value: s, label: formatStoreLabel(s, storeNameMap[s]) }))}
+                                showSearch
+                                optionFilterProp="label"
                             />
                         </div>
                         <div>

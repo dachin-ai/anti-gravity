@@ -575,6 +575,79 @@ h4.ant-typography {
   transition: filter 0.4s ease, transform 0.4s ease;
 }
 
+.fm-header-profile-trigger .wajan-container {
+  margin-right: 0;
+}
+
+.fm-header-profile-trigger:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+:root[data-theme="light"] .fm-header-profile-trigger:focus-visible {
+  outline-color: #0284c7;
+}
+
+/* Header settings dropdown: segmented (theme + language) */
+.fm-settings-panel .ant-segmented {
+  border-radius: 10px;
+}
+
+.fm-settings-panel .ant-segmented .ant-segmented-item-label {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Login: bahasa kiri, tema kanan */
+.fm-login-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  column-gap: 16px;
+  row-gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.fm-login-toolbar-start {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.fm-login-toolbar-end {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.fm-login-toolbar .ant-segmented {
+  border-radius: 10px;
+}
+
+.fm-login-toolbar .ant-segmented .ant-segmented-item-label {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 420px) {
+  .fm-login-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fm-login-toolbar-end {
+    margin-left: 0;
+  }
+
+  .fm-login-toolbar .ant-segmented {
+    width: 100%;
+  }
+}
+
 .wajan-container:hover {
   filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.9));
   transform: scale(1.12);
