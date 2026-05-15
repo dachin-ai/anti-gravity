@@ -1,10 +1,22 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import case, func
 from pydantic import BaseModel
 from database import SessionLocal
 from models import AccessRequest, AccountUser
 from services.user_activity_logic import get_user_activity
-from services.auth_logic import verify_token, normalize_permissions, has_permission
+from services.auth_logic import (
+    verify_token,
+    normalize_permissions,
+    has_permission,
+    hash_password,
+    TOOL_KEYS,
+    normalize_account_approval_label,
+    admin_append_account_sheet_row,
+    admin_update_account_sheet_approval,
+    admin_delete_account_sheet_row,
+    invalidate_user_sheet_cache,
+)
 from typing import Optional, List
 from datetime import datetime
 
@@ -28,6 +40,16 @@ class ApproveBody(BaseModel):
     name: Optional[str] = None
 
 
+class ApprovalUpdateBody(BaseModel):
+    approval: str
+
+
+class AdminCreateUserBody(BaseModel):
+    email: str
+    username: str
+    password: str
+    name: Optional[str] = None
+    approval: Optional[str] = "Approve"
 def get_db():
     db = SessionLocal()
     try:
@@ -156,12 +178,23 @@ def reject_request(req_id: int, request: Request, db: Session = Depends(get_db))
 @router.get("/users")
 def get_users(request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
-    users = db.query(AccountUser).order_by(AccountUser.username).all()
+    # Pending / waiting accounts first (easier to approve), then A–Z by display name (fallback: username).
+    ap = func.lower(func.trim(func.coalesce(AccountUser.approval, "")))
+    pending_first = case((ap.in_(["waiting", "pending"]), 0), else_=1)
+    sort_name = func.lower(
+        func.coalesce(
+            func.nullif(func.trim(AccountUser.name), ""),
+            AccountUser.username,
+            "",
+        )
+    )
+    users = db.query(AccountUser).order_by(pending_first, sort_name).all()
     return [
         {
             "username": u.username,
             "name": (u.name or u.username),
             "email": u.email,
+            "approval": (u.approval or "").strip(),
             "permissions": normalize_permissions(u.permissions),
         }
         for u in users
@@ -178,3 +211,110 @@ def update_permissions(username: str, body: PermissionsBody, request: Request, d
         user.name = body.name.strip() if body.name else None
     db.commit()
     return {"message": "Permissions updated"}
+
+
+@router.put("/users/{username}/approval")
+def update_user_account_approval(
+    username: str, body: ApprovalUpdateBody, request: Request, db: Session = Depends(get_db)
+):
+    _require_admin(request)
+    try:
+        label = normalize_account_approval_label(body.approval)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    user = db.query(AccountUser).filter(AccountUser.username.ilike(username.strip())).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    old = (user.approval or "").strip()
+    user.approval = label
+    db.commit()
+
+    ok, msg = admin_update_account_sheet_approval(user.username, label)
+    if not ok:
+        user.approval = old
+        db.commit()
+        raise HTTPException(status_code=502, detail=f"Google Sheet update failed: {msg}")
+
+    invalidate_user_sheet_cache()
+    return {"message": "Approval updated", "approval": label}
+
+
+@router.delete("/users/{username}")
+def delete_user_account(username: str, request: Request, db: Session = Depends(get_db)):
+    payload = _require_admin(request)
+    admin_u = str(payload.get("username", "")).strip().lower()
+    if admin_u == username.strip().lower():
+        raise HTTPException(status_code=400, detail="You cannot delete your own account.")
+
+    user = db.query(AccountUser).filter(AccountUser.username.ilike(username.strip())).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    ok, msg = admin_delete_account_sheet_row(user.username)
+    if not ok:
+        low = str(msg).lower()
+        if "not found" in low or "username not found" in low:
+            pass
+        else:
+            raise HTTPException(status_code=502, detail=f"Google Sheet delete failed: {msg}")
+
+    db.delete(user)
+    db.commit()
+    invalidate_user_sheet_cache()
+    return {"message": "User deleted"}
+
+
+@router.post("/users")
+def create_user_account(body: AdminCreateUserBody, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+    try:
+        approval_label = normalize_account_approval_label(body.approval or "Approve")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    email = body.email.strip()
+    uname = body.username.strip()
+    if not email or not uname:
+        raise HTTPException(status_code=400, detail="Email and username are required.")
+
+    if db.query(AccountUser).filter(AccountUser.username.ilike(uname)).first():
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    if db.query(AccountUser).filter(AccountUser.email.ilike(email)).first():
+        raise HTTPException(status_code=400, detail="Email already exists.")
+
+    name_clean = (body.name or "").strip() or uname
+    hashed = hash_password(body.password)
+    perms = {k: 0 for k in TOOL_KEYS}
+
+    new_user = AccountUser(
+        email=email,
+        username=uname,
+        name=name_clean,
+        password=hashed,
+        approval=approval_label,
+        permissions=perms,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    ok, msg = admin_append_account_sheet_row(email, uname, hashed, approval_label, name_clean)
+    if not ok:
+        db.delete(new_user)
+        db.commit()
+        raise HTTPException(status_code=502, detail=f"User was not saved to Google Sheet: {msg}")
+
+    invalidate_user_sheet_cache()
+    return {
+        "message": "User created",
+        "username": new_user.username,
+        "email": new_user.email,
+        "name": new_user.name,
+        "approval": new_user.approval,
+        "permissions": normalize_permissions(new_user.permissions),
+    }

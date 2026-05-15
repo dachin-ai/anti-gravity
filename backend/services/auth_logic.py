@@ -16,6 +16,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, Dict, Tuple, List
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database import SessionLocal
 from models import ActivityLog, AccountUser
 
@@ -323,20 +324,38 @@ def find_user_by_email(email: str) -> Optional[Dict]:
         db.close()
 
 
+def _find_account_user_for_login(db: Session, login_id: str) -> Optional[AccountUser]:
+    """
+    Resolve account by registered username or email (case-insensitive).
+    If login_id contains '@', try email first to avoid matching a username that looks like an email
+    when the user intended their email address.
+    """
+    ident = (login_id or "").strip()
+    if not ident:
+        return None
+    if "@" in ident:
+        u = db.query(AccountUser).filter(AccountUser.email.ilike(ident)).first()
+        if u:
+            return u
+        return db.query(AccountUser).filter(AccountUser.username.ilike(ident)).first()
+    u = db.query(AccountUser).filter(AccountUser.username.ilike(ident)).first()
+    if u:
+        return u
+    return db.query(AccountUser).filter(AccountUser.email.ilike(ident)).first()
+
+
 def login_user_optimized(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
     """
     Optimized login dengan single DB query.
+    `username` may be the user's registered username or email.
     """
     try:
         db = SessionLocal()
         try:
-            # Single query untuk find user
-            user = db.query(AccountUser).filter(
-                AccountUser.username.ilike(username.strip().lower())
-            ).first()
-            
+            user = _find_account_user_for_login(db, username)
+
             if not user:
-                return False, "Username not found.", None
+                return False, "No account found with that username or email.", None
             
             # Check password
             hashed = hash_password(password)
@@ -370,26 +389,66 @@ def login_user_optimized(username: str, password: str) -> Tuple[bool, str, Optio
 
 
 def signup_user(email: str, username: str, password: str) -> Tuple[bool, str]:
-    """Register a new user with Waiting status."""
+    """
+    Register a new user with Waiting status in PostgreSQL and the Account sheet.
+    The admin UI lists users from the database; sheet-only rows would not appear until sync.
+    """
+    email_c = (email or "").strip()
+    uname_c = (username or "").strip()
     try:
-        # Check duplicates (DB queries — fast)
-        if find_user_by_email(email):
+        if find_user_by_email(email_c):
             return False, "Email already registered."
-        if find_user_by_username(username):
+        if find_user_by_username(uname_c):
             return False, "Username already taken."
 
         hashed = hash_password(password)
+        perms = {k: 0 for k in TOOL_KEYS}
+        approval_waiting = "Waiting"
 
-        # Write to Google Sheets WITH timeout protection
+        db = SessionLocal()
+        try:
+            new_user = AccountUser(
+                email=email_c,
+                username=uname_c,
+                name=uname_c,
+                password=hashed,
+                approval=approval_waiting,
+                permissions=perms,
+            )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+        except IntegrityError:
+            db.rollback()
+            return False, "Email or username already registered."
+        except Exception as e:
+            db.rollback()
+            return False, f"Registration failed: {str(e)}"
+        finally:
+            db.close()
+
         def write_to_sheet():
-            sh = get_sheet_client()
-            ws = sh.worksheet("Account")
-            ws.append_row([email, username, hashed, "Waiting"])
+            ok, msg = admin_append_account_sheet_row(
+                email_c, uname_c, hashed, approval_waiting, uname_c
+            )
+            if not ok:
+                raise RuntimeError(msg)
 
         success, result = call_with_timeout(write_to_sheet, timeout_sec=SHEETS_API_TIMEOUT)
         if not success:
+            db2 = SessionLocal()
+            try:
+                u = db2.query(AccountUser).filter(AccountUser.username.ilike(uname_c)).first()
+                if u:
+                    db2.delete(u)
+                    db2.commit()
+            except Exception:
+                db2.rollback()
+            finally:
+                db2.close()
             return False, f"Registration failed: Google Sheets unavailable ({result}). Please try again."
 
+        invalidate_user_sheet_cache()
         return True, "Registration successful. Please wait for admin approval."
 
     except Exception as e:
@@ -401,11 +460,24 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
     """
     Validate login.
     Returns (success, message, jwt_token)
+    `username` may be the user's registered username or email.
     """
     try:
-        user = find_user_by_username(username)
-        if not user:
-            return False, "Username not found.", None
+        db = SessionLocal()
+        try:
+            u = _find_account_user_for_login(db, username)
+            if not u:
+                return False, "No account found with that username or email.", None
+            user = {
+                "Email": u.email,
+                "Username": u.username,
+                "Name": u.name or u.username,
+                "Password": u.password,
+                "Approval": u.approval,
+                "permissions": normalize_permissions(u.permissions),
+            }
+        finally:
+            db.close()
 
         # Check password
         hashed = hash_password(password)
@@ -669,4 +741,109 @@ def change_password(username: str, current_password: str, new_password: str) -> 
         print(f"[Change Password] Error: {e}")
         traceback.print_exc()
         return False, f"Change failed: {str(e)}"
+
+
+def invalidate_user_sheet_cache() -> None:
+    """Pakai setelah admin mengubah Account sheet lewat API agar get_users tidak stale."""
+    global _cached_users_timestamp
+    _cached_users_timestamp = 0
+
+
+def normalize_account_approval_label(raw: str) -> str:
+    """Nilai selaras spreadsheet + login_user_optimized (lower: approve / waiting / reject)."""
+    s = (raw or "").strip().lower()
+    if s in ("approve", "approved"):
+        return "Approve"
+    if s in ("waiting", "pending", "wait"):
+        return "Waiting"
+    if s in ("reject", "rejected", "denied", "inactive"):
+        return "Reject"
+    raise ValueError(f"Invalid approval: {raw!r}")
+
+
+def admin_append_account_sheet_row(
+    email: str,
+    username: str,
+    password_hash: str,
+    approval: str,
+    display_name: str,
+) -> Tuple[bool, str]:
+    """Tambah satu baris ke worksheet Account dengan urutan kolom mengikuti header baris 1."""
+
+    def op():
+        sh = get_sheet_client()
+        ws = sh.worksheet("Account")
+        headers = [str(h).strip() for h in ws.row_values(1)]
+        if not headers:
+            raise RuntimeError("Account sheet has no header row")
+        approval_label = normalize_account_approval_label(approval)
+        name_val = (display_name or "").strip() or username.strip()
+        row_map = {}
+        for h in headers:
+            hl = h.lower()
+            if hl == "email":
+                row_map[h] = email.strip()
+            elif hl == "username":
+                row_map[h] = username.strip()
+            elif hl == "password":
+                row_map[h] = password_hash
+            elif hl == "approval":
+                row_map[h] = approval_label
+            elif hl == "name":
+                row_map[h] = name_val
+            else:
+                row_map[h] = ""
+        ws.append_row([row_map.get(h, "") for h in headers])
+
+    ok, res = call_with_timeout(op, timeout_sec=SHEETS_API_TIMEOUT)
+    return (ok, res if ok else str(res))
+
+
+def admin_update_account_sheet_approval(username: str, approval: str) -> Tuple[bool, str]:
+    """Update sel Approval untuk baris yang Username-nya cocok."""
+
+    def op():
+        sh = get_sheet_client()
+        ws = sh.worksheet("Account")
+        headers = [str(h).strip() for h in ws.row_values(1)]
+        if "Username" not in headers or "Approval" not in headers:
+            raise RuntimeError("Account sheet must have Username and Approval columns")
+        uname_col = headers.index("Username") + 1
+        appr_col = headers.index("Approval") + 1
+        unames = ws.col_values(uname_col)
+        target = username.strip().lower()
+        for i, cell in enumerate(unames):
+            if i == 0:
+                continue
+            if str(cell).strip().lower() == target:
+                ws.update_cell(i + 1, appr_col, normalize_account_approval_label(approval))
+                return
+        raise ValueError(f"Username not found in sheet: {username}")
+
+    ok, res = call_with_timeout(op, timeout_sec=SHEETS_API_TIMEOUT)
+    return (ok, res if ok else str(res))
+
+
+def admin_delete_account_sheet_row(username: str) -> Tuple[bool, str]:
+    """Hapus baris Account yang Username-nya cocok (1-based row di gspread)."""
+
+    def op():
+        sh = get_sheet_client()
+        ws = sh.worksheet("Account")
+        headers = [str(h).strip() for h in ws.row_values(1)]
+        if "Username" not in headers:
+            raise RuntimeError("Account sheet must have Username column")
+        uname_col = headers.index("Username") + 1
+        unames = ws.col_values(uname_col)
+        target = username.strip().lower()
+        for i, cell in enumerate(unames):
+            if i == 0:
+                continue
+            if str(cell).strip().lower() == target:
+                ws.delete_rows(i + 1)
+                return
+        raise ValueError(f"Username not found in sheet: {username}")
+
+    ok, res = call_with_timeout(op, timeout_sec=SHEETS_API_TIMEOUT)
+    return (ok, res if ok else str(res))
 

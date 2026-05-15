@@ -74,7 +74,12 @@ export const getAccessRequests = () => api.get('/access/requests');
 export const approveAccessRequest = (id, name) => api.put(`/access/requests/${id}/approve`, { name });
 export const rejectAccessRequest = (id) => api.put(`/access/requests/${id}/reject`);
 export const getAllUsersWithPermissions = () => api.get('/access/users');
-export const updateUserPermissions = (username, permissions, name) => api.put(`/access/users/${username}/permissions`, { permissions, name });
+export const updateUserPermissions = (username, permissions, name) =>
+  api.put(`/access/users/${encodeURIComponent(username)}/permissions`, { permissions, name });
+export const updateUserApproval = (username, approval) =>
+  api.put(`/access/users/${encodeURIComponent(username)}/approval`, { approval });
+export const deleteUserAccount = (username) => api.delete(`/access/users/${encodeURIComponent(username)}`);
+export const createUserAccount = (payload) => api.post('/access/users', payload);
 export const getUserActivity = (payload) => api.post('/access/user-activity', payload);
 
 /** Shared Quick Links (all logged-in users read/write same data) */

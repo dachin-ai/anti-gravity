@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Tabs, Table, Button, Tag, Checkbox, message, Typography, Space, Badge, Input } from 'antd';
+import {
+    Tabs, Table, Button, Tag, Checkbox, message, Typography, Space, Badge, Input,
+    Modal, Form, Select, Popconfirm,
+} from 'antd';
 import {
     CheckOutlined, CloseOutlined, ReloadOutlined, SaveOutlined,
     ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
+    UserAddOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
     getAccessRequests, approveAccessRequest, rejectAccessRequest,
     getAllUsersWithPermissions, updateUserPermissions,
+    updateUserApproval, deleteUserAccount, createUserAccount,
 } from '../api';
+import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
 import UserActivity from './UserActivity';
 
@@ -44,6 +50,26 @@ function StatusTag({ status }) {
         return <Tag icon={<CheckCircleOutlined />} color="success">{t('accessMgmt.statusApproved')}</Tag>;
     }
     return <Tag icon={<CloseCircleOutlined />} color="error">{t('accessMgmt.statusRejected')}</Tag>;
+}
+
+/** Status akun spreadsheet (Approval): Approve / Waiting / Reject */
+function AccountApprovalTag({ approval }) {
+    const { t } = useTranslation();
+    const a = String(approval || '').trim().toLowerCase();
+    if (a === 'approve' || a === 'approved') {
+        return <Tag color="success">{t('accessMgmt.accountApproved')}</Tag>;
+    }
+    if (a === 'waiting' || a === 'pending' || a === 'wait') {
+        return <Tag color="gold">{t('accessMgmt.accountPending')}</Tag>;
+    }
+    return <Tag color="error">{t('accessMgmt.accountRejected')}</Tag>;
+}
+
+function approvalSelectValue(approval) {
+    const a = String(approval || '').trim().toLowerCase();
+    if (a === 'approve' || a === 'approved') return 'approve';
+    if (a === 'reject' || a === 'rejected' || a === 'denied') return 'reject';
+    return 'waiting';
 }
 
 /* ─────────────── Tab 1: Access Requests ─────────────── */
@@ -172,9 +198,14 @@ function AccessRequestsTab() {
 /* ─────────────── Tab 2: User Permissions Matrix ─────────────── */
 function UserPermissionsTab() {
     const { t } = useTranslation();
+    const { user: authUser } = useAuth();
     const [users, setUsers]     = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving]   = useState(null);
+    const [approvalUpdating, setApprovalUpdating] = useState(null);
+    const [addModalOpen, setAddModalOpen] = useState(false);
+    const [addSubmitting, setAddSubmitting] = useState(false);
+    const [addForm] = Form.useForm();
     const [editingNames, setEditingNames] = useState({});
     /** Latest display names for API calls (permission toggles run before React re-renders). */
     const editingNamesRef = useRef({});
@@ -221,6 +252,65 @@ function UserPermissionsTab() {
     }, [t]);
 
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+    const approvalToLabel = (value) => {
+        if (value === 'approve') return 'Approve';
+        if (value === 'reject') return 'Reject';
+        return 'Waiting';
+    };
+
+    const onApprovalChange = async (username, value) => {
+        const row = users.find((u) => u.username === username);
+        if (!row || approvalSelectValue(row.approval) === value) return;
+        setApprovalUpdating(username);
+        try {
+            await updateUserApproval(username, value);
+            const label = approvalToLabel(value);
+            setUsers((prev) =>
+                prev.map((u) => (u.username === username ? { ...u, approval: label } : u)),
+            );
+            message.success(t('accessMgmt.msgApprovalUpdated'));
+        } catch (err) {
+            message.error(err.response?.data?.detail || t('accessMgmt.msgApprovalFail'));
+            await fetchUsers();
+        } finally {
+            setApprovalUpdating(null);
+        }
+    };
+
+    const onDeleteUser = async (username) => {
+        setSaving(username);
+        try {
+            await deleteUserAccount(username);
+            message.success(t('accessMgmt.msgDeleteUserSuccess'));
+            await fetchUsers();
+        } catch (err) {
+            message.error(err.response?.data?.detail || t('accessMgmt.msgDeleteUserFail'));
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    const onAddUserSubmit = async (values) => {
+        setAddSubmitting(true);
+        try {
+            await createUserAccount({
+                email: values.email.trim(),
+                username: values.username.trim(),
+                password: values.password,
+                name: values.name?.trim() || undefined,
+                approval: values.approval || 'approve',
+            });
+            message.success(t('accessMgmt.msgAddUserSuccess'));
+            setAddModalOpen(false);
+            addForm.resetFields();
+            await fetchUsers();
+        } catch (err) {
+            message.error(err.response?.data?.detail || t('accessMgmt.msgAddUserFail'));
+        } finally {
+            setAddSubmitting(false);
+        }
+    };
 
     const togglePermission = async (username, toolKey, currentValue) => {
         const currentInt = toPermissionInt(currentValue);
@@ -322,7 +412,11 @@ function UserPermissionsTab() {
             render: (_, row) => (
                 <Checkbox
                     checked={toPermissionInt(row.permissions?.[tool.key]) === 1}
-                    disabled={saving === row.username || saving === '__bulk_names__'}
+                    disabled={
+                        saving === row.username
+                        || saving === '__bulk_names__'
+                        || approvalUpdating === row.username
+                    }
                     onChange={() => togglePermission(row.username, tool.key, row.permissions?.[tool.key] ?? 0)}
                 />
             ),
@@ -347,7 +441,11 @@ function UserPermissionsTab() {
                 <Input
                     size="small"
                     value={editingNames[row.username] ?? row.name ?? row.username}
-                    disabled={saving === row.username || saving === '__bulk_names__'}
+                    disabled={
+                        saving === row.username
+                        || saving === '__bulk_names__'
+                        || approvalUpdating === row.username
+                    }
                     onChange={(e) =>
                         setEditingNames((prev) => ({ ...prev, [row.username]: e.target.value }))
                     }
@@ -363,7 +461,68 @@ function UserPermissionsTab() {
             width: 220,
             render: v => <Text style={{ color: 'var(--text-muted)', fontSize: 13 }}>{v}</Text>,
         },
+        {
+            title: t('accessMgmt.colApproval'),
+            key: 'approval_display',
+            width: 130,
+            render: (_, row) => <AccountApprovalTag approval={row.approval} />,
+        },
+        {
+            title: t('accessMgmt.colSetApproval'),
+            key: 'approval_set',
+            width: 160,
+            render: (_, row) => (
+                <Select
+                    size="small"
+                    style={{ width: 150 }}
+                    value={approvalSelectValue(row.approval)}
+                    disabled={approvalUpdating === row.username}
+                    options={[
+                        { value: 'approve', label: t('accessMgmt.optApprove') },
+                        { value: 'waiting', label: t('accessMgmt.optWaiting') },
+                        { value: 'reject', label: t('accessMgmt.optReject') },
+                    ]}
+                    onChange={(v) => onApprovalChange(row.username, v)}
+                />
+            ),
+        },
         ...toolColumns,
+        {
+            title: t('accessMgmt.colUserActions'),
+            key: 'user_actions',
+            fixed: 'right',
+            width: 110,
+            align: 'center',
+            render: (_, row) => {
+                const isSelf = authUser?.username?.toLowerCase() === row.username?.toLowerCase();
+                return (
+                    isSelf ? (
+                        <Button danger size="small" icon={<DeleteOutlined />} disabled>
+                            {t('accessMgmt.deleteUser')}
+                        </Button>
+                    ) : (
+                        <Popconfirm
+                            title={t('accessMgmt.confirmDeleteUser')}
+                            description={t('accessMgmt.confirmDeleteUserDesc')}
+                            okText={t('accessMgmt.deleteUserOk')}
+                            cancelText={t('accessMgmt.deleteUserCancel')}
+                            okButtonProps={{ danger: true }}
+                            onConfirm={() => onDeleteUser(row.username)}
+                        >
+                            <Button
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                disabled={saving === row.username || approvalUpdating === row.username}
+                                loading={saving === row.username}
+                            >
+                                {t('accessMgmt.deleteUser')}
+                            </Button>
+                        </Popconfirm>
+                    )
+                );
+            },
+        },
     ];
 
     return (
@@ -374,8 +533,19 @@ function UserPermissionsTab() {
                 </Text>
                 <Space wrap>
                     <Button
-                        icon={<SaveOutlined />}
                         type="primary"
+                        icon={<UserAddOutlined />}
+                        size="small"
+                        onClick={() => {
+                            addForm.resetFields();
+                            addForm.setFieldsValue({ approval: 'approve' });
+                            setAddModalOpen(true);
+                        }}
+                    >
+                        {t('accessMgmt.addUser')}
+                    </Button>
+                    <Button
+                        icon={<SaveOutlined />}
                         size="small"
                         loading={saving === '__bulk_names__'}
                         disabled={loading || saving === '__bulk_names__'}
@@ -393,6 +563,75 @@ function UserPermissionsTab() {
                     </Button>
                 </Space>
             </div>
+            <Modal
+                title={t('accessMgmt.addUserTitle')}
+                open={addModalOpen}
+                onCancel={() => {
+                    setAddModalOpen(false);
+                    addForm.resetFields();
+                }}
+                footer={null}
+                destroyOnClose
+            >
+                <Form
+                    form={addForm}
+                    layout="vertical"
+                    onFinish={onAddUserSubmit}
+                    initialValues={{ approval: 'approve' }}
+                >
+                    <Form.Item
+                        name="email"
+                        label={t('accessMgmt.colEmail')}
+                        rules={[{ required: true, message: t('accessMgmt.addUserEmailRequired') }, { type: 'email' }]}
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name="username"
+                        label={t('accessMgmt.colUsername')}
+                        rules={[{ required: true, message: t('accessMgmt.addUserUsernameRequired') }]}
+                    >
+                        <Input autoComplete="off" />
+                    </Form.Item>
+                    <Form.Item
+                        name="password"
+                        label={t('accessMgmt.addUserPassword')}
+                        rules={[
+                            { required: true, message: t('accessMgmt.addUserPasswordRequired') },
+                            { min: 6, message: t('accessMgmt.addUserPasswordRules') },
+                        ]}
+                    >
+                        <Input.Password autoComplete="new-password" />
+                    </Form.Item>
+                    <Form.Item name="name" label={t('accessMgmt.colName')}>
+                        <Input placeholder={t('accessMgmt.addUserNamePlaceholder')} />
+                    </Form.Item>
+                    <Form.Item name="approval" label={t('accessMgmt.colApproval')}>
+                        <Select
+                            options={[
+                                { value: 'approve', label: t('accessMgmt.optApprove') },
+                                { value: 'waiting', label: t('accessMgmt.optWaiting') },
+                                { value: 'reject', label: t('accessMgmt.optReject') },
+                            ]}
+                        />
+                    </Form.Item>
+                    <Form.Item>
+                        <Space>
+                            <Button type="primary" htmlType="submit" loading={addSubmitting}>
+                                {t('accessMgmt.addUserSubmit')}
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setAddModalOpen(false);
+                                    addForm.resetFields();
+                                }}
+                            >
+                                {t('accessMgmt.addUserCancel')}
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
             <Table
                 dataSource={users}
                 columns={columns}

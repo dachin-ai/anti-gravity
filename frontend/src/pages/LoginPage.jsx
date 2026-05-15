@@ -310,8 +310,8 @@ const LoginPage = () => {
 
                 {activeTab === 'login' && (
                     <Form onFinish={onLogin} layout="vertical" requiredMark={false}>
-                        <Form.Item name="username" rules={[{ required: true, message: t('login.enterUsername') }]} style={{ marginBottom: 16 }}>
-                            <Input prefix={<UserOutlined style={{ color: prefixIco }} />} placeholder={t('login.username')} style={inputStyle} />
+                        <Form.Item name="username" rules={[{ required: true, message: t('login.enterUsernameOrEmail') }]} style={{ marginBottom: 16 }}>
+                            <Input prefix={<UserOutlined style={{ color: prefixIco }} />} placeholder={t('login.usernameOrEmail')} style={inputStyle} />
                         </Form.Item>
                         <Form.Item name="password" rules={[{ required: true, message: t('login.enterPassword') }]} style={{ marginBottom: 24 }}>
                             <Input.Password prefix={<LockOutlined style={{ color: prefixIco }} />} placeholder={t('login.password')} style={inputStyle} />
