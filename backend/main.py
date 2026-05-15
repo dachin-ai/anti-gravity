@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 from routers import price_checker, order_loss, failed_delivery, presales, erp_oos, sku_plan, conversion_cleaner, order_match, auth, warehouse_order, socmed, affiliate, tiktok_ads, access, product_performance, livestream_display, photo_downloader, quick_links
-from database import engine, Base
+from database import engine, Base, SessionLocal, USING_SQLITE_DEV
 import models  # noqa: F401 - ensure all models are registered before create_all
 import os
 import sys
@@ -245,16 +245,52 @@ def _run_migrations():
     print("[Startup] [OK] Database migrations checked / applied.")
 
 
+def _seed_sqlite_dev_user():
+    """Tanpa Neon: satu user admin lokal agar login di http://localhost:5173 berhasil."""
+    if not USING_SQLITE_DEV:
+        return
+    from models import AccountUser
+    from services.auth_logic import TOOL_KEYS, hash_password
+
+    db = SessionLocal()
+    try:
+        if db.query(AccountUser).count() > 0:
+            return
+        perms = {k: 1 for k in TOOL_KEYS}
+        db.add(
+            AccountUser(
+                id=1,
+                email="dev@local.test",
+                username="dev",
+                name="Local Dev",
+                password=hash_password("devdev"),
+                approval="approve",
+                permissions=perms,
+            )
+        )
+        db.commit()
+        print("[Startup] [OK] SQLite dev login: username=dev  password=devdev  (set DATABASE_URL to use real DB)")
+    except Exception as e:
+        print(f"[Startup] [WARN] SQLite dev seed failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Server sudah listen di port 8080 saat ini — DB init di background
     try:
         Base.metadata.create_all(bind=engine)
         print("[Startup] [OK] Database tables created/verified.")
+        _seed_sqlite_dev_user()
     except Exception as e:
         print(f"[Startup] [WARN] Database not yet available: {e}")
     try:
-        _run_migrations()
+        if engine.dialect.name == "postgresql":
+            _run_migrations()
+        else:
+            print("[Startup] [INFO] Skipping PostgreSQL migration SQL (local SQLite).")
     except Exception as e:
         print(f"[Startup] [WARN] Migration warning: {e}")
     # Warm Google Sheets cache so first user request is fast

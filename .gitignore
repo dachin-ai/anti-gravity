@@ -19,6 +19,9 @@ credentials.json
 client_secret.json
 .DS_Store
 
+# Local SQLite (no DATABASE_URL)
+freemir_local.db
+
 # Scratch and Context
 scratch*.py
 #context/  # Allow documentation files to be tracked
